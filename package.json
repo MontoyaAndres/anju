@@ -1,0 +1,30 @@
+{
+  "name": "anju",
+  "version": "0.0.0",
+  "main": "index.js",
+  "repository": "git@github.com:MontoyaAndres/anju.git",
+  "author": "MontoyaAndres <andresmontoyafcb@gmail.com>",
+  "packageManager": "npm@11.3.0",
+  "license": "MIT",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "clean": "turbo run clean && rm -r node_modules",
+    "generate": "turbo run generate",
+    "migrate-dev": "turbo run generate && turbo run migrate-dev",
+    "migrate-prod": "turbo run generate && turbo run migrate-prod",
+    "deploy-dev": "turbo run deploy-dev",
+    "deploy-prod": "turbo run deploy-prod"
+  },
+  "dependencies": {
+    "turbo": "^2.6.1"
+  },
+  "devDependencies": {
+    "dotenv-cli": "^11.0.0",
+    "wrangler": "^4.50.0"
+  }
+}

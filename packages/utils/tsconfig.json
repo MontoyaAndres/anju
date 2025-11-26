@@ -1,0 +1,12 @@
+{
+  "extends": "@anju/tsconfig/base.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "declaration": true,
+    "declarationMap": true,
+    "emitDeclarationOnly": false,
+    "rootDir": "./src",
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules"]
+}

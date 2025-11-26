@@ -1,0 +1,21 @@
+{
+  "name": "@anju/utils",
+  "version": "0.0.1",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf dist && rm -rf node_modules"
+  },
+  "devDependencies": {
+    "@anju/tsconfig": "*",
+    "typescript": "^5.9.3"
+  }
+}

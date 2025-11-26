@@ -1,0 +1,34 @@
+{
+  "name": "api",
+  "version": "0.0.1",
+  "scripts": {
+    "build": "node esbuild.config.mjs && tsc --emitDeclarationOnly",
+    "dev": "dotenv -e ../../.env -- nodemon --exec \"node -r esbuild-register ./src/index.ts\" -e .ts",
+    "clean": "rm -rf dist && rm -rf node_modules",
+    "studio": "drizzle-kit studio",
+    "generate": "drizzle-kit generate",
+    "migrate-dev": "dotenv -e ../../.env drizzle-kit migrate",
+    "migrate-prod": "dotenv -e ../../.env.prod drizzle-kit migrate",
+    "deploy-dev": "wrangler deploy --env development",
+    "deploy-prod": "wrangler deploy --env production"
+  },
+  "dependencies": {
+    "@anju/utils": "*",
+    "@neondatabase/serverless": "^1.0.2",
+    "better-auth": "^1.4.1",
+    "drizzle-orm": "^0.44.7",
+    "hono": "^4.10.6",
+    "uuid": "^13.0.0"
+  },
+  "devDependencies": {
+    "@anju/tsconfig": "*",
+    "@hono/node-server": "^1.19.6",
+    "@types/node": "^24.10.1",
+    "drizzle-kit": "^0.31.7",
+    "esbuild": "^0.27.0",
+    "esbuild-register": "^3.6.0",
+    "fast-glob": "^3.3.3",
+    "nodemon": "^3.1.11",
+    "typescript": "^5.9.3"
+  }
+}

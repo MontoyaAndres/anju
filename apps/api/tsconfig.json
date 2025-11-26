@@ -1,0 +1,12 @@
+{
+  "extends": "@anju/tsconfig/base.json",
+  "compilerOptions": {
+    "lib": ["ES2015", "dom"],
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+  },
+  "exclude": ["node_modules"],
+  "include": ["src"]
+}

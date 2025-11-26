@@ -1,0 +1,35 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "tasks": {
+    "build": {
+      "outputs": ["dist/**", ".next/**", "!.next/cache/**", "public/dist/**"],
+      "dependsOn": ["^build"]
+    },
+    "test": {
+      "outputs": ["coverage/**"],
+      "dependsOn": []
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true
+    },
+    "clean": {
+      "cache": false
+    },
+    "generate": {
+      "cache": false
+    },
+    "migrate-dev": {
+      "cache": false
+    },
+    "migrate-prod": {
+      "cache": false
+    },
+    "deploy-dev": {
+      "cache": false
+    },
+    "deploy-prod": {
+      "cache": false
+    }
+  }
+}
