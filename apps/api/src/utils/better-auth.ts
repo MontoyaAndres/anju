@@ -11,4 +11,11 @@ export const auth = betterAuth({
   }),
   baseURL: process.env.NEXT_PUBLIC_API_URL,
   secret: process.env.JWT_SECRET!,
+  socialProviders: {
+    google: {
+      clientId: process.env.GOOGLE_CLIENT_ID!,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+    },
+  },
+  trustedOrigins: [process.env.NEXT_PUBLIC_WEB_URL!],
 });

@@ -10,7 +10,7 @@ command = "npm run build"
 [env.development]
 name = "anju-development"
 [env.development.vars]
-NODE_ENV = "development"
+NODE_ENV = "production"
 NEXT_PUBLIC_API_URL="http://localhost:8080"
 NEXT_PUBLIC_WEB_URL="http://localhost:3000"
 
