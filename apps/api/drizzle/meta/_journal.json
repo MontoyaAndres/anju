@@ -15,6 +15,13 @@
       "when": 1764108670008,
       "tag": "0001_blushing_black_crow",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1764275062071,
+      "tag": "0002_sturdy_betty_brant",
+      "breakpoints": true
     }
   ]
 }

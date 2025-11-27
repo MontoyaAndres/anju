@@ -15,6 +15,10 @@ const TYPE_MESSAGE_USER = 'USER';
 const TYPE_MESSAGE_AI = 'AI';
 const TYPE_MESSAGES = [TYPE_MESSAGE_USER, TYPE_MESSAGE_AI];
 
+const LANGUAGE_EN = 'en';
+const LANGUAGE_ES = 'es';
+const LANGUAGES = [LANGUAGE_EN, LANGUAGE_ES];
+
 export const constants = {
   USER_STATUS_ACTIVE,
   USER_STATUS_BLOCKED,
@@ -29,4 +33,7 @@ export const constants = {
   TYPE_MESSAGE_USER,
   TYPE_MESSAGE_AI,
   TYPE_MESSAGES,
+  LANGUAGE_EN,
+  LANGUAGE_ES,
+  LANGUAGES,
 };

@@ -13,6 +13,9 @@
       "cache": false,
       "persistent": true
     },
+    "start": {
+      "cache": false
+    },
     "clean": {
       "cache": false
     },

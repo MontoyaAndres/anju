@@ -1,5 +1,6 @@
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { betterAuth } from 'better-auth';
+import { v7 as uuid } from 'uuid';
 
 import { db, schema } from '../db';
 
@@ -10,6 +11,7 @@ export const auth = betterAuth({
     schema,
   }),
   baseURL: process.env.NEXT_PUBLIC_API_URL,
+  basePath: '/auth',
   secret: process.env.JWT_SECRET!,
   socialProviders: {
     google: {
@@ -18,4 +20,9 @@ export const auth = betterAuth({
     },
   },
   trustedOrigins: [process.env.NEXT_PUBLIC_WEB_URL!],
+  advanced: {
+    database: {
+      generateId: () => uuid(),
+    },
+  },
 });

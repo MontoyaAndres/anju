@@ -13,6 +13,7 @@
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev",
+    "start": "turbo run start",
     "clean": "turbo run clean && rm -r node_modules",
     "generate": "turbo run generate",
     "migrate-dev": "turbo run generate && turbo run migrate-dev",
