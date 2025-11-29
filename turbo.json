@@ -1,5 +1,16 @@
 {
   "$schema": "https://turbo.build/schema.json",
+  "globalDependencies": [".env"],
+  "globalEnv": [
+    "NODE_ENV",
+    "SERVER_PORT",
+    "DATABASE_URL",
+    "JWT_SECRET",
+    "GOOGLE_CLIENT_ID",
+    "GOOGLE_CLIENT_SECRET",
+    "NEXT_PUBLIC_API_URL",
+    "NEXT_PUBLIC_WEB_URL"
+  ],
   "tasks": {
     "build": {
       "outputs": ["dist/**", ".next/**", "!.next/cache/**", "public/dist/**"],
@@ -10,6 +21,7 @@
       "dependsOn": []
     },
     "dev": {
+      "inputs": [".env"],
       "cache": false,
       "persistent": true
     },
