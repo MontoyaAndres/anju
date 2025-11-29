@@ -210,7 +210,7 @@ export const artifactResource = pgTable('artifact_resource', {
 export const artifactUser = pgTable(
   'artifact_user',
   {
-    role: text('role').notNull().default('VIEWER'),
+    role: text('role').notNull().default(utils.constants.USER_ROLE_ADMIN),
     artifactId: text('artifact_id')
       .notNull()
       .references(() => artifact.id, { onDelete: 'cascade' }),

@@ -39,6 +39,7 @@ const create = async (c: Context<AppEnv>) => {
         .insert(schema.project)
         .values({
           name: currentValues.projectName,
+          description: currentValues.projectDescription || null,
           createdById: currentValues.userId,
           projectUserCount: '1',
           organizationId: org.id,
@@ -58,10 +59,9 @@ const create = async (c: Context<AppEnv>) => {
 
 const update = async (c: Context<AppEnv>) => {
   const body = await c.req.json();
-  const param = c.req.param();
   const currentValues = await utils.Schema.ORGANIZATION_UPDATE.parseAsync({
     ...body,
-    id: param.id,
+    id: c.req.param('organizationId'),
     userId: c.get('user').id,
   });
 
@@ -82,15 +82,17 @@ const update = async (c: Context<AppEnv>) => {
 };
 
 const get = async (c: Context<AppEnv>) => {
-  const param = c.req.param();
-  const userId = c.get('user').id;
+  const currentValues = await utils.Schema.ORGANIZATION_GET.parseAsync({
+    id: c.req.param('organizationId'),
+    userId: c.get('user').id,
+  });
 
   const db = createDb(c);
 
   const organization = await db.query.organization.findFirst({
     where: and(
-      eq(schema.organization.id, param.id),
-      eq(schema.organization.ownerId, userId)
+      eq(schema.organization.id, currentValues.id),
+      eq(schema.organization.ownerId, currentValues.userId)
     ),
     with: {
       projects: true,
@@ -101,22 +103,26 @@ const get = async (c: Context<AppEnv>) => {
 };
 
 const list = async (c: Context<AppEnv>) => {
-  const userId = c.get('user').id;
+  const currentValues = await utils.Schema.AUTH_USER_GET.parseAsync({
+    userId: c.get('user').id,
+  });
 
   const db = createDb(c);
 
   const organizations = await db
     .select()
     .from(schema.organization)
-    .where(eq(schema.organization.ownerId, userId))
+    .where(eq(schema.organization.ownerId, currentValues.userId))
     .orderBy(desc(schema.organization.id));
 
   return c.json(organizations);
 };
 
 const remove = async (c: Context<AppEnv>) => {
-  const param = c.req.param();
-  const userId = c.get('user').id;
+  const currentValues = await utils.Schema.ORGANIZATION_GET.parseAsync({
+    id: c.req.param('organizationId'),
+    userId: c.get('user').id,
+  });
 
   const db = createDb(c);
 
@@ -124,12 +130,12 @@ const remove = async (c: Context<AppEnv>) => {
     .delete(schema.organization)
     .where(
       and(
-        eq(schema.organization.id, param.id),
-        eq(schema.organization.ownerId, userId)
+        eq(schema.organization.id, currentValues.id),
+        eq(schema.organization.ownerId, currentValues.userId)
       )
     );
 
-  return c.json({ id: param.id });
+  return c.json({ id: currentValues.id });
 };
 
 export const OrganizationController = {

@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 
-import { OrganizationController } from './controllers';
+import { OrganizationController, ProjectController } from './controllers';
 import { ErrorMiddleware, UserMiddleware } from './middleware';
 import { createAuth } from './utils';
 
@@ -36,15 +36,41 @@ app
   .get('/organization', UserMiddleware.verify, OrganizationController.list)
   .post('/organization', UserMiddleware.verify, OrganizationController.create)
   .put(
-    '/organization/:id',
+    '/organization/:organizationId',
     UserMiddleware.verify,
     OrganizationController.update
   )
-  .get('/organization/:id', UserMiddleware.verify, OrganizationController.get)
+  .get(
+    '/organization/:organizationId',
+    UserMiddleware.verify,
+    OrganizationController.get
+  )
   .delete(
-    '/organization/:id',
+    '/organization/:organizationId',
     UserMiddleware.verify,
     OrganizationController.remove
+  )
+
+  // Project controller
+  .post(
+    '/organization/:organizationId/project',
+    UserMiddleware.verify,
+    ProjectController.create
+  )
+  .put(
+    '/organization/:organizationId/project/:projectId',
+    UserMiddleware.verify,
+    ProjectController.update
+  )
+  .get(
+    '/organization/:organizationId/project/:projectId',
+    UserMiddleware.verify,
+    ProjectController.get
+  )
+  .delete(
+    '/organization/:organizationId/project/:projectId',
+    UserMiddleware.verify,
+    ProjectController.remove
   );
 
 if (process.env.NODE_ENV === 'development') {

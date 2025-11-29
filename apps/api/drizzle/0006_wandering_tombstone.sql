@@ -1,0 +1,1 @@
+ALTER TABLE "artifact_user" ALTER COLUMN "role" SET DEFAULT 'ADMIN';
