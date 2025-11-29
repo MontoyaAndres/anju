@@ -15,10 +15,10 @@
   },
   "dependencies": {
     "@anju/utils": "*",
-    "@neondatabase/serverless": "^1.0.2",
     "better-auth": "^1.4.1",
     "drizzle-orm": "^0.44.7",
     "hono": "^4.10.6",
+    "postgres": "^3.4.7",
     "uuid": "^13.0.0"
   },
   "devDependencies": {
