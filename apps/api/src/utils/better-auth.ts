@@ -28,20 +28,18 @@ export const createAuth = (c: Context) => {
       process.env.NEXT_PUBLIC_API_URL!,
     ],
     account: {
-      storeStateStrategy: 'cookie',
+      storeStateStrategy: 'database',
+      skipStateCookieCheck: true,
     },
     advanced: {
+      crossSubDomainCookies:
+        process.env.NODE_ENV === 'production'
+          ? { enabled: true, domain: '.anju.ai' }
+          : { enabled: false },
       database: {
         generateId: () => uuid(),
       },
-      crossSubDomainCookies: {
-        enabled: false,
-      },
       useSecureCookies: process.env.NODE_ENV === 'production',
-      cookieCache: {
-        enabled: true,
-        maxAge: 300,
-      },
     },
   });
 };
