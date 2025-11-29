@@ -1,3 +1,4 @@
+import { ErrorMiddleware } from './error';
 import { UserMiddleware } from './user';
 
-export { UserMiddleware };
+export { ErrorMiddleware, UserMiddleware };

@@ -21,7 +21,6 @@ export const user = pgTable(
     email: text('email').notNull().unique(),
     emailVerified: boolean('email_verified').default(false).notNull(),
     image: text('image'),
-    timezone: text('timezone').notNull().default('UTC'),
     createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { mode: 'date' })
       .notNull()
@@ -106,6 +105,8 @@ export const organization = pgTable('organization', {
   ownerId: text('owner_id')
     .notNull()
     .references(() => user.id),
+  projectCount: text('project_count').notNull().default('0'),
+  organizationUserCount: text('organization_user_count').notNull().default('0'),
   createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { mode: 'date' })
     .notNull()
@@ -137,6 +138,8 @@ export const project = pgTable('project', {
     .primaryKey()
     .$defaultFn(() => uuid()),
   name: text('name').notNull(),
+  artifactCount: text('artifact_count').notNull().default('0'),
+  projectUserCount: text('project_user_count').notNull().default('0'),
   description: text('description'),
   createdById: text('created_by_id')
     .notNull()
@@ -175,6 +178,8 @@ export const artifact = pgTable('artifact', {
     .primaryKey()
     .$defaultFn(() => uuid()),
   name: text('name').notNull(),
+  artifactResourceCount: text('artifact_resource_count').notNull().default('0'),
+  artifactUserCount: text('artifact_user_count').notNull().default('0'),
   metadata: json('metadata'),
   projectId: text('project_id')
     .notNull()

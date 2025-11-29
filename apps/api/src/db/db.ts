@@ -1,6 +1,14 @@
-import { neon } from '@neondatabase/serverless';
-import { drizzle } from 'drizzle-orm/neon-http';
+import { Context } from 'hono';
+import { Pool } from '@neondatabase/serverless';
+import { drizzle } from 'drizzle-orm/neon-serverless';
 
 import * as schema from './schema';
+import { getDBConnectionString } from '../utils';
 
-export const db = drizzle(neon(process.env.DATABASE_URL!), { schema });
+export const createDb = (c: Context) => {
+  const connectionString = getDBConnectionString(c.env);
+  const pool = new Pool({ connectionString });
+  return drizzle(pool, { schema });
+};
+
+export type Database = ReturnType<typeof createDb>;

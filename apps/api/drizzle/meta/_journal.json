@@ -22,6 +22,27 @@
       "when": 1764275062071,
       "tag": "0002_sturdy_betty_brant",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1764376732520,
+      "tag": "0003_same_kylun",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1764378129283,
+      "tag": "0004_thin_cardiac",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1764378468882,
+      "tag": "0005_rapid_warbird",
+      "breakpoints": true
     }
   ]
 }

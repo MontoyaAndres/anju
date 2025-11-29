@@ -1,16 +1,13 @@
 import type { Context, Next } from 'hono';
 
-import { auth } from '../utils';
+import { createAuth } from '../utils';
 
-type Variables = {
-  user: typeof auth.$Infer.Session.user;
-  session: typeof auth.$Infer.Session.session;
-};
+// types
+import type { AppEnv } from '../types';
 
-export const verify = async (
-  c: Context<{ Variables: Variables }>,
-  next: Next
-) => {
+export const verify = async (c: Context<AppEnv>, next: Next) => {
+  const auth = createAuth(c);
+
   const session = await auth.api.getSession({
     headers: c.req.raw.headers,
   });

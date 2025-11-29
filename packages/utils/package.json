@@ -14,6 +14,9 @@
     "build": "tsc",
     "clean": "rm -rf dist && rm -rf node_modules"
   },
+  "dependencies": {
+    "zod": "^3.22.3"
+  },
   "devDependencies": {
     "@anju/tsconfig": "*",
     "typescript": "^5.9.3"

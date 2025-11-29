@@ -1,0 +1,1 @@
+ALTER TABLE "organization" ADD COLUMN "project_count" text DEFAULT '0' NOT NULL;

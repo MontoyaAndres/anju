@@ -23,6 +23,7 @@
   },
   "devDependencies": {
     "@anju/tsconfig": "*",
+    "@cloudflare/workers-types": "^4.20251128.0",
     "@hono/node-server": "^1.19.6",
     "@types/node": "^24.10.1",
     "drizzle-kit": "^0.31.7",

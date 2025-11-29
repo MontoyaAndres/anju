@@ -1,22 +1,31 @@
-name = "anju"
+name = "anju-api"
 main = "dist/index.js"
 compatibility_date = "2025-04-01"
 
 compatibility_flags = ["nodejs_compat", "nodejs_compat_populate_process_env"]
 
+[observability]
+enabled = true
+
 [build]
 command = "npm run build"
 
 [env.development]
-name = "anju-development"
+name = "anju-api-development"
 [env.development.vars]
 NODE_ENV = "production"
-NEXT_PUBLIC_API_URL="http://localhost:8080"
-NEXT_PUBLIC_WEB_URL="http://localhost:3000"
+NEXT_PUBLIC_API_URL="https://anju-api-development.andresmontoyafcb.workers.dev"
+NEXT_PUBLIC_WEB_URL="https://anju-web-development.andresmontoyafcb.workers.dev"
+[[env.development.hyperdrive]]
+binding = "HYPERDRIVE"
+id = "0b5686f0873c4838b90fccc4e84a4805"
 
 [env.production]
-name = "anju-production"
+name = "anju-api-production"
 [env.production.vars]
 NODE_ENV = "production"
 NEXT_PUBLIC_API_URL="https://api.anju.ai"
 NEXT_PUBLIC_WEB_URL="https://app.anju.ai"
+[[env.production.hyperdrive]]
+binding = "HYPERDRIVE"
+id = "<YOUR_HYPERDRIVE_ID>"

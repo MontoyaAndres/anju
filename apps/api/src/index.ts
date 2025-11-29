@@ -1,43 +1,51 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 
-import { UserMiddleware } from './middleware';
-import { auth } from './utils';
+import { OrganizationController } from './controllers';
+import { ErrorMiddleware, UserMiddleware } from './middleware';
+import { createAuth } from './utils';
 
-type Variables = {
-  user: typeof auth.$Infer.Session.user;
-  session: typeof auth.$Infer.Session.session;
-};
+// types
+import type { AppEnv } from './types';
 
-const app = new Hono<{ Variables: Variables }>();
-
-app.use(
-  '*',
-  cors({
-    origin: [process.env.NEXT_PUBLIC_WEB_URL!],
-    credentials: true,
-    allowHeaders: ['Content-Type', 'Authorization'],
-    allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  })
-);
+const app = new Hono<AppEnv>();
 
 app
-  // Auth controller
-  .on(['GET', 'POST'], '/auth/*', c => auth.handler(c.req.raw))
+  .use(
+    '*',
+    cors({
+      origin: [process.env.NEXT_PUBLIC_WEB_URL!],
+      credentials: true,
+      allowHeaders: ['Content-Type'],
+      allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    })
+  )
+  .onError(ErrorMiddleware.errorHandler)
 
-  // Protected route example
+  // Auth controller
+  .on(['GET', 'POST'], '/auth/*', c => {
+    const auth = createAuth(c);
+    return auth.handler(c.req.raw);
+  })
   .get('/me', UserMiddleware.verify, c => {
     const user = c.get('user');
     return c.json({ user });
   })
-  .get('/protected', UserMiddleware.verify, c => {
-    const user = c.get('user');
-    return c.json({
-      message: 'You have access to this protected resource',
-      userId: user.id,
-      email: user.email,
-    });
-  });
+
+  // Organization controller
+  .get('/organization', UserMiddleware.verify, OrganizationController.list)
+  .post('/organization', UserMiddleware.verify, OrganizationController.create)
+  .put(
+    '/organization/:id',
+    UserMiddleware.verify,
+    OrganizationController.update
+  )
+  .get('/organization/:id', UserMiddleware.verify, OrganizationController.get)
+  .delete(
+    '/organization/:id',
+    UserMiddleware.verify,
+    OrganizationController.remove
+  );
 
 if (process.env.NODE_ENV === 'development') {
   import('@hono/node-server').then(({ serve }) => {
