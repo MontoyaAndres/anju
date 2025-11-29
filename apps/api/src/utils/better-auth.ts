@@ -23,10 +23,24 @@ export const createAuth = (c: Context) => {
         clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
       },
     },
-    trustedOrigins: [process.env.NEXT_PUBLIC_WEB_URL!],
+    trustedOrigins: [
+      process.env.NEXT_PUBLIC_WEB_URL!,
+      process.env.NEXT_PUBLIC_API_URL!,
+    ],
+    account: {
+      storeStateStrategy: 'cookie',
+    },
     advanced: {
       database: {
         generateId: () => uuid(),
+      },
+      crossSubDomainCookies: {
+        enabled: false,
+      },
+      useSecureCookies: process.env.NODE_ENV === 'production',
+      cookieCache: {
+        enabled: true,
+        maxAge: 300,
       },
     },
   });
