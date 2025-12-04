@@ -1,6 +1,5 @@
-import { createAuth } from './better-auth';
-import { getDBConnectionString } from './getDBConnectionString';
+import { auth } from './better-auth';
 
 export type { Auth } from './better-auth';
 
-export { createAuth, getDBConnectionString };
+export { auth };

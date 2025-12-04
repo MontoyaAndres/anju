@@ -10,21 +10,20 @@
     "generate": "drizzle-kit generate",
     "migrate-dev": "dotenv -e ../../.env drizzle-kit migrate",
     "migrate-prod": "dotenv -e ../../.env.prod drizzle-kit migrate",
-    "deploy-dev": "wrangler deploy --env development",
-    "deploy-prod": "wrangler deploy --env production"
+    "deploy-dev": "",
+    "deploy-prod": ""
   },
   "dependencies": {
     "@anju/utils": "*",
+    "@hono/node-server": "^1.19.6",
     "better-auth": "^1.4.1",
     "drizzle-orm": "^0.44.7",
-    "hono": "^4.10.6",
+    "hono": "^4.10.7",
     "postgres": "^3.4.7",
     "uuid": "^13.0.0"
   },
   "devDependencies": {
     "@anju/tsconfig": "*",
-    "@cloudflare/workers-types": "^4.20251128.0",
-    "@hono/node-server": "^1.19.6",
     "@types/node": "^24.10.1",
     "drizzle-kit": "^0.31.7",
     "esbuild": "^0.27.0",

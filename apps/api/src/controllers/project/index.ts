@@ -2,7 +2,7 @@ import { Context } from 'hono';
 import { and, eq, sql } from 'drizzle-orm';
 import { utils } from '@anju/utils';
 
-import { createDb, schema } from '../../db';
+import { db, schema } from '../../db';
 
 // types
 import { AppEnv } from '../../types';
@@ -14,8 +14,6 @@ const create = async (c: Context<AppEnv>) => {
     userId: c.get('user').id,
     organizationId: c.req.param('organizationId'),
   });
-
-  const db = createDb(c);
 
   const result = await db.transaction(async tx => {
     const [project] = await tx
@@ -55,8 +53,6 @@ const update = async (c: Context<AppEnv>) => {
     organizationId: c.req.param('organizationId'),
   });
 
-  const db = createDb(c);
-
   const result = await db
     .update(schema.project)
     .set({
@@ -81,8 +77,6 @@ const get = async (c: Context<AppEnv>) => {
     userId: c.get('user').id,
   });
 
-  const db = createDb(c);
-
   const result = await db
     .select()
     .from(schema.project)
@@ -102,8 +96,6 @@ const remove = async (c: Context<AppEnv>) => {
     organizationId: c.req.param('organizationId'),
     userId: c.get('user').id,
   });
-
-  const db = createDb(c);
 
   await db.transaction(async tx => {
     await tx

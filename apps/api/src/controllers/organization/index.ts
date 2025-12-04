@@ -2,7 +2,7 @@ import { Context } from 'hono';
 import { eq, and, desc } from 'drizzle-orm';
 import { utils } from '@anju/utils';
 
-import { createDb, schema } from '../../db';
+import { db, schema } from '../../db';
 
 // types
 import { AppEnv } from '../../types';
@@ -13,8 +13,6 @@ const create = async (c: Context<AppEnv>) => {
     ...body,
     userId: c.get('user').id,
   });
-
-  const db = createDb(c);
 
   const result = await db.transaction(async tx => {
     let project = null;
@@ -65,8 +63,6 @@ const update = async (c: Context<AppEnv>) => {
     userId: c.get('user').id,
   });
 
-  const db = createDb(c);
-
   const [org] = await db
     .update(schema.organization)
     .set({ name: currentValues.name })
@@ -87,8 +83,6 @@ const get = async (c: Context<AppEnv>) => {
     userId: c.get('user').id,
   });
 
-  const db = createDb(c);
-
   const organization = await db.query.organization.findFirst({
     where: and(
       eq(schema.organization.id, currentValues.id),
@@ -107,8 +101,6 @@ const list = async (c: Context<AppEnv>) => {
     userId: c.get('user').id,
   });
 
-  const db = createDb(c);
-
   const organizations = await db
     .select()
     .from(schema.organization)
@@ -123,8 +115,6 @@ const remove = async (c: Context<AppEnv>) => {
     id: c.req.param('organizationId'),
     userId: c.get('user').id,
   });
-
-  const db = createDb(c);
 
   await db
     .delete(schema.organization)

@@ -1,9 +1,10 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
+import { serve } from '@hono/node-server';
 
 import { OrganizationController, ProjectController } from './controllers';
 import { ErrorMiddleware, UserMiddleware } from './middleware';
-import { createAuth } from './utils';
+import { auth } from './utils';
 
 // types
 import type { AppEnv } from './types';
@@ -16,17 +17,14 @@ app
     cors({
       origin: [process.env.NEXT_PUBLIC_WEB_URL!],
       credentials: true,
-      allowHeaders: ['Content-Type'],
+      allowHeaders: ['Content-Type', 'User-Agent', 'Authorization'],
       allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     })
   )
   .onError(ErrorMiddleware.errorHandler)
 
   // Auth controller
-  .on(['GET', 'POST'], '/auth/*', c => {
-    const auth = createAuth(c);
-    return auth.handler(c.req.raw);
-  })
+  .on(['GET', 'POST'], '/auth/*', c => auth.handler(c.req.raw))
   .get('/me', UserMiddleware.verify, c => {
     const user = c.get('user');
     return c.json({ user });
@@ -73,13 +71,9 @@ app
     ProjectController.remove
   );
 
-if (process.env.NODE_ENV === 'development') {
-  import('@hono/node-server').then(({ serve }) => {
-    serve({
-      fetch: app.fetch,
-      port: Number(process.env.SERVER_PORT),
-    });
-  });
-}
+serve({
+  fetch: app.fetch,
+  port: Number(process.env.SERVER_PORT),
+});
 
 export default app;
