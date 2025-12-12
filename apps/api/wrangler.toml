@@ -18,7 +18,7 @@ NEXT_PUBLIC_API_URL="https://anju-api-development.andresmontoyafcb.workers.dev"
 NEXT_PUBLIC_WEB_URL="https://anju-web-git-develop-andrs-montoyas-projects.vercel.app"
 [[env.development.hyperdrive]]
 binding = "HYPERDRIVE"
-id = "0b5686f0873c4838b90fccc4e84a4805"
+id = "20b38b96e12a4f45ac111fb7d8161edf"
 
 [env.production]
 name = "anju-api-production"

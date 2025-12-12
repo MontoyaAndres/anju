@@ -16,7 +16,7 @@ app
     cors({
       origin: [process.env.NEXT_PUBLIC_WEB_URL!],
       credentials: true,
-      allowHeaders: ['Content-Type'],
+      allowHeaders: ['Content-Type', 'User-Agent'],
       allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     })
   )
