@@ -1,22 +1,7 @@
-import { authClient } from '../utils';
+import { Components } from '../components';
 
 const IndexPage = () => {
-  const signIn = (provider: string) => {
-    if (!provider) return;
-    if (provider !== 'google' && provider !== 'github') return;
-
-    authClient.signIn.social({
-      provider,
-      callbackURL: `${process.env.NEXT_PUBLIC_WEB_URL}/dashboard`,
-    });
-  };
-
-  return (
-    <div>
-      <button onClick={() => signIn('google')}>Sign in with Google</button>
-      <button onClick={() => signIn('github')}>Sign in with GitHub</button>
-    </div>
-  );
+  return <Components.Views.Auth />;
 };
 
 export default IndexPage;

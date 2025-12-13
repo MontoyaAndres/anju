@@ -1,7 +1,9 @@
-import { constants } from './constants';
 import { Schema } from './schema';
+import { fetcher } from './fetcher';
+import { constants } from './constants';
 
 export const utils = {
-  constants,
   Schema,
+  fetcher,
+  constants,
 };

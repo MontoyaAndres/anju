@@ -1,16 +1,32 @@
-const DashboardPage = () => {
-  const getUser = async () => {
-    const user = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/me`, {
-      credentials: 'include',
-    }).then(res => res.json());
-    console.log('User:', user);
-  };
+import { ParsedUrlQuery } from 'querystring';
 
-  return (
-    <div>
-      <button onClick={getUser}>Get user</button>
-    </div>
-  );
+import { ssr } from '../utils';
+
+interface IProps {
+  auth: {
+    name: string;
+    email: string;
+    emailVerified: boolean;
+    image: string;
+    createdAt: string;
+    updatedAt: string;
+    id: string;
+  };
+  query: ParsedUrlQuery;
+  env: {
+    apiEndpoint: string;
+    webEndpoint: string;
+    trackerEndpoint: string;
+  };
+  locale: string;
+}
+
+const DashboardPage = (props: IProps) => {
+  const { auth } = props;
+
+  return <div>Hello {auth?.name || 'User'}, welcome to your dashboard!</div>;
 };
+
+export const getServerSideProps = ssr.getAuthMe;
 
 export default DashboardPage;

@@ -1,3 +1,4 @@
+import { ssr } from './ssr';
 import { authClient } from './auth';
 
-export { authClient };
+export { ssr, authClient };
