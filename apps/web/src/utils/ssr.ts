@@ -118,6 +118,18 @@ const getAuthOrganizations = async (context: GetServerSidePropsContext) => {
   if (me) {
     const organizations = await getOrganizations(context);
 
+    if (organizations.length === 1) {
+      return {
+        props: {},
+        redirect: {
+          permanent: false,
+          destination: `/organization/${organizations?.[0].id}/project/${
+            organizations?.[0].projects?.[0]?.id || ''
+          }`,
+        },
+      };
+    }
+
     return {
       props: {
         params: params || null,

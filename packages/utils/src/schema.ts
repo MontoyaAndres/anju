@@ -7,6 +7,12 @@ const ORGANIZATION_CREATE = z.object({
   projectDescription: z.string().max(500),
 });
 
+const ORGANIZATION_CREATE_VIEW = z.object({
+  name: z.string().min(3).max(100),
+  projectName: z.string().min(3).max(100),
+  projectDescription: z.string().max(500),
+});
+
 const ORGANIZATION_UPDATE = z.object({
   id: z.string().uuid(),
   userId: z.string().uuid(),
@@ -45,6 +51,7 @@ const PROJECT_GET = z.object({
 
 export const Schema = {
   ORGANIZATION_CREATE,
+  ORGANIZATION_CREATE_VIEW,
   ORGANIZATION_UPDATE,
   ORGANIZATION_GET,
   AUTH_USER_GET,

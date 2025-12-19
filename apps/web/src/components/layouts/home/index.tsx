@@ -92,7 +92,7 @@ export const Home = (
                   onClick={() => {}}
                 >
                   {pathname ===
-                  '/organization/[id]/projects/[projectId]/knowledge' ? (
+                  '/organization/[id]/project/[projectId]/knowledge' ? (
                     <EmojiObjects />
                   ) : (
                     <EmojiObjectsOutlined />
