@@ -24,6 +24,29 @@ const getMe = async (context: GetServerSidePropsContext) => {
   return null;
 };
 
+const getOrganizations = async (context: GetServerSidePropsContext) => {
+  const { req } = context;
+
+  const cookies = req.headers.cookie;
+
+  const organizations = await utils.fetcher({
+    url: '/organization',
+    config: {
+      credentials: 'include',
+      headers: {
+        cookie: cookies,
+      },
+    },
+    ssrContext: context,
+  });
+
+  if (organizations && !organizations?.error) {
+    return organizations;
+  }
+
+  return null;
+};
+
 const getAuthMe: GetServerSideProps = async context => {
   const {
     req,
@@ -68,6 +91,54 @@ const getAuthMe: GetServerSideProps = async context => {
   };
 };
 
+const getAuthOrganizations = async (context: GetServerSidePropsContext) => {
+  const {
+    req,
+    res,
+    params,
+    query,
+    locale,
+    defaultLocale = utils.constants.LANGUAGE_EN,
+  } = context;
+
+  const cookies = req.headers.cookie;
+
+  if (!cookies) {
+    return {
+      props: {},
+      redirect: {
+        permanent: false,
+        destination: '/',
+      },
+    };
+  }
+
+  const me = await getMe(context);
+
+  if (me) {
+    const organizations = await getOrganizations(context);
+
+    return {
+      props: {
+        params: params || null,
+        query: query || null,
+        locale: locale || defaultLocale,
+        auth: me?.user || null,
+        organizations: organizations || [],
+      },
+    };
+  }
+
+  return {
+    props: {},
+    redirect: {
+      permanent: false,
+      destination: '/',
+    },
+  };
+};
+
 export const ssr = {
   getAuthMe,
+  getAuthOrganizations,
 };

@@ -95,7 +95,12 @@ const get = async (c: Context<AppEnv>) => {
       eq(schema.organization.ownerId, currentValues.userId)
     ),
     with: {
-      projects: true,
+      projects: {
+        columns: {
+          id: true,
+          name: true,
+        },
+      },
     },
   });
 
@@ -109,11 +114,18 @@ const list = async (c: Context<AppEnv>) => {
 
   const db = createDb(c);
 
-  const organizations = await db
-    .select()
-    .from(schema.organization)
-    .where(eq(schema.organization.ownerId, currentValues.userId))
-    .orderBy(desc(schema.organization.id));
+  const organizations = await db.query.organization.findMany({
+    where: eq(schema.organization.ownerId, currentValues.userId),
+    orderBy: desc(schema.organization.id),
+    with: {
+      projects: {
+        columns: {
+          id: true,
+          name: true,
+        },
+      },
+    },
+  });
 
   return c.json(organizations);
 };

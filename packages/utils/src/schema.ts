@@ -3,8 +3,8 @@ import { z } from 'zod';
 const ORGANIZATION_CREATE = z.object({
   userId: z.string().uuid(),
   name: z.string().min(3).max(100),
-  projectName: z.string().min(3).max(100).optional(),
-  projectDescription: z.string().max(500).optional(),
+  projectName: z.string().min(3).max(100),
+  projectDescription: z.string().max(500),
 });
 
 const ORGANIZATION_UPDATE = z.object({

@@ -10,16 +10,12 @@ export const Auth = () => {
 
     authClient.signIn.social({
       provider,
-      callbackURL: `${process.env.NEXT_PUBLIC_WEB_URL}/dashboard`,
+      callbackURL: `${process.env.NEXT_PUBLIC_WEB_URL}/organization`,
     });
   };
 
   return (
     <Wrapper>
-      <div className="logo">
-        <div className="logo-image" />
-        <div className="logo-text">Anju.ai</div>
-      </div>
       <div className="login-content">
         <p className="login-content-texts">
           <span className="login-content-subtitle">

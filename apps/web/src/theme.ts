@@ -9,6 +9,7 @@ const basicConfig = {
     red: '#FF0000',
     alto: '#D4D4D4',
     fernGreen: '#417741',
+    saltBox: '#6E6B73',
   },
   fonts: {
     xs: '12px',

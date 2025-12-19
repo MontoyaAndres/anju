@@ -49,6 +49,7 @@ declare module '@emotion/react' {
       red: string;
       alto: string;
       fernGreen: string;
+      saltBox: string;
     };
     fonts: {
       xs: string;
