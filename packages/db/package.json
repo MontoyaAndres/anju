@@ -1,0 +1,31 @@
+{
+  "name": "@anju/db",
+  "version": "0.0.1",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf dist && rm -rf node_modules",
+    "studio": "drizzle-kit studio",
+    "generate": "drizzle-kit generate",
+    "migrate-dev": "dotenv -e ../../.env drizzle-kit migrate",
+    "migrate-prod": "dotenv -e ../../.env.prod drizzle-kit migrate"
+  },
+  "dependencies": {
+    "drizzle-orm": "^0.44.7",
+    "postgres": "^3.4.7",
+    "uuid": "^13.0.0"
+  },
+  "devDependencies": {
+    "@anju/tsconfig": "*",
+    "drizzle-kit": "^0.31.7",
+    "typescript": "^5.9.3"
+  }
+}

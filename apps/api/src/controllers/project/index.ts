@@ -1,8 +1,7 @@
 import { Context } from 'hono';
 import { and, eq, sql } from 'drizzle-orm';
 import { utils } from '@anju/utils';
-
-import { createDb, schema } from '../../db';
+import { db } from '@anju/db';
 
 // types
 import { AppEnv } from '../../types';
@@ -15,11 +14,11 @@ const create = async (c: Context<AppEnv>) => {
     organizationId: c.req.param('organizationId'),
   });
 
-  const db = createDb(c);
+  const dbInstance = db.create(c);
 
-  const result = await db.transaction(async tx => {
+  const result = await dbInstance.transaction(async tx => {
     const [project] = await tx
-      .insert(schema.project)
+      .insert(db.schema.project)
       .values({
         name: currentValues.name,
         description: currentValues.description || null,
@@ -30,16 +29,15 @@ const create = async (c: Context<AppEnv>) => {
       .returning();
 
     await tx
-      .insert(schema.projectUser)
+      .insert(db.schema.projectUser)
       .values({ userId: currentValues.userId, projectId: project.id });
 
     await tx
-      .update(schema.organization)
+      .update(db.schema.organization)
       .set({
-        projectCount: sql`(${schema.organization.projectCount}::int + 1)::text`,
+        projectCount: sql`(${db.schema.organization.projectCount}::int + 1)::text`,
       })
-      .where(eq(schema.organization.id, currentValues.organizationId));
-
+      .where(eq(db.schema.organization.id, currentValues.organizationId));
     return project;
   });
 
@@ -55,18 +53,18 @@ const update = async (c: Context<AppEnv>) => {
     organizationId: c.req.param('organizationId'),
   });
 
-  const db = createDb(c);
+  const dbInstance = db.create(c);
 
-  const result = await db
-    .update(schema.project)
+  const result = await dbInstance
+    .update(db.schema.project)
     .set({
       name: currentValues.name,
       description: currentValues.description || null,
     })
     .where(
       and(
-        eq(schema.project.id, currentValues.id),
-        eq(schema.project.organizationId, currentValues.organizationId)
+        eq(db.schema.project.id, currentValues.id),
+        eq(db.schema.project.organizationId, currentValues.organizationId)
       )
     )
     .returning();
@@ -81,15 +79,15 @@ const get = async (c: Context<AppEnv>) => {
     userId: c.get('user').id,
   });
 
-  const db = createDb(c);
+  const dbInstance = db.create(c);
 
-  const result = await db
+  const result = await dbInstance
     .select()
-    .from(schema.project)
+    .from(db.schema.project)
     .where(
       and(
-        eq(schema.project.id, currentValues.id),
-        eq(schema.project.organizationId, currentValues.organizationId)
+        eq(db.schema.project.id, currentValues.id),
+        eq(db.schema.project.organizationId, currentValues.organizationId)
       )
     );
 
@@ -103,24 +101,24 @@ const remove = async (c: Context<AppEnv>) => {
     userId: c.get('user').id,
   });
 
-  const db = createDb(c);
+  const dbInstance = db.create(c);
 
-  await db.transaction(async tx => {
+  await dbInstance.transaction(async tx => {
     await tx
-      .delete(schema.project)
+      .delete(db.schema.project)
       .where(
         and(
-          eq(schema.project.id, currentValues.id),
-          eq(schema.project.organizationId, currentValues.organizationId)
+          eq(db.schema.project.id, currentValues.id),
+          eq(db.schema.project.organizationId, currentValues.organizationId)
         )
       );
 
     await tx
-      .update(schema.organization)
+      .update(db.schema.organization)
       .set({
-        projectCount: sql`(${schema.organization.projectCount}::int - 1)::text`,
+        projectCount: sql`(${db.schema.organization.projectCount}::int - 1)::text`,
       })
-      .where(eq(schema.organization.id, currentValues.organizationId));
+      .where(eq(db.schema.organization.id, currentValues.organizationId));
   });
 
   return c.json(currentValues);

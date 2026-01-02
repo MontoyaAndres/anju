@@ -5,7 +5,7 @@ import { drizzle } from 'drizzle-orm/postgres-js';
 import * as schema from './schema';
 import { getDBConnectionString } from '../utils';
 
-export const createDb = (c: Context) => {
+export const create = (c: Context) => {
   const connectionString = getDBConnectionString(c.env);
   const client = postgres(connectionString, {
     prepare: true,
@@ -13,4 +13,4 @@ export const createDb = (c: Context) => {
   return drizzle(client, { schema });
 };
 
-export type Database = ReturnType<typeof createDb>;
+export type Database = ReturnType<typeof create>;

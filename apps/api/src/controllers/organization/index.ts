@@ -1,8 +1,7 @@
 import { Context } from 'hono';
 import { eq, and, desc } from 'drizzle-orm';
 import { utils } from '@anju/utils';
-
-import { createDb, schema } from '../../db';
+import { db } from '@anju/db';
 
 // types
 import { AppEnv } from '../../types';
@@ -14,14 +13,14 @@ const create = async (c: Context<AppEnv>) => {
     userId: c.get('user').id,
   });
 
-  const db = createDb(c);
+  const dbInstance = db.create(c);
 
-  const result = await db.transaction(async tx => {
+  const result = await dbInstance.transaction(async tx => {
     let project = null;
     const projectCount = currentValues.projectName ? '1' : '0';
 
     const [org] = await tx
-      .insert(schema.organization)
+      .insert(db.schema.organization)
       .values({
         name: currentValues.name,
         ownerId: currentValues.userId,
@@ -31,12 +30,12 @@ const create = async (c: Context<AppEnv>) => {
       .returning();
 
     await tx
-      .insert(schema.organizationUser)
+      .insert(db.schema.organizationUser)
       .values({ userId: currentValues.userId, organizationId: org.id });
 
     if (currentValues.projectName) {
       [project] = await tx
-        .insert(schema.project)
+        .insert(db.schema.project)
         .values({
           name: currentValues.projectName,
           description: currentValues.projectDescription || null,
@@ -47,7 +46,7 @@ const create = async (c: Context<AppEnv>) => {
         .returning();
 
       await tx
-        .insert(schema.projectUser)
+        .insert(db.schema.projectUser)
         .values({ userId: currentValues.userId, projectId: project.id });
     }
 
@@ -65,15 +64,15 @@ const update = async (c: Context<AppEnv>) => {
     userId: c.get('user').id,
   });
 
-  const db = createDb(c);
+  const dbInstance = db.create(c);
 
-  const [org] = await db
-    .update(schema.organization)
+  const [org] = await dbInstance
+    .update(db.schema.organization)
     .set({ name: currentValues.name })
     .where(
       and(
-        eq(schema.organization.id, currentValues.id),
-        eq(schema.organization.ownerId, currentValues.userId)
+        eq(db.schema.organization.id, currentValues.id),
+        eq(db.schema.organization.ownerId, currentValues.userId)
       )
     )
     .returning();
@@ -87,12 +86,12 @@ const get = async (c: Context<AppEnv>) => {
     userId: c.get('user').id,
   });
 
-  const db = createDb(c);
+  const dbInstance = db.create(c);
 
-  const organization = await db.query.organization.findFirst({
+  const organization = await dbInstance.query.organization.findFirst({
     where: and(
-      eq(schema.organization.id, currentValues.id),
-      eq(schema.organization.ownerId, currentValues.userId)
+      eq(db.schema.organization.id, currentValues.id),
+      eq(db.schema.organization.ownerId, currentValues.userId)
     ),
     with: {
       projects: {
@@ -112,11 +111,11 @@ const list = async (c: Context<AppEnv>) => {
     userId: c.get('user').id,
   });
 
-  const db = createDb(c);
+  const dbInstance = db.create(c);
 
-  const organizations = await db.query.organization.findMany({
-    where: eq(schema.organization.ownerId, currentValues.userId),
-    orderBy: desc(schema.organization.id),
+  const organizations = await dbInstance.query.organization.findMany({
+    where: eq(db.schema.organization.ownerId, currentValues.userId),
+    orderBy: desc(db.schema.organization.id),
     with: {
       projects: {
         columns: {
@@ -136,14 +135,14 @@ const remove = async (c: Context<AppEnv>) => {
     userId: c.get('user').id,
   });
 
-  const db = createDb(c);
+  const dbInstance = db.create(c);
 
-  await db
-    .delete(schema.organization)
+  await dbInstance
+    .delete(db.schema.organization)
     .where(
       and(
-        eq(schema.organization.id, currentValues.id),
-        eq(schema.organization.ownerId, currentValues.userId)
+        eq(db.schema.organization.id, currentValues.id),
+        eq(db.schema.organization.ownerId, currentValues.userId)
       )
     );
 

@@ -15,10 +15,10 @@
     "clean": "rm -rf dist && rm -rf node_modules"
   },
   "dependencies": {
-    "typescript": "^5.9.3",
     "zod": "^3.22.3"
   },
   "devDependencies": {
-    "@anju/tsconfig": "*"
+    "@anju/tsconfig": "*",
+    "typescript": "^5.9.3"
   }
 }

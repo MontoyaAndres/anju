@@ -2,17 +2,16 @@ import { Context } from 'hono';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { betterAuth } from 'better-auth';
 import { v7 as uuid } from 'uuid';
-
-import { createDb, schema } from '../db';
+import { db } from '@anju/db';
 
 export const createAuth = (c: Context) => {
-  const db = createDb(c);
+  const dbInstance = db.create(c);
 
   return betterAuth({
     appName: 'anju',
-    database: drizzleAdapter(db, {
+    database: drizzleAdapter(dbInstance, {
       provider: 'pg',
-      schema,
+      schema: db.schema,
     }),
     baseURL: process.env.NEXT_PUBLIC_API_URL,
     basePath: '/auth',

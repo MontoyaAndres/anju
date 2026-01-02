@@ -1,5 +1,5 @@
 {
-  "name": "api",
+  "name": "mcp",
   "version": "0.0.1",
   "scripts": {
     "build": "node esbuild.config.mjs && tsc --emitDeclarationOnly",
@@ -12,7 +12,6 @@
   "dependencies": {
     "@anju/db": "*",
     "@anju/utils": "*",
-    "better-auth": "^1.4.1",
     "hono": "^4.10.6"
   },
   "devDependencies": {
