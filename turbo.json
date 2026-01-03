@@ -4,12 +4,14 @@
   "globalEnv": [
     "NODE_ENV",
     "SERVER_PORT",
+    "MCP_PORT",
     "DATABASE_URL",
     "JWT_SECRET",
     "GOOGLE_CLIENT_ID",
     "GOOGLE_CLIENT_SECRET",
     "NEXT_PUBLIC_API_URL",
-    "NEXT_PUBLIC_WEB_URL"
+    "NEXT_PUBLIC_WEB_URL",
+    "NEXT_PUBLIC_MCP_URL"
   ],
   "tasks": {
     "build": {

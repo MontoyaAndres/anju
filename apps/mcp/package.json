@@ -12,6 +12,8 @@
   "dependencies": {
     "@anju/db": "*",
     "@anju/utils": "*",
+    "@hono/mcp": "^0.2.3",
+    "@modelcontextprotocol/sdk": "^1.25.1",
     "hono": "^4.10.6"
   },
   "devDependencies": {

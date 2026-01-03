@@ -1,6 +1,8 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 
+import { MCPController } from './controllers';
+
 // types
 import type { AppEnv } from './types';
 
@@ -11,21 +13,26 @@ app
     '*',
     cors({
       origin: ['*'],
-      allowHeaders: ['Content-Type', 'User-Agent', 'Authorization'],
-      allowMethods: ['POST'],
+      allowHeaders: [
+        'Content-Type',
+        'User-Agent',
+        'Authorization',
+        'Accept',
+        'Mcp-Session-Id',
+      ],
+      allowMethods: ['GET', 'POST'],
     })
   )
 
-  // Organization controller
-  .get('/', () => {
-    return true;
-  });
+  // MCP controller
+  .post('/', MCPController.business)
+  .get('/health', MCPController.health);
 
 if (process.env.NODE_ENV === 'development') {
   import('@hono/node-server').then(({ serve }) => {
     serve({
       fetch: app.fetch,
-      port: Number(process.env.SERVER_PORT),
+      port: Number(process.env.MCP_PORT),
     });
   });
 }
