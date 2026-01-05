@@ -4,6 +4,7 @@ import {
   timestamp,
   json,
   index,
+  integer,
   primaryKey,
   boolean,
 } from 'drizzle-orm/pg-core';
@@ -105,8 +106,10 @@ export const organization = pgTable('organization', {
   ownerId: text('owner_id')
     .notNull()
     .references(() => user.id),
-  projectCount: text('project_count').notNull().default('0'),
-  organizationUserCount: text('organization_user_count').notNull().default('0'),
+  projectCount: integer('project_count').notNull().default(0),
+  organizationUserCount: integer('organization_user_count')
+    .notNull()
+    .default(0),
   createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { mode: 'date' })
     .notNull()
@@ -138,8 +141,8 @@ export const project = pgTable('project', {
     .primaryKey()
     .$defaultFn(() => uuid()),
   name: text('name').notNull(),
-  artifactCount: text('artifact_count').notNull().default('0'),
-  projectUserCount: text('project_user_count').notNull().default('0'),
+  artifactCount: integer('artifact_count').notNull().default(0),
+  projectUserCount: integer('project_user_count').notNull().default(0),
   description: text('description'),
   createdById: text('created_by_id')
     .notNull()
@@ -177,9 +180,11 @@ export const artifact = pgTable('artifact', {
   id: text('id')
     .primaryKey()
     .$defaultFn(() => uuid()),
-  name: text('name').notNull(),
-  artifactResourceCount: text('artifact_resource_count').notNull().default('0'),
-  artifactUserCount: text('artifact_user_count').notNull().default('0'),
+  hash: text('hash').notNull().unique(),
+  artifactPromptCount: integer('artifact_prompt_count').notNull().default(0),
+  artifactResourceCount: integer('artifact_resource_count')
+    .notNull()
+    .default(0),
   metadata: json('metadata'),
   projectId: text('project_id')
     .notNull()
@@ -191,11 +196,13 @@ export const artifact = pgTable('artifact', {
     .$onUpdate(() => new Date()),
 });
 
-export const artifactResource = pgTable('artifact_resource', {
+export const artifactPrompt = pgTable('artifact_prompt', {
   id: text('id')
     .primaryKey()
     .$defaultFn(() => uuid()),
-  type: text('type').notNull(),
+  title: text('title').notNull(),
+  description: text('description'),
+  schema: json('schema'),
   metadata: json('metadata'),
   artifactId: text('artifact_id')
     .notNull()
@@ -207,24 +214,26 @@ export const artifactResource = pgTable('artifact_resource', {
     .$onUpdate(() => new Date()),
 });
 
-export const artifactUser = pgTable(
-  'artifact_user',
-  {
-    role: text('role').notNull().default(utils.constants.USER_ROLE_ADMIN),
-    artifactId: text('artifact_id')
-      .notNull()
-      .references(() => artifact.id, { onDelete: 'cascade' }),
-    userId: text('user_id')
-      .notNull()
-      .references(() => user.id, { onDelete: 'cascade' }),
-    createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),
-    updatedAt: timestamp('updated_at', { mode: 'date' })
-      .notNull()
-      .defaultNow()
-      .$onUpdate(() => new Date()),
-  },
-  table => [primaryKey({ columns: [table.artifactId, table.userId] })]
-);
+export const artifactResource = pgTable('artifact_resource', {
+  id: text('id')
+    .primaryKey()
+    .$defaultFn(() => uuid()),
+  title: text('title').notNull(),
+  uri: text('uri').notNull(),
+  description: text('description'),
+  mimeType: text('mime_type').notNull(),
+  annotations: json('annotations'),
+  icons: json('icons'),
+  metadata: json('metadata'),
+  artifactId: text('artifact_id')
+    .notNull()
+    .references(() => artifact.id, { onDelete: 'cascade' }),
+  createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { mode: 'date' })
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+});
 
 export const userRelations = relations(user, ({ many }) => ({
   sessions: many(session),
@@ -233,7 +242,6 @@ export const userRelations = relations(user, ({ many }) => ({
   createdProjects: many(project),
   organizationUsers: many(organizationUser),
   projectUsers: many(projectUser),
-  artifactUsers: many(artifactUser),
 }));
 
 export const sessionRelations = relations(session, ({ one }) => ({
@@ -305,8 +313,15 @@ export const artifactRelations = relations(artifact, ({ one, many }) => ({
     fields: [artifact.projectId],
     references: [project.id],
   }),
+  artifactPrompts: many(artifactPrompt),
   artifactResources: many(artifactResource),
-  artifactUsers: many(artifactUser),
+}));
+
+export const artifactPromptRelations = relations(artifactPrompt, ({ one }) => ({
+  artifact: one(artifact, {
+    fields: [artifactPrompt.artifactId],
+    references: [artifact.id],
+  }),
 }));
 
 export const artifactResourceRelations = relations(
@@ -318,14 +333,3 @@ export const artifactResourceRelations = relations(
     }),
   })
 );
-
-export const artifactUserRelations = relations(artifactUser, ({ one }) => ({
-  artifact: one(artifact, {
-    fields: [artifactUser.artifactId],
-    references: [artifact.id],
-  }),
-  user: one(user, {
-    fields: [artifactUser.userId],
-    references: [user.id],
-  }),
-}));
