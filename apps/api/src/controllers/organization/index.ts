@@ -2,6 +2,7 @@ import { Context } from 'hono';
 import { eq, and, desc } from 'drizzle-orm';
 import { utils } from '@anju/utils';
 import { db } from '@anju/db';
+import { v7 as uuid } from 'uuid';
 
 // types
 import { AppEnv } from '../../types';
@@ -16,16 +17,13 @@ const create = async (c: Context<AppEnv>) => {
   const dbInstance = db.create(c);
 
   const result = await dbInstance.transaction(async tx => {
-    let project = null;
-    const projectCount = currentValues.projectName ? '1' : '0';
-
     const [org] = await tx
       .insert(db.schema.organization)
       .values({
         name: currentValues.name,
         ownerId: currentValues.userId,
-        organizationUserCount: '1',
-        projectCount,
+        organizationUserCount: 1,
+        projectCount: 1,
       })
       .returning();
 
@@ -33,22 +31,35 @@ const create = async (c: Context<AppEnv>) => {
       .insert(db.schema.organizationUser)
       .values({ userId: currentValues.userId, organizationId: org.id });
 
-    if (currentValues.projectName) {
-      [project] = await tx
-        .insert(db.schema.project)
-        .values({
-          name: currentValues.projectName,
-          description: currentValues.projectDescription || null,
-          createdById: currentValues.userId,
-          projectUserCount: '1',
-          organizationId: org.id,
-        })
-        .returning();
+    const [project] = await tx
+      .insert(db.schema.project)
+      .values({
+        name: currentValues.projectName,
+        description: currentValues.projectDescription || null,
+        createdById: currentValues.userId,
+        projectUserCount: 1,
+        organizationId: org.id,
+      })
+      .returning();
 
-      await tx
-        .insert(db.schema.projectUser)
-        .values({ userId: currentValues.userId, projectId: project.id });
-    }
+    await tx
+      .insert(db.schema.projectUser)
+      .values({ userId: currentValues.userId, projectId: project.id });
+
+    const artifactId = uuid();
+    const artifactHash = utils.hashObject({
+      organizationId: org.id,
+      projectId: project.id,
+      artifactId,
+    });
+
+    await tx.insert(db.schema.artifact).values({
+      id: artifactId,
+      hash: artifactHash,
+      artifactPromptCount: 0,
+      artifactResourceCount: 0,
+      projectId: project.id,
+    });
 
     return { organization: org, project };
   });

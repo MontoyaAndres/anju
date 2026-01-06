@@ -2,6 +2,7 @@ import { Context } from 'hono';
 import { and, eq, sql } from 'drizzle-orm';
 import { utils } from '@anju/utils';
 import { db } from '@anju/db';
+import { v7 as uuid } from 'uuid';
 
 // types
 import { AppEnv } from '../../types';
@@ -23,7 +24,7 @@ const create = async (c: Context<AppEnv>) => {
         name: currentValues.name,
         description: currentValues.description || null,
         createdById: currentValues.userId,
-        projectUserCount: '1',
+        projectUserCount: 1,
         organizationId: currentValues.organizationId,
       })
       .returning();
@@ -35,9 +36,25 @@ const create = async (c: Context<AppEnv>) => {
     await tx
       .update(db.schema.organization)
       .set({
-        projectCount: sql`(${db.schema.organization.projectCount}::int + 1)::text`,
+        projectCount: sql`(${db.schema.organization.projectCount}::int + 1)::int`,
       })
       .where(eq(db.schema.organization.id, currentValues.organizationId));
+
+    const artifactId = uuid();
+    const artifactHash = utils.hashObject({
+      organizationId: currentValues.organizationId,
+      projectId: project.id,
+      artifactId,
+    });
+
+    await tx.insert(db.schema.artifact).values({
+      id: artifactId,
+      hash: artifactHash,
+      artifactPromptCount: 0,
+      artifactResourceCount: 0,
+      projectId: project.id,
+    });
+
     return project;
   });
 
@@ -116,7 +133,7 @@ const remove = async (c: Context<AppEnv>) => {
     await tx
       .update(db.schema.organization)
       .set({
-        projectCount: sql`(${db.schema.organization.projectCount}::int - 1)::text`,
+        projectCount: sql`(${db.schema.organization.projectCount}::int - 1)::int`,
       })
       .where(eq(db.schema.organization.id, currentValues.organizationId));
   });
