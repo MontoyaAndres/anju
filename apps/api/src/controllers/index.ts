@@ -1,4 +1,5 @@
-import { OrganizationController } from './organization';
 import { ProjectController } from './project';
+import { ArtifactController } from './artifact';
+import { OrganizationController } from './organization';
 
-export { OrganizationController, ProjectController };
+export { ProjectController, ArtifactController, OrganizationController };

@@ -84,7 +84,7 @@ export const CreateOrganizationWrapper = styled.div`
     align-items: center;
     height: calc(100vh - 190px);
     padding: 0 20px;
-    margin-top: 60px;
+    margin: 60px 0;
 
     @media (min-width: ${theme.screens.md}) {
       padding: 0;

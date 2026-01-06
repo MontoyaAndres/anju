@@ -15,7 +15,7 @@
     "clean": "rm -rf dist && rm -rf node_modules"
   },
   "dependencies": {
-    "zod": "^3.22.3"
+    "zod": "^4.3.5"
   },
   "devDependencies": {
     "@anju/tsconfig": "*",
