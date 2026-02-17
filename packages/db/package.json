@@ -19,13 +19,13 @@
     "migrate-prod": "dotenv -e ../../.env.prod drizzle-kit migrate"
   },
   "dependencies": {
-    "drizzle-orm": "^0.44.7",
-    "postgres": "^3.4.7",
+    "drizzle-orm": "^0.45.1",
+    "postgres": "^3.4.8",
     "uuid": "^13.0.0"
   },
   "devDependencies": {
     "@anju/tsconfig": "*",
-    "drizzle-kit": "^0.31.7",
+    "drizzle-kit": "^0.31.9",
     "typescript": "^5.9.3"
   }
 }
