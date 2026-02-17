@@ -1,131 +1,147 @@
 import { Context } from 'hono';
-import {
-  McpServer,
-  ResourceTemplate,
-} from '@modelcontextprotocol/sdk/server/mcp.js';
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPTransport } from '@hono/mcp';
-import { z } from 'zod';
+import { utils } from '@anju/utils';
+import { db } from '@anju/db';
+import { eq } from 'drizzle-orm';
+import * as z from 'zod';
 
 // types
 import { AppEnv } from '../../types';
 
-const mcpServer = new McpServer({
-  name: 'my-mcp-server',
-  version: '0.0.1',
-});
-const transport = new StreamableHTTPTransport();
+type JsonSchemaProperty = {
+  type: 'string' | 'number' | 'boolean' | 'object' | 'array';
+  description?: string;
+  minimum?: number;
+  maximum?: number;
+  minLength?: number;
+  maxLength?: number;
+  pattern?: string;
+  enum?: string[];
+};
 
-mcpServer.registerTool(
-  'add',
-  {
-    title: 'Addition',
-    description: 'Add two numbers',
-    inputSchema: {
-      a: z.number(),
-      b: z.number(),
-    },
-    outputSchema: {
-      result: z.number(),
-    },
-  },
-  async ({ a, b }) => {
-    const output = { result: a + b };
+type JsonSchema = {
+  type: 'object';
+  properties?: Record<string, JsonSchemaProperty>;
+  required?: string[];
+};
 
-    return {
-      content: [{ type: 'text', text: JSON.stringify(output) }],
-      structuredContent: output,
-    };
+function jsonSchemaToZodObject(schema: JsonSchema): z.ZodObject<z.ZodRawShape> {
+  const properties = schema.properties ?? {};
+  const required = schema.required ?? [];
+
+  const shape: Record<string, z.ZodTypeAny> = {};
+
+  for (const [key, prop] of Object.entries(properties)) {
+    let field: z.ZodTypeAny;
+
+    switch (prop.type) {
+      case 'string': {
+        if (prop.enum) {
+          field = z.enum(prop.enum as [string, ...string[]]);
+        } else {
+          let str = z.string();
+          if (prop.minLength !== undefined) str = str.min(prop.minLength);
+          if (prop.maxLength !== undefined) str = str.max(prop.maxLength);
+          if (prop.pattern !== undefined)
+            str = str.regex(new RegExp(prop.pattern));
+          field = str;
+        }
+        break;
+      }
+      case 'number': {
+        let num = z.number();
+        if (prop.minimum !== undefined) num = num.min(prop.minimum);
+        if (prop.maximum !== undefined) num = num.max(prop.maximum);
+        field = num;
+        break;
+      }
+      case 'boolean':
+        field = z.boolean();
+        break;
+      case 'array':
+        field = z.array(z.any());
+        break;
+      case 'object':
+        field = z.record(z.string(), z.any());
+        break;
+      default:
+        field = z.any();
+    }
+
+    if (prop.description) {
+      field = field.describe(prop.description);
+    }
+
+    if (!required.includes(key)) {
+      field = field.optional();
+    }
+
+    shape[key] = field;
   }
-);
 
-mcpServer.registerResource(
-  'config',
-  'config://app/settings',
-  {
-    description: 'Application configuration settings',
-    mimeType: 'application/json',
-  },
-  async () => {
-    const config = {
-      appName: 'Anju',
-      version: '0.0.1',
-      environment: process.env.NODE_ENV || 'development',
-      features: {
-        darkMode: true,
-        notifications: true,
-      },
-    };
-
-    return {
-      contents: [
-        {
-          uri: 'config://app/settings',
-          mimeType: 'application/json',
-          text: JSON.stringify(config, null, 2),
-        },
-      ],
-    };
-  }
-);
-
-mcpServer.registerResource(
-  'user',
-  new ResourceTemplate('users://{userId}/profile', { list: undefined }),
-  {
-    description: 'Get user profile by ID',
-    mimeType: 'application/json',
-  },
-  async (uri, { userId }) => {
-    const user = {
-      id: userId,
-      name: `User ${userId}`,
-      email: `user${userId}@example.com`,
-      createdAt: new Date().toISOString(),
-    };
-
-    return {
-      contents: [
-        {
-          uri: uri.href,
-          mimeType: 'application/json',
-          text: JSON.stringify(user, null, 2),
-        },
-      ],
-    };
-  }
-);
-
-mcpServer.registerPrompt(
-  'greeting',
-  {
-    title: 'Greeting Generator',
-    description: 'Generate a personalized greeting',
-    argsSchema: {
-      name: z.string().describe('Name of the person to greet'),
-      style: z
-        .enum(['formal', 'casual'])
-        .optional()
-        .describe('Style of greeting'),
-    },
-  },
-  async ({ name, style }) => {
-    const greeting =
-      style === 'formal'
-        ? `Good day, ${name}. It is a pleasure to meet you.`
-        : `Hey ${name}! What's up?`;
-
-    return {
-      messages: [
-        {
-          role: 'user',
-          content: { type: 'text', text: greeting },
-        },
-      ],
-    };
-  }
-);
+  return z.object(shape);
+}
 
 const business = async (c: Context<AppEnv>) => {
+  const query = c.req.query();
+
+  const currentValues = await utils.Schema.BUSINESS_QUERY.parseAsync({
+    hash: query.hash,
+  });
+
+  const dbInstance = db.create(c);
+
+  const artifact = await dbInstance.query.artifact.findFirst({
+    where: eq(db.schema.artifact.hash, currentValues.hash),
+    with: {
+      artifactPrompts: true,
+      artifactResources: true,
+      project: true,
+    },
+  });
+
+  if (!artifact) {
+    throw new Error('MCP Server not found');
+  }
+
+  const mcpServer = new McpServer({
+    name: artifact.project.name || 'MCP Server',
+    description: artifact.project.description || 'MCP Server Description',
+    version: '0.0.1',
+  });
+
+  const transport = new StreamableHTTPTransport();
+
+  for (const prompt of artifact.artifactPrompts) {
+    const schema = jsonSchemaToZodObject(prompt.schema as JsonSchema);
+
+    mcpServer.registerPrompt(
+      prompt.id,
+      {
+        title: prompt.title,
+        description: prompt.description || undefined,
+        argsSchema: schema as any,
+      },
+      async (args: any, extra: any) => {
+        const { name, style } = args;
+        const greeting =
+          style === 'formal'
+            ? `Good day, ${name}. It is a pleasure to meet you.`
+            : `Hey ${name}! What's up?`;
+
+        return {
+          messages: [
+            {
+              role: 'user' as 'user',
+              content: { type: 'text', text: greeting },
+            },
+          ],
+        };
+      }
+    );
+  }
+
   if (!mcpServer.isConnected()) {
     await mcpServer.connect(transport);
   }

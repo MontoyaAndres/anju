@@ -20,7 +20,3 @@ export const errorHandler: ErrorHandler = (error: Error, c: Context) => {
   // TODO: Save error and return a reference id
   return c.json({ id: uuid(), error: 'Internal Server Error' }, 500);
 };
-
-export const ErrorMiddleware = {
-  errorHandler,
-};

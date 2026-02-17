@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
+import { utils } from '@anju/utils';
 
 import { MCPController } from './controllers';
 
@@ -23,6 +24,7 @@ app
       allowMethods: ['GET', 'POST'],
     })
   )
+  .onError(utils.errorHandler)
 
   // MCP controller
   .post('/', MCPController.business)

@@ -1,5 +1,18 @@
 import { z } from 'zod';
 
+const SCHEMA_DEFINITION = z.object({
+  type: z.enum(['string', 'number', 'boolean', 'object', 'array']),
+  properties: z.record(z.string(), z.any()).optional(),
+  required: z.array(z.string()).optional(),
+  items: z.any().optional(),
+  minimum: z.number().optional(),
+  maximum: z.number().optional(),
+  minLength: z.number().optional(),
+  maxLength: z.number().optional(),
+  pattern: z.string().optional(),
+  enum: z.array(z.any()).optional(),
+});
+
 const ORGANIZATION_CREATE = z.object({
   userId: z.uuid(),
   name: z.string().min(3).max(100),
@@ -52,7 +65,7 @@ const PROJECT_GET = z.object({
 const ARTIFACT_CREATE_PROMPT = z.object({
   title: z.string().min(3).max(200),
   description: z.string().max(1000).optional(),
-  schema: z.looseObject({}),
+  schema: SCHEMA_DEFINITION,
   projectId: z.uuid(),
   userId: z.uuid(),
   organizationId: z.uuid(),
@@ -63,6 +76,10 @@ const ARTIFACT_REMOVE_PROMPT = z.object({
   projectId: z.uuid(),
   userId: z.uuid(),
   organizationId: z.uuid(),
+});
+
+const BUSINESS_QUERY = z.object({
+  hash: z.string().length(8).min(8).max(8),
 });
 
 export const Schema = {
@@ -76,4 +93,5 @@ export const Schema = {
   PROJECT_GET,
   ARTIFACT_CREATE_PROMPT,
   ARTIFACT_REMOVE_PROMPT,
+  BUSINESS_QUERY,
 };

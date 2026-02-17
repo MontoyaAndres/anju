@@ -1,8 +1,13 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
+import { utils } from '@anju/utils';
 
-import { OrganizationController, ProjectController } from './controllers';
-import { ErrorMiddleware, UserMiddleware } from './middleware';
+import {
+  ArtifactController,
+  OrganizationController,
+  ProjectController,
+} from './controllers';
+import { UserMiddleware } from './middleware';
 import { createAuth } from './utils';
 
 // types
@@ -20,7 +25,7 @@ app
       allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     })
   )
-  .onError(ErrorMiddleware.errorHandler)
+  .onError(utils.errorHandler)
 
   // Auth controller
   .on(['GET', 'POST'], '/auth/*', c => {
@@ -71,6 +76,23 @@ app
     '/organization/:organizationId/project/:projectId',
     UserMiddleware.verify,
     ProjectController.remove
+  )
+
+  // Artifact controller
+  .post(
+    '/organization/:organizationId/project/:projectId/artifact/prompt',
+    UserMiddleware.verify,
+    ArtifactController.createPrompt
+  )
+  .put(
+    '/organization/:organizationId/project/:projectId/artifact/prompt/:promptId',
+    UserMiddleware.verify,
+    ArtifactController.updatePrompt
+  )
+  .delete(
+    '/organization/:organizationId/project/:projectId/artifact/prompt/:promptId',
+    UserMiddleware.verify,
+    ArtifactController.removePrompt
   );
 
 if (process.env.NODE_ENV === 'development') {
