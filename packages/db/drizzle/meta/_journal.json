@@ -57,6 +57,34 @@
       "when": 1767655838818,
       "tag": "0007_parallel_king_cobra",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1771688344234,
+      "tag": "0008_medical_franklin_richards",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1771688471367,
+      "tag": "0009_icy_doctor_spectrum",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1771704585105,
+      "tag": "0010_wise_devos",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1771704600000,
+      "tag": "0011_fix_messages_to_json",
+      "breakpoints": true
     }
   ]
 }

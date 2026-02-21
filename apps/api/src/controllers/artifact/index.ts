@@ -12,7 +12,7 @@ const createPrompt = async (c: Context<AppEnv>) => {
     ...body,
     projectId: c.req.param('projectId'),
     userId: c.get('user').id,
-    organizationId: c.req.param('organizationId'),
+    organizationId: c.req.param('organizationId')
   });
 
   const dbInstance = db.create(c);
@@ -48,15 +48,16 @@ const createPrompt = async (c: Context<AppEnv>) => {
       .values({
         title: currentValues.title,
         description: currentValues.description || null,
+        messages: currentValues.messages,
         schema: currentValues.schema,
-        artifactId: currentArtifactByProject.id,
+        artifactId: currentArtifactByProject.id
       })
       .returning();
 
     await tx
       .update(db.schema.artifact)
       .set({
-        artifactPromptCount: sql`(${db.schema.artifact.artifactPromptCount}::int + 1)::int`,
+        artifactPromptCount: sql`(${db.schema.artifact.artifactPromptCount}::int + 1)::int`
       })
       .where(eq(db.schema.artifact.id, currentArtifactByProject.id));
 
@@ -72,7 +73,7 @@ const updatePrompt = async (c: Context<AppEnv>) => {
     ...body,
     projectId: c.req.param('projectId'),
     userId: c.get('user').id,
-    organizationId: c.req.param('organizationId'),
+    organizationId: c.req.param('organizationId')
   });
 
   const dbInstance = db.create(c);
@@ -108,7 +109,8 @@ const updatePrompt = async (c: Context<AppEnv>) => {
       .set({
         title: currentValues.title,
         description: currentValues.description || null,
-        schema: currentValues.schema,
+        messages: currentValues.messages,
+        schema: currentValues.schema
       })
       .where(
         and(
@@ -124,13 +126,11 @@ const updatePrompt = async (c: Context<AppEnv>) => {
 };
 
 const removePrompt = async (c: Context<AppEnv>) => {
-  const body = await c.req.json();
   const currentValues = await utils.Schema.ARTIFACT_REMOVE_PROMPT.parseAsync({
-    ...body,
     projectId: c.req.param('projectId'),
     userId: c.get('user').id,
     organizationId: c.req.param('organizationId'),
-    promptId: c.req.param('promptId'),
+    promptId: c.req.param('promptId')
   });
 
   const dbInstance = db.create(c);
@@ -178,7 +178,7 @@ const removePrompt = async (c: Context<AppEnv>) => {
     await tx
       .update(db.schema.artifact)
       .set({
-        artifactPromptCount: sql`(${db.schema.artifact.artifactPromptCount}::int - 1)::int`,
+        artifactPromptCount: sql`(${db.schema.artifact.artifactPromptCount}::int - 1)::int`
       })
       .where(eq(db.schema.artifact.id, currentArtifactByProject.id));
   });
@@ -189,5 +189,5 @@ const removePrompt = async (c: Context<AppEnv>) => {
 export const ArtifactController = {
   createPrompt,
   updatePrompt,
-  removePrompt,
+  removePrompt
 };

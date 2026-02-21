@@ -6,7 +6,7 @@ import {
   index,
   integer,
   primaryKey,
-  boolean,
+  boolean
 } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 import { v7 as uuid } from 'uuid';
@@ -26,7 +26,7 @@ export const user = pgTable(
     updatedAt: timestamp('updated_at', { mode: 'date' })
       .notNull()
       .defaultNow()
-      .$onUpdate(() => new Date()),
+      .$onUpdate(() => new Date())
   },
   table => [index('user_email_idx').on(table.email)]
 );
@@ -48,7 +48,7 @@ export const session = pgTable(
     updatedAt: timestamp('updated_at', { mode: 'date' })
       .notNull()
       .defaultNow()
-      .$onUpdate(() => new Date()),
+      .$onUpdate(() => new Date())
   },
   table => [index('session_userId_idx').on(table.userId)]
 );
@@ -75,7 +75,7 @@ export const account = pgTable(
     updatedAt: timestamp('updated_at', { mode: 'date' })
       .notNull()
       .defaultNow()
-      .$onUpdate(() => new Date()),
+      .$onUpdate(() => new Date())
   },
   table => [index('account_userId_idx').on(table.userId)]
 );
@@ -93,7 +93,7 @@ export const verification = pgTable(
     updatedAt: timestamp('updated_at', { mode: 'date' })
       .notNull()
       .defaultNow()
-      .$onUpdate(() => new Date()),
+      .$onUpdate(() => new Date())
   },
   table => [index('verification_identifier_idx').on(table.identifier)]
 );
@@ -114,7 +114,7 @@ export const organization = pgTable('organization', {
   updatedAt: timestamp('updated_at', { mode: 'date' })
     .notNull()
     .defaultNow()
-    .$onUpdate(() => new Date()),
+    .$onUpdate(() => new Date())
 });
 
 export const organizationUser = pgTable(
@@ -131,7 +131,7 @@ export const organizationUser = pgTable(
     updatedAt: timestamp('updated_at', { mode: 'date' })
       .notNull()
       .defaultNow()
-      .$onUpdate(() => new Date()),
+      .$onUpdate(() => new Date())
   },
   table => [primaryKey({ columns: [table.userId, table.organizationId] })]
 );
@@ -154,7 +154,7 @@ export const project = pgTable('project', {
   updatedAt: timestamp('updated_at', { mode: 'date' })
     .notNull()
     .defaultNow()
-    .$onUpdate(() => new Date()),
+    .$onUpdate(() => new Date())
 });
 
 export const projectUser = pgTable(
@@ -171,7 +171,7 @@ export const projectUser = pgTable(
     updatedAt: timestamp('updated_at', { mode: 'date' })
       .notNull()
       .defaultNow()
-      .$onUpdate(() => new Date()),
+      .$onUpdate(() => new Date())
   },
   table => [primaryKey({ columns: [table.projectId, table.userId] })]
 );
@@ -193,7 +193,7 @@ export const artifact = pgTable('artifact', {
   updatedAt: timestamp('updated_at', { mode: 'date' })
     .notNull()
     .defaultNow()
-    .$onUpdate(() => new Date()),
+    .$onUpdate(() => new Date())
 });
 
 export const artifactPrompt = pgTable('artifact_prompt', {
@@ -202,6 +202,7 @@ export const artifactPrompt = pgTable('artifact_prompt', {
     .$defaultFn(() => uuid()),
   title: text('title').notNull(),
   description: text('description'),
+  messages: json('messages').notNull().default([]),
   schema: json('schema'),
   metadata: json('metadata'),
   artifactId: text('artifact_id')
@@ -211,7 +212,7 @@ export const artifactPrompt = pgTable('artifact_prompt', {
   updatedAt: timestamp('updated_at', { mode: 'date' })
     .notNull()
     .defaultNow()
-    .$onUpdate(() => new Date()),
+    .$onUpdate(() => new Date())
 });
 
 export const artifactResource = pgTable('artifact_resource', {
@@ -232,7 +233,7 @@ export const artifactResource = pgTable('artifact_resource', {
   updatedAt: timestamp('updated_at', { mode: 'date' })
     .notNull()
     .defaultNow()
-    .$onUpdate(() => new Date()),
+    .$onUpdate(() => new Date())
 });
 
 export const userRelations = relations(user, ({ many }) => ({
@@ -241,21 +242,21 @@ export const userRelations = relations(user, ({ many }) => ({
   ownedOrganizations: many(organization),
   createdProjects: many(project),
   organizationUsers: many(organizationUser),
-  projectUsers: many(projectUser),
+  projectUsers: many(projectUser)
 }));
 
 export const sessionRelations = relations(session, ({ one }) => ({
   user: one(user, {
     fields: [session.userId],
-    references: [user.id],
-  }),
+    references: [user.id]
+  })
 }));
 
 export const accountRelations = relations(account, ({ one }) => ({
   user: one(user, {
     fields: [account.userId],
-    references: [user.id],
-  }),
+    references: [user.id]
+  })
 }));
 
 export const organizationRelations = relations(
@@ -263,10 +264,10 @@ export const organizationRelations = relations(
   ({ one, many }) => ({
     owner: one(user, {
       fields: [organization.ownerId],
-      references: [user.id],
+      references: [user.id]
     }),
     projects: many(project),
-    organizationUsers: many(organizationUser),
+    organizationUsers: many(organizationUser)
   })
 );
 
@@ -275,53 +276,53 @@ export const organizationUserRelations = relations(
   ({ one }) => ({
     user: one(user, {
       fields: [organizationUser.userId],
-      references: [user.id],
+      references: [user.id]
     }),
     organization: one(organization, {
       fields: [organizationUser.organizationId],
-      references: [organization.id],
-    }),
+      references: [organization.id]
+    })
   })
 );
 
 export const projectRelations = relations(project, ({ one, many }) => ({
   createdBy: one(user, {
     fields: [project.createdById],
-    references: [user.id],
+    references: [user.id]
   }),
   organization: one(organization, {
     fields: [project.organizationId],
-    references: [organization.id],
+    references: [organization.id]
   }),
   artifacts: many(artifact),
-  projectUsers: many(projectUser),
+  projectUsers: many(projectUser)
 }));
 
 export const projectUserRelations = relations(projectUser, ({ one }) => ({
   project: one(project, {
     fields: [projectUser.projectId],
-    references: [project.id],
+    references: [project.id]
   }),
   user: one(user, {
     fields: [projectUser.userId],
-    references: [user.id],
-  }),
+    references: [user.id]
+  })
 }));
 
 export const artifactRelations = relations(artifact, ({ one, many }) => ({
   project: one(project, {
     fields: [artifact.projectId],
-    references: [project.id],
+    references: [project.id]
   }),
   artifactPrompts: many(artifactPrompt),
-  artifactResources: many(artifactResource),
+  artifactResources: many(artifactResource)
 }));
 
 export const artifactPromptRelations = relations(artifactPrompt, ({ one }) => ({
   artifact: one(artifact, {
     fields: [artifactPrompt.artifactId],
-    references: [artifact.id],
-  }),
+    references: [artifact.id]
+  })
 }));
 
 export const artifactResourceRelations = relations(
@@ -329,7 +330,7 @@ export const artifactResourceRelations = relations(
   ({ one }) => ({
     artifact: one(artifact, {
       fields: [artifactResource.artifactId],
-      references: [artifact.id],
-    }),
+      references: [artifact.id]
+    })
   })
 );

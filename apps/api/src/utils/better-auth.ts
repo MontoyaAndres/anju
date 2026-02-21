@@ -11,7 +11,7 @@ export const createAuth = (c: Context) => {
     appName: 'anju',
     database: drizzleAdapter(dbInstance, {
       provider: 'pg',
-      schema: db.schema,
+      schema: db.schema
     }),
     baseURL: process.env.NEXT_PUBLIC_API_URL,
     basePath: '/auth',
@@ -19,16 +19,16 @@ export const createAuth = (c: Context) => {
     socialProviders: {
       google: {
         clientId: process.env.GOOGLE_CLIENT_ID!,
-        clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-      },
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET!
+      }
     },
     trustedOrigins: [
       process.env.NEXT_PUBLIC_WEB_URL!,
-      process.env.NEXT_PUBLIC_API_URL!,
+      process.env.NEXT_PUBLIC_API_URL!
     ],
     account: {
       storeStateStrategy: 'database',
-      skipStateCookieCheck: true,
+      skipStateCookieCheck: true
     },
     advanced: {
       crossSubDomainCookies:
@@ -36,10 +36,10 @@ export const createAuth = (c: Context) => {
           ? { enabled: true, domain: '.anju.ai' }
           : { enabled: false },
       database: {
-        generateId: () => uuid(),
+        generateId: () => uuid()
       },
-      useSecureCookies: process.env.NODE_ENV === 'production',
-    },
+      useSecureCookies: process.env.NODE_ENV === 'production'
+    }
   });
 };
 

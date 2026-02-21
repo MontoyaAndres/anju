@@ -1,7 +1,7 @@
 {
   "extends": "@anju/tsconfig/base.json",
   "compilerOptions": {
-    "lib": ["ES2015", "dom"],
+    "lib": ["ES2021", "dom"],
     "outDir": "./dist",
     "rootDir": "./src",
     "resolveJsonModule": true,

@@ -12,7 +12,7 @@ export const verify = async (c: Context<AppEnv>, next: Next) => {
   const auth = createAuth(c);
 
   const session = await auth.api.getSession({
-    headers: c.req.raw.headers,
+    headers: c.req.raw.headers
   });
 
   if (!session) {
@@ -67,5 +67,5 @@ export const verify = async (c: Context<AppEnv>, next: Next) => {
 };
 
 export const UserMiddleware = {
-  verify,
+  verify
 };

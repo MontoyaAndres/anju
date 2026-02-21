@@ -1,0 +1,1 @@
+ALTER TABLE "artifact_prompt" ALTER COLUMN "template" SET DEFAULT '';

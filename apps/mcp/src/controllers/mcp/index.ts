@@ -26,7 +26,9 @@ type JsonSchema = {
   required?: string[];
 };
 
-function jsonSchemaToZodObject(schema: JsonSchema): z.ZodObject<z.ZodRawShape> {
+const jsonSchemaToZodShape = (
+  schema: JsonSchema
+): Record<string, z.ZodTypeAny> => {
   const properties = schema.properties ?? {};
   const required = schema.required ?? [];
 
@@ -80,14 +82,14 @@ function jsonSchemaToZodObject(schema: JsonSchema): z.ZodObject<z.ZodRawShape> {
     shape[key] = field;
   }
 
-  return z.object(shape);
-}
+  return shape;
+};
 
 const business = async (c: Context<AppEnv>) => {
   const query = c.req.query();
 
   const currentValues = await utils.Schema.BUSINESS_QUERY.parseAsync({
-    hash: query.hash,
+    hash: query.hash
   });
 
   const dbInstance = db.create(c);
@@ -97,8 +99,8 @@ const business = async (c: Context<AppEnv>) => {
     with: {
       artifactPrompts: true,
       artifactResources: true,
-      project: true,
-    },
+      project: true
+    }
   });
 
   if (!artifact) {
@@ -108,35 +110,40 @@ const business = async (c: Context<AppEnv>) => {
   const mcpServer = new McpServer({
     name: artifact.project.name || 'MCP Server',
     description: artifact.project.description || 'MCP Server Description',
-    version: '0.0.1',
+    version: '0.0.1'
   });
 
   const transport = new StreamableHTTPTransport();
 
   for (const prompt of artifact.artifactPrompts) {
-    const schema = jsonSchemaToZodObject(prompt.schema as JsonSchema);
+    const schema = jsonSchemaToZodShape(prompt.schema as JsonSchema);
 
     mcpServer.registerPrompt(
       prompt.id,
       {
         title: prompt.title,
         description: prompt.description || undefined,
-        argsSchema: schema as any,
+        argsSchema: schema as any
       },
-      async (args: any, extra: any) => {
-        const { name, style } = args;
-        const greeting =
-          style === 'formal'
-            ? `Good day, ${name}. It is a pleasure to meet you.`
-            : `Hey ${name}! What's up?`;
+      async (args: any) => {
+        const promptMessages = (prompt.messages || []) as Array<{
+          role: 'user' | 'assistant';
+          content: string;
+        }>;
 
         return {
-          messages: [
-            {
-              role: 'user' as 'user',
-              content: { type: 'text', text: greeting },
-            },
-          ],
+          messages: promptMessages.map(msg => {
+            let text = msg.content;
+
+            for (const [key, value] of Object.entries(args)) {
+              text = text.replaceAll(`{{${key}}}`, value ? String(value) : '');
+            }
+
+            return {
+              role: msg.role,
+              content: { type: 'text' as const, text }
+            };
+          })
         };
       }
     );
@@ -155,5 +162,5 @@ const health = async (c: Context<AppEnv>) => {
 
 export const MCPController = {
   business,
-  health,
+  health
 };
