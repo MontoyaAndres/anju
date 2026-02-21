@@ -79,6 +79,11 @@ app
   )
 
   // Artifact controller
+  .get(
+    '/organization/:organizationId/project/:projectId/artifact/prompt',
+    UserMiddleware.verify,
+    ArtifactController.listPrompts
+  )
   .post(
     '/organization/:organizationId/project/:projectId/artifact/prompt',
     UserMiddleware.verify,

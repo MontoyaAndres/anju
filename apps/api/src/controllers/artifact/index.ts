@@ -15,6 +15,8 @@ const createPrompt = async (c: Context<AppEnv>) => {
     organizationId: c.req.param('organizationId')
   });
 
+  utils.validateMessageVariables(currentValues.messages, currentValues.schema);
+
   const dbInstance = db.create(c);
 
   const result = await dbInstance.transaction(async tx => {
@@ -69,12 +71,15 @@ const createPrompt = async (c: Context<AppEnv>) => {
 
 const updatePrompt = async (c: Context<AppEnv>) => {
   const body = await c.req.json();
-  const currentValues = await utils.Schema.ARTIFACT_CREATE_PROMPT.parseAsync({
+  const currentValues = await utils.Schema.ARTIFACT_UPDATE_PROMPT.parseAsync({
     ...body,
+    promptId: c.req.param('promptId'),
     projectId: c.req.param('projectId'),
     userId: c.get('user').id,
     organizationId: c.req.param('organizationId')
   });
+
+  utils.validateMessageVariables(currentValues.messages, currentValues.schema);
 
   const dbInstance = db.create(c);
 
@@ -114,15 +119,43 @@ const updatePrompt = async (c: Context<AppEnv>) => {
       })
       .where(
         and(
+          eq(db.schema.artifactPrompt.id, currentValues.promptId),
           eq(db.schema.artifactPrompt.artifactId, currentArtifactByProject.id)
         )
       )
       .returning();
 
+    if (!artifactPrompt[0]) {
+      throw new Error('Prompt not found');
+    }
+
     return artifactPrompt[0];
   });
 
   return c.json(result);
+};
+
+const listPrompts = async (c: Context<AppEnv>) => {
+  const currentValues = await utils.Schema.ARTIFACT_GET_PROMPT.parseAsync({
+    projectId: c.req.param('projectId'),
+    userId: c.get('user').id,
+    organizationId: c.req.param('organizationId')
+  });
+
+  const dbInstance = db.create(c);
+
+  const artifact = await dbInstance.query.artifact.findFirst({
+    where: eq(db.schema.artifact.projectId, currentValues.projectId),
+    with: {
+      artifactPrompts: true
+    }
+  });
+
+  if (!artifact) {
+    throw new Error('Artifact not found for the project');
+  }
+
+  return c.json(artifact.artifactPrompts);
 };
 
 const removePrompt = async (c: Context<AppEnv>) => {
@@ -189,5 +222,6 @@ const removePrompt = async (c: Context<AppEnv>) => {
 export const ArtifactController = {
   createPrompt,
   updatePrompt,
-  removePrompt
+  removePrompt,
+  listPrompts
 };

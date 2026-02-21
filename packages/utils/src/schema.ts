@@ -81,8 +81,32 @@ const ARTIFACT_CREATE_PROMPT = z.object({
   organizationId: z.uuid()
 });
 
+const ARTIFACT_UPDATE_PROMPT = z.object({
+  promptId: z.uuid(),
+  title: z.string().min(3).max(200),
+  description: z.string().max(1000).optional(),
+  messages: z
+    .array(
+      z.object({
+        role: z.enum(constants.ROLE_MESSAGES),
+        content: z.string()
+      })
+    )
+    .min(1),
+  schema: SCHEMA_DEFINITION,
+  projectId: z.uuid(),
+  userId: z.uuid(),
+  organizationId: z.uuid()
+});
+
 const ARTIFACT_REMOVE_PROMPT = z.object({
   promptId: z.uuid(),
+  projectId: z.uuid(),
+  userId: z.uuid(),
+  organizationId: z.uuid()
+});
+
+const ARTIFACT_GET_PROMPT = z.object({
   projectId: z.uuid(),
   userId: z.uuid(),
   organizationId: z.uuid()
@@ -102,6 +126,8 @@ export const Schema = {
   PROJECT_UPDATE,
   PROJECT_GET,
   ARTIFACT_CREATE_PROMPT,
+  ARTIFACT_UPDATE_PROMPT,
+  ARTIFACT_GET_PROMPT,
   ARTIFACT_REMOVE_PROMPT,
   BUSINESS_QUERY
 };
