@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { constants } from './constants';
 
 const SCHEMA_DEFINITION = z.object({
-  type: z.enum(['string', 'number', 'boolean', 'object', 'array']),
+  type: z.enum(constants.SCHEMA_DEFINITION_TYPES),
   properties: z.record(z.string(), z.any()).optional(),
   required: z.array(z.string()).optional(),
   items: z.any().optional(),
@@ -112,6 +112,93 @@ const ARTIFACT_GET_PROMPT = z.object({
   organizationId: z.uuid()
 });
 
+const ARTIFACT_CREATE_RESOURCE = z.object({
+  title: z.string().min(3).max(200),
+  uri: z.string(),
+  type: z
+    .enum(constants.RESOURCE_TYPES)
+    .default(constants.RESOURCE_TYPE_STATIC),
+  description: z.string().max(1000).optional(),
+  mimeType: z.string().min(1).max(200),
+  content: z.string().optional(),
+  fileKey: z.string().optional(),
+  annotations: z
+    .object({
+      audience: z.array(z.enum(constants.ROLE_MESSAGES)).optional(),
+      priority: z.number().min(0).max(1).optional(),
+      lastModified: z.string().datetime().optional()
+    })
+    .optional(),
+  icons: z
+    .array(
+      z.object({
+        src: z.string(),
+        mimeType: z.string().optional(),
+        sizes: z.array(z.string()).optional(),
+        theme: z.enum(constants.RESOURCE_ICON_THEMES).optional()
+      })
+    )
+    .optional(),
+  metadata: z.record(z.string(), z.any()).optional(),
+  projectId: z.uuid(),
+  userId: z.uuid(),
+  organizationId: z.uuid()
+});
+
+const ARTIFACT_UPDATE_RESOURCE = z.object({
+  resourceId: z.uuid(),
+  title: z.string().min(3).max(200),
+  uri: z.string(),
+  type: z
+    .enum(constants.RESOURCE_TYPES)
+    .default(constants.RESOURCE_TYPE_STATIC),
+  description: z.string().max(1000).optional(),
+  mimeType: z.string().min(1).max(200),
+  content: z.string().optional(),
+  fileKey: z.string().optional(),
+  annotations: z
+    .object({
+      audience: z.array(z.enum(constants.ROLE_MESSAGES)).optional(),
+      priority: z.number().min(0).max(1).optional(),
+      lastModified: z.string().datetime().optional()
+    })
+    .optional(),
+  icons: z
+    .array(
+      z.object({
+        src: z.string(),
+        mimeType: z.string().optional(),
+        sizes: z.array(z.string()).optional(),
+        theme: z.enum(constants.RESOURCE_ICON_THEMES).optional()
+      })
+    )
+    .optional(),
+  metadata: z.record(z.string(), z.any()).optional(),
+  projectId: z.uuid(),
+  userId: z.uuid(),
+  organizationId: z.uuid()
+});
+
+const ARTIFACT_GET_RESOURCE = z.object({
+  projectId: z.uuid(),
+  userId: z.uuid(),
+  organizationId: z.uuid()
+});
+
+const ARTIFACT_REMOVE_RESOURCE = z.object({
+  resourceId: z.uuid(),
+  projectId: z.uuid(),
+  userId: z.uuid(),
+  organizationId: z.uuid()
+});
+
+const ARTIFACT_UPLOAD_RESOURCE_FILE = z.object({
+  resourceId: z.uuid(),
+  projectId: z.uuid(),
+  userId: z.uuid(),
+  organizationId: z.uuid()
+});
+
 const BUSINESS_QUERY = z.object({
   hash: z.string().length(8).min(8).max(8)
 });
@@ -129,5 +216,10 @@ export const Schema = {
   ARTIFACT_UPDATE_PROMPT,
   ARTIFACT_GET_PROMPT,
   ARTIFACT_REMOVE_PROMPT,
+  ARTIFACT_CREATE_RESOURCE,
+  ARTIFACT_UPDATE_RESOURCE,
+  ARTIFACT_GET_RESOURCE,
+  ARTIFACT_REMOVE_RESOURCE,
+  ARTIFACT_UPLOAD_RESOURCE_FILE,
   BUSINESS_QUERY
 };

@@ -1,0 +1,1 @@
+ALTER TABLE "artifact_resource" ADD COLUMN "type" text DEFAULT 'static' NOT NULL;

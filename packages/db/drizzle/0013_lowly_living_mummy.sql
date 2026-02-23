@@ -1,0 +1,1 @@
+ALTER TABLE "artifact_resource" ADD COLUMN "file_url" text;

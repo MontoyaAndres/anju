@@ -1,0 +1,1 @@
+ALTER TABLE "artifact_resource" ADD COLUMN "content" text;

@@ -1,0 +1,1 @@
+ALTER TABLE "artifact_resource" RENAME COLUMN "file_url" TO "file_key";

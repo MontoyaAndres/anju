@@ -5,7 +5,7 @@ import { utils } from '@anju/utils';
 import {
   ArtifactController,
   OrganizationController,
-  ProjectController,
+  ProjectController
 } from './controllers';
 import { UserMiddleware } from './middleware';
 import { createAuth } from './utils';
@@ -22,7 +22,7 @@ app
       origin: [process.env.NEXT_PUBLIC_WEB_URL!],
       credentials: true,
       allowHeaders: ['Content-Type', 'User-Agent'],
-      allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+      allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
     })
   )
   .onError(utils.errorHandler)
@@ -78,7 +78,7 @@ app
     ProjectController.remove
   )
 
-  // Artifact controller
+  // Artifact Prompt controller
   .get(
     '/organization/:organizationId/project/:projectId/artifact/prompt',
     UserMiddleware.verify,
@@ -98,13 +98,40 @@ app
     '/organization/:organizationId/project/:projectId/artifact/prompt/:promptId',
     UserMiddleware.verify,
     ArtifactController.removePrompt
+  )
+
+  // Artifact Resource controller
+  .get(
+    '/organization/:organizationId/project/:projectId/artifact/resource',
+    UserMiddleware.verify,
+    ArtifactController.listResources
+  )
+  .post(
+    '/organization/:organizationId/project/:projectId/artifact/resource',
+    UserMiddleware.verify,
+    ArtifactController.createResource
+  )
+  .put(
+    '/organization/:organizationId/project/:projectId/artifact/resource/:resourceId',
+    UserMiddleware.verify,
+    ArtifactController.updateResource
+  )
+  .delete(
+    '/organization/:organizationId/project/:projectId/artifact/resource/:resourceId',
+    UserMiddleware.verify,
+    ArtifactController.removeResource
+  )
+  .post(
+    '/organization/:organizationId/project/:projectId/artifact/resource/:resourceId/upload',
+    UserMiddleware.verify,
+    ArtifactController.uploadResourceFile
   );
 
 if (process.env.NODE_ENV === 'development') {
   import('@hono/node-server').then(({ serve }) => {
     serve({
       fetch: app.fetch,
-      port: Number(process.env.SERVER_PORT),
+      port: Number(process.env.SERVER_PORT)
     });
   });
 }

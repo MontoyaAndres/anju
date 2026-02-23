@@ -17,6 +17,9 @@ NODE_ENV = "production"
 [[env.development.hyperdrive]]
 binding = "HYPERDRIVE"
 id = "20b38b96e12a4f45ac111fb7d8161edf"
+[[env.development.r2_buckets]]
+binding = "STORAGE_BUCKET"
+bucket_name = "anju-storage-development"
 
 [env.production]
 name = "anju-mcp-production"
@@ -25,3 +28,6 @@ NODE_ENV = "production"
 [[env.production.hyperdrive]]
 binding = "HYPERDRIVE"
 id = "<YOUR_HYPERDRIVE_ID>"
+[[env.production.r2_buckets]]
+binding = "STORAGE_BUCKET"
+bucket_name = "anju-storage-production"

@@ -1,89 +1,17 @@
 import { Context } from 'hono';
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import {
+  McpServer,
+  ResourceTemplate
+} from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPTransport } from '@hono/mcp';
-import { utils } from '@anju/utils';
+import { JsonSchema, utils } from '@anju/utils';
 import { db } from '@anju/db';
 import { eq } from 'drizzle-orm';
-import * as z from 'zod';
+
+import { readResourceContent } from '../utils';
 
 // types
 import { AppEnv } from '../../types';
-
-type JsonSchemaProperty = {
-  type: 'string' | 'number' | 'boolean' | 'object' | 'array';
-  description?: string;
-  minimum?: number;
-  maximum?: number;
-  minLength?: number;
-  maxLength?: number;
-  pattern?: string;
-  enum?: string[];
-};
-
-type JsonSchema = {
-  type: 'object';
-  properties?: Record<string, JsonSchemaProperty>;
-  required?: string[];
-};
-
-const jsonSchemaToZodShape = (
-  schema: JsonSchema
-): Record<string, z.ZodTypeAny> => {
-  const properties = schema.properties ?? {};
-  const required = schema.required ?? [];
-
-  const shape: Record<string, z.ZodTypeAny> = {};
-
-  for (const [key, prop] of Object.entries(properties)) {
-    let field: z.ZodTypeAny;
-
-    switch (prop.type) {
-      case 'string': {
-        if (prop.enum) {
-          field = z.enum(prop.enum as [string, ...string[]]);
-        } else {
-          let str = z.string();
-          if (prop.minLength !== undefined) str = str.min(prop.minLength);
-          if (prop.maxLength !== undefined) str = str.max(prop.maxLength);
-          if (prop.pattern !== undefined)
-            str = str.regex(new RegExp(prop.pattern));
-          field = str;
-        }
-        break;
-      }
-      case 'number': {
-        let num = z.number();
-        if (prop.minimum !== undefined) num = num.min(prop.minimum);
-        if (prop.maximum !== undefined) num = num.max(prop.maximum);
-        field = num;
-        break;
-      }
-      case 'boolean':
-        field = z.boolean();
-        break;
-      case 'array':
-        field = z.array(z.any());
-        break;
-      case 'object':
-        field = z.record(z.string(), z.any());
-        break;
-      default:
-        field = z.any();
-    }
-
-    if (prop.description) {
-      field = field.describe(prop.description);
-    }
-
-    if (!required.includes(key)) {
-      field = field.optional();
-    }
-
-    shape[key] = field;
-  }
-
-  return shape;
-};
 
 const business = async (c: Context<AppEnv>) => {
   const query = c.req.query();
@@ -112,11 +40,11 @@ const business = async (c: Context<AppEnv>) => {
     description: artifact.project.description || 'MCP Server Description',
     version: '0.0.1'
   });
-
   const transport = new StreamableHTTPTransport();
+  const bucket = c.env.STORAGE_BUCKET;
 
   for (const prompt of artifact.artifactPrompts) {
-    const schema = jsonSchemaToZodShape(prompt.schema as JsonSchema);
+    const schema = utils.jsonSchemaToZodShape(prompt.schema as JsonSchema);
 
     mcpServer.registerPrompt(
       prompt.id,
@@ -139,6 +67,8 @@ const business = async (c: Context<AppEnv>) => {
               text = text.replaceAll(`{{${key}}}`, value ? String(value) : '');
             }
 
+            text = text.replaceAll(/\{\{[^}]+\}\}/g, '');
+
             return {
               role: msg.role,
               content: { type: 'text' as const, text }
@@ -149,9 +79,59 @@ const business = async (c: Context<AppEnv>) => {
     );
   }
 
-  if (!mcpServer.isConnected()) {
-    await mcpServer.connect(transport);
+  for (const resource of artifact.artifactResources) {
+    const resourceMetadata = {
+      title: resource.title,
+      description: resource.description || undefined,
+      mimeType: resource.mimeType || undefined,
+      annotations: (resource.annotations as any) || undefined,
+      icons: (resource.icons as any) || undefined
+    };
+
+    if (resource.type === 'template') {
+      const template = new ResourceTemplate(resource.uri, {
+        list: undefined
+      });
+
+      mcpServer.registerResource(
+        resource.id,
+        template,
+        resourceMetadata,
+        async (uri: URL, variables) => {
+          const result = await readResourceContent(resource, uri, bucket);
+
+          for (const content of result.contents) {
+            if ('text' in content && content.text) {
+              for (const [key, value] of Object.entries(variables)) {
+                const replacement = Array.isArray(value)
+                  ? value.join(', ')
+                  : value;
+                content.text = content.text.replaceAll(
+                  `{{${key}}}`,
+                  replacement || ''
+                );
+              }
+
+              content.text = content.text.replaceAll(/\{\{[^}]+\}\}/g, '');
+            }
+          }
+
+          return result;
+        }
+      );
+
+      continue;
+    }
+
+    mcpServer.registerResource(
+      resource.id,
+      resource.uri,
+      resourceMetadata,
+      async (uri: URL) => readResourceContent(resource, uri, bucket)
+    );
   }
+
+  await mcpServer.connect(transport);
 
   return transport.handleRequest(c);
 };
