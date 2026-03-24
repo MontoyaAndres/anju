@@ -199,6 +199,38 @@ const ARTIFACT_UPLOAD_RESOURCE_FILE = z.object({
   organizationId: z.uuid()
 });
 
+const ARTIFACT_CREATE_TOOL = z.object({
+  toolKey: z.string().min(1).max(200),
+  config: z.record(z.string(), z.any()).optional(),
+  metadata: z.record(z.string(), z.any()).optional(),
+  projectId: z.uuid(),
+  userId: z.uuid(),
+  organizationId: z.uuid()
+});
+
+const ARTIFACT_UPDATE_TOOL = z.object({
+  toolId: z.uuid(),
+  toolKey: z.string().min(1).max(200),
+  config: z.record(z.string(), z.any()).optional(),
+  metadata: z.record(z.string(), z.any()).optional(),
+  projectId: z.uuid(),
+  userId: z.uuid(),
+  organizationId: z.uuid()
+});
+
+const ARTIFACT_GET_TOOL = z.object({
+  projectId: z.uuid(),
+  userId: z.uuid(),
+  organizationId: z.uuid()
+});
+
+const ARTIFACT_REMOVE_TOOL = z.object({
+  toolId: z.uuid(),
+  projectId: z.uuid(),
+  userId: z.uuid(),
+  organizationId: z.uuid()
+});
+
 const BUSINESS_QUERY = z.object({
   hash: z.string().length(8).min(8).max(8)
 });
@@ -221,5 +253,9 @@ export const Schema = {
   ARTIFACT_GET_RESOURCE,
   ARTIFACT_REMOVE_RESOURCE,
   ARTIFACT_UPLOAD_RESOURCE_FILE,
+  ARTIFACT_CREATE_TOOL,
+  ARTIFACT_UPDATE_TOOL,
+  ARTIFACT_GET_TOOL,
+  ARTIFACT_REMOVE_TOOL,
   BUSINESS_QUERY
 };

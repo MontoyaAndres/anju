@@ -125,6 +125,28 @@ app
     '/organization/:organizationId/project/:projectId/artifact/resource/:resourceId/upload',
     UserMiddleware.verify,
     ArtifactController.uploadResourceFile
+  )
+
+  // Artifact Tool controller
+  .get(
+    '/organization/:organizationId/project/:projectId/artifact/tool',
+    UserMiddleware.verify,
+    ArtifactController.listTools
+  )
+  .post(
+    '/organization/:organizationId/project/:projectId/artifact/tool',
+    UserMiddleware.verify,
+    ArtifactController.createTool
+  )
+  .put(
+    '/organization/:organizationId/project/:projectId/artifact/tool/:toolId',
+    UserMiddleware.verify,
+    ArtifactController.updateTool
+  )
+  .delete(
+    '/organization/:organizationId/project/:projectId/artifact/tool/:toolId',
+    UserMiddleware.verify,
+    ArtifactController.removeTool
   );
 
 if (process.env.NODE_ENV === 'development') {

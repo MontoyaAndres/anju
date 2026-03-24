@@ -1,0 +1,1 @@
+ALTER TABLE "artifact_tool" DROP COLUMN "config";

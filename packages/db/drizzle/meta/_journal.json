@@ -113,6 +113,27 @@
       "when": 1771872306853,
       "tag": "0015_old_mikhail_rasputin",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1774386713152,
+      "tag": "0016_natural_sinister_six",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1774387031848,
+      "tag": "0017_dark_gorilla_man",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1774388624435,
+      "tag": "0018_open_hemingway",
+      "breakpoints": true
     }
   ]
 }

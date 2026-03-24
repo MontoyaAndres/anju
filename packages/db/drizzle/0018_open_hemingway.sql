@@ -1,0 +1,1 @@
+ALTER TABLE "artifact_tool" ADD COLUMN "config" json;

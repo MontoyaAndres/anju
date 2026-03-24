@@ -9,6 +9,7 @@ import { db } from '@anju/db';
 import { eq } from 'drizzle-orm';
 
 import { readResourceContent } from '../utils';
+import { toolRegistry } from '../../tools';
 
 // types
 import { AppEnv } from '../../types';
@@ -27,6 +28,7 @@ const business = async (c: Context<AppEnv>) => {
     with: {
       artifactPrompts: true,
       artifactResources: true,
+      artifactTools: true,
       project: true
     }
   });
@@ -128,6 +130,27 @@ const business = async (c: Context<AppEnv>) => {
       resource.uri,
       resourceMetadata,
       async (uri: URL) => readResourceContent(resource, uri, bucket)
+    );
+  }
+
+  for (const artifactTool of artifact.artifactTools) {
+    const definition = toolRegistry.get(artifactTool.toolKey);
+
+    if (!definition) {
+      continue;
+    }
+
+    const schema = utils.jsonSchemaToZodShape(definition.schema);
+    const toolConfig = (artifactTool.config as Record<string, unknown>) || {};
+
+    mcpServer.registerTool(
+      artifactTool.toolKey,
+      {
+        title: definition.title,
+        description: definition.description,
+        inputSchema: schema as any
+      },
+      async (args: any) => definition.handler(args, toolConfig)
     );
   }
 

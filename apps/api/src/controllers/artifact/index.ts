@@ -440,6 +440,213 @@ const removeResource = async (c: Context<AppEnv>) => {
   return c.json(currentValues);
 };
 
+const createTool = async (c: Context<AppEnv>) => {
+  const body = await c.req.json();
+  const currentValues = await utils.Schema.ARTIFACT_CREATE_TOOL.parseAsync({
+    ...body,
+    projectId: c.req.param('projectId'),
+    userId: c.get('user').id,
+    organizationId: c.req.param('organizationId')
+  });
+
+  const dbInstance = db.create(c);
+
+  const result = await dbInstance.transaction(async tx => {
+    const [project] = await tx
+      .select()
+      .from(db.schema.project)
+      .where(
+        and(
+          eq(db.schema.project.id, currentValues.projectId),
+          eq(db.schema.project.organizationId, currentValues.organizationId)
+        )
+      )
+      .limit(1);
+
+    if (!project) {
+      throw new Error('Project not found');
+    }
+
+    const [currentArtifactByProject] = await tx
+      .select()
+      .from(db.schema.artifact)
+      .where(eq(db.schema.artifact.projectId, currentValues.projectId))
+      .limit(1);
+
+    if (!currentArtifactByProject) {
+      throw new Error('Artifact not found for the project');
+    }
+
+    const artifactTool = await tx
+      .insert(db.schema.artifactTool)
+      .values({
+        toolKey: currentValues.toolKey,
+        config: currentValues.config || null,
+        metadata: currentValues.metadata || null,
+        artifactId: currentArtifactByProject.id
+      })
+      .returning();
+
+    await tx
+      .update(db.schema.artifact)
+      .set({
+        artifactToolCount: sql`(${db.schema.artifact.artifactToolCount}::int + 1)::int`
+      })
+      .where(eq(db.schema.artifact.id, currentArtifactByProject.id));
+
+    return artifactTool[0];
+  });
+
+  return c.json(result);
+};
+
+const updateTool = async (c: Context<AppEnv>) => {
+  const body = await c.req.json();
+  const currentValues = await utils.Schema.ARTIFACT_UPDATE_TOOL.parseAsync({
+    ...body,
+    toolId: c.req.param('toolId'),
+    projectId: c.req.param('projectId'),
+    userId: c.get('user').id,
+    organizationId: c.req.param('organizationId')
+  });
+
+  const dbInstance = db.create(c);
+
+  const result = await dbInstance.transaction(async tx => {
+    const [project] = await tx
+      .select()
+      .from(db.schema.project)
+      .where(
+        and(
+          eq(db.schema.project.id, currentValues.projectId),
+          eq(db.schema.project.organizationId, currentValues.organizationId)
+        )
+      )
+      .limit(1);
+
+    if (!project) {
+      throw new Error('Project not found');
+    }
+
+    const [currentArtifactByProject] = await tx
+      .select()
+      .from(db.schema.artifact)
+      .where(eq(db.schema.artifact.projectId, currentValues.projectId))
+      .limit(1);
+
+    if (!currentArtifactByProject) {
+      throw new Error('Artifact not found for the project');
+    }
+
+    const artifactTool = await tx
+      .update(db.schema.artifactTool)
+      .set({
+        toolKey: currentValues.toolKey,
+        config: currentValues.config || null,
+        metadata: currentValues.metadata || null
+      })
+      .where(
+        and(
+          eq(db.schema.artifactTool.id, currentValues.toolId),
+          eq(db.schema.artifactTool.artifactId, currentArtifactByProject.id)
+        )
+      )
+      .returning();
+
+    if (!artifactTool[0]) {
+      throw new Error('Tool not found');
+    }
+
+    return artifactTool[0];
+  });
+
+  return c.json(result);
+};
+
+const listTools = async (c: Context<AppEnv>) => {
+  const currentValues = await utils.Schema.ARTIFACT_GET_TOOL.parseAsync({
+    projectId: c.req.param('projectId'),
+    userId: c.get('user').id,
+    organizationId: c.req.param('organizationId')
+  });
+
+  const dbInstance = db.create(c);
+
+  const artifact = await dbInstance.query.artifact.findFirst({
+    where: eq(db.schema.artifact.projectId, currentValues.projectId),
+    with: {
+      artifactTools: true
+    }
+  });
+
+  if (!artifact) {
+    throw new Error('Artifact not found for the project');
+  }
+
+  return c.json(artifact.artifactTools);
+};
+
+const removeTool = async (c: Context<AppEnv>) => {
+  const currentValues = await utils.Schema.ARTIFACT_REMOVE_TOOL.parseAsync({
+    projectId: c.req.param('projectId'),
+    userId: c.get('user').id,
+    organizationId: c.req.param('organizationId'),
+    toolId: c.req.param('toolId')
+  });
+
+  const dbInstance = db.create(c);
+
+  await dbInstance.transaction(async tx => {
+    const [project] = await tx
+      .select()
+      .from(db.schema.project)
+      .where(
+        and(
+          eq(db.schema.project.id, currentValues.projectId),
+          eq(db.schema.project.organizationId, currentValues.organizationId)
+        )
+      )
+      .limit(1);
+
+    if (!project) {
+      throw new Error('Project not found');
+    }
+
+    const [currentArtifactByProject] = await tx
+      .select()
+      .from(db.schema.artifact)
+      .where(eq(db.schema.artifact.projectId, currentValues.projectId))
+      .limit(1);
+
+    if (!currentArtifactByProject) {
+      throw new Error('Artifact not found for the project');
+    }
+
+    const deleteTool = await tx
+      .delete(db.schema.artifactTool)
+      .where(
+        and(
+          eq(db.schema.artifactTool.id, currentValues.toolId),
+          eq(db.schema.artifactTool.artifactId, currentArtifactByProject.id)
+        )
+      )
+      .returning();
+
+    if (deleteTool.length === 0) {
+      throw new Error('Tool not found');
+    }
+
+    await tx
+      .update(db.schema.artifact)
+      .set({
+        artifactToolCount: sql`(${db.schema.artifact.artifactToolCount}::int - 1)::int`
+      })
+      .where(eq(db.schema.artifact.id, currentArtifactByProject.id));
+  });
+
+  return c.json(currentValues);
+};
+
 const uploadResourceFile = async (c: Context<AppEnv>) => {
   const currentValues =
     await utils.Schema.ARTIFACT_UPLOAD_RESOURCE_FILE.parseAsync({
@@ -530,5 +737,9 @@ export const ArtifactController = {
   updateResource,
   removeResource,
   listResources,
-  uploadResourceFile
+  uploadResourceFile,
+  createTool,
+  updateTool,
+  removeTool,
+  listTools
 };

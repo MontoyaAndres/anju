@@ -185,6 +185,7 @@ export const artifact = pgTable('artifact', {
   artifactResourceCount: integer('artifact_resource_count')
     .notNull()
     .default(0),
+  artifactToolCount: integer('artifact_tool_count').notNull().default(0),
   metadata: json('metadata'),
   projectId: text('project_id')
     .notNull()
@@ -204,6 +205,23 @@ export const artifactPrompt = pgTable('artifact_prompt', {
   description: text('description'),
   messages: json('messages').notNull().default([]),
   schema: json('schema'),
+  metadata: json('metadata'),
+  artifactId: text('artifact_id')
+    .notNull()
+    .references(() => artifact.id, { onDelete: 'cascade' }),
+  createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { mode: 'date' })
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date())
+});
+
+export const artifactTool = pgTable('artifact_tool', {
+  id: text('id')
+    .primaryKey()
+    .$defaultFn(() => uuid()),
+  toolKey: text('tool_key').notNull(),
+  config: json('config'),
   metadata: json('metadata'),
   artifactId: text('artifact_id')
     .notNull()
@@ -318,12 +336,20 @@ export const artifactRelations = relations(artifact, ({ one, many }) => ({
     references: [project.id]
   }),
   artifactPrompts: many(artifactPrompt),
-  artifactResources: many(artifactResource)
+  artifactResources: many(artifactResource),
+  artifactTools: many(artifactTool)
 }));
 
 export const artifactPromptRelations = relations(artifactPrompt, ({ one }) => ({
   artifact: one(artifact, {
     fields: [artifactPrompt.artifactId],
+    references: [artifact.id]
+  })
+}));
+
+export const artifactToolRelations = relations(artifactTool, ({ one }) => ({
+  artifact: one(artifact, {
+    fields: [artifactTool.artifactId],
     references: [artifact.id]
   })
 }));
