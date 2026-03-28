@@ -477,10 +477,20 @@ const createTool = async (c: Context<AppEnv>) => {
       throw new Error('Artifact not found for the project');
     }
 
+    const [toolDef] = await tx
+      .select()
+      .from(db.schema.toolDefinition)
+      .where(eq(db.schema.toolDefinition.id, currentValues.toolDefinitionId))
+      .limit(1);
+
+    if (!toolDef) {
+      throw new Error('Tool definition not found');
+    }
+
     const artifactTool = await tx
       .insert(db.schema.artifactTool)
       .values({
-        toolKey: currentValues.toolKey,
+        toolDefinitionId: currentValues.toolDefinitionId,
         config: currentValues.config || null,
         metadata: currentValues.metadata || null,
         artifactId: currentArtifactByProject.id
@@ -541,7 +551,6 @@ const updateTool = async (c: Context<AppEnv>) => {
     const artifactTool = await tx
       .update(db.schema.artifactTool)
       .set({
-        toolKey: currentValues.toolKey,
         config: currentValues.config || null,
         metadata: currentValues.metadata || null
       })
@@ -575,7 +584,15 @@ const listTools = async (c: Context<AppEnv>) => {
   const artifact = await dbInstance.query.artifact.findFirst({
     where: eq(db.schema.artifact.projectId, currentValues.projectId),
     with: {
-      artifactTools: true
+      artifactTools: {
+        with: {
+          toolDefinition: {
+            with: {
+              group: true
+            }
+          }
+        }
+      }
     }
   });
 
@@ -728,6 +745,94 @@ const uploadResourceFile = async (c: Context<AppEnv>) => {
   return c.json(result);
 };
 
+const listCredentials = async (c: Context<AppEnv>) => {
+  const currentValues = await utils.Schema.ARTIFACT_GET_CREDENTIAL.parseAsync({
+    projectId: c.req.param('projectId'),
+    userId: c.get('user').id,
+    organizationId: c.req.param('organizationId')
+  });
+
+  const dbInstance = db.create(c);
+
+  const artifact = await dbInstance.query.artifact.findFirst({
+    where: eq(db.schema.artifact.projectId, currentValues.projectId),
+    with: {
+      artifactCredentials: true
+    }
+  });
+
+  if (!artifact) {
+    throw new Error('Artifact not found for the project');
+  }
+
+  return c.json(artifact.artifactCredentials);
+};
+
+const removeCredential = async (c: Context<AppEnv>) => {
+  const currentValues =
+    await utils.Schema.ARTIFACT_REMOVE_CREDENTIAL.parseAsync({
+      projectId: c.req.param('projectId'),
+      userId: c.get('user').id,
+      organizationId: c.req.param('organizationId'),
+      credentialId: c.req.param('credentialId')
+    });
+
+  const dbInstance = db.create(c);
+
+  await dbInstance.transaction(async tx => {
+    const [project] = await tx
+      .select()
+      .from(db.schema.project)
+      .where(
+        and(
+          eq(db.schema.project.id, currentValues.projectId),
+          eq(db.schema.project.organizationId, currentValues.organizationId)
+        )
+      )
+      .limit(1);
+
+    if (!project) {
+      throw new Error('Project not found');
+    }
+
+    const [currentArtifactByProject] = await tx
+      .select()
+      .from(db.schema.artifact)
+      .where(eq(db.schema.artifact.projectId, currentValues.projectId))
+      .limit(1);
+
+    if (!currentArtifactByProject) {
+      throw new Error('Artifact not found for the project');
+    }
+
+    const deleteCredential = await tx
+      .delete(db.schema.artifactCredential)
+      .where(
+        and(
+          eq(db.schema.artifactCredential.id, currentValues.credentialId),
+          eq(
+            db.schema.artifactCredential.artifactId,
+            currentArtifactByProject.id
+          )
+        )
+      )
+      .returning();
+
+    if (deleteCredential.length === 0) {
+      throw new Error('Credential not found');
+    }
+
+    await tx
+      .update(db.schema.artifact)
+      .set({
+        artifactCredentialCount: sql`(${db.schema.artifact.artifactCredentialCount}::int - 1)::int`
+      })
+      .where(eq(db.schema.artifact.id, currentArtifactByProject.id));
+  });
+
+  return c.json(currentValues);
+};
+
 export const ArtifactController = {
   createPrompt,
   updatePrompt,
@@ -741,5 +846,7 @@ export const ArtifactController = {
   createTool,
   updateTool,
   removeTool,
-  listTools
+  listTools,
+  removeCredential,
+  listCredentials
 };

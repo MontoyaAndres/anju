@@ -18,7 +18,7 @@ export const greeting: ToolDefinition = {
     },
     required: ['name']
   },
-  handler: async (args, _config) => {
+  handler: async (args, _context) => {
     const name = String(args.name);
     const language = String(args.language || 'en');
 

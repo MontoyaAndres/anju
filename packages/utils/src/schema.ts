@@ -200,7 +200,7 @@ const ARTIFACT_UPLOAD_RESOURCE_FILE = z.object({
 });
 
 const ARTIFACT_CREATE_TOOL = z.object({
-  toolKey: z.string().min(1).max(200),
+  toolDefinitionId: z.uuid(),
   config: z.record(z.string(), z.any()).optional(),
   metadata: z.record(z.string(), z.any()).optional(),
   projectId: z.uuid(),
@@ -210,7 +210,6 @@ const ARTIFACT_CREATE_TOOL = z.object({
 
 const ARTIFACT_UPDATE_TOOL = z.object({
   toolId: z.uuid(),
-  toolKey: z.string().min(1).max(200),
   config: z.record(z.string(), z.any()).optional(),
   metadata: z.record(z.string(), z.any()).optional(),
   projectId: z.uuid(),
@@ -226,6 +225,19 @@ const ARTIFACT_GET_TOOL = z.object({
 
 const ARTIFACT_REMOVE_TOOL = z.object({
   toolId: z.uuid(),
+  projectId: z.uuid(),
+  userId: z.uuid(),
+  organizationId: z.uuid()
+});
+
+const ARTIFACT_GET_CREDENTIAL = z.object({
+  projectId: z.uuid(),
+  userId: z.uuid(),
+  organizationId: z.uuid()
+});
+
+const ARTIFACT_REMOVE_CREDENTIAL = z.object({
+  credentialId: z.uuid(),
   projectId: z.uuid(),
   userId: z.uuid(),
   organizationId: z.uuid()
@@ -257,5 +269,7 @@ export const Schema = {
   ARTIFACT_UPDATE_TOOL,
   ARTIFACT_GET_TOOL,
   ARTIFACT_REMOVE_TOOL,
+  ARTIFACT_GET_CREDENTIAL,
+  ARTIFACT_REMOVE_CREDENTIAL,
   BUSINESS_QUERY
 };

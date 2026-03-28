@@ -186,6 +186,9 @@ export const artifact = pgTable('artifact', {
     .notNull()
     .default(0),
   artifactToolCount: integer('artifact_tool_count').notNull().default(0),
+  artifactCredentialCount: integer('artifact_credential_count')
+    .notNull()
+    .default(0),
   metadata: json('metadata'),
   projectId: text('project_id')
     .notNull()
@@ -216,12 +219,68 @@ export const artifactPrompt = pgTable('artifact_prompt', {
     .$onUpdate(() => new Date())
 });
 
+export const toolGroup = pgTable('tool_group', {
+  id: text('id')
+    .primaryKey()
+    .$defaultFn(() => uuid()),
+  key: text('key').notNull().unique(),
+  title: text('title').notNull(),
+  description: text('description'),
+  icon: text('icon'),
+  provider: text('provider'),
+  createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { mode: 'date' })
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date())
+});
+
+export const toolDefinition = pgTable('tool_definition', {
+  id: text('id')
+    .primaryKey()
+    .$defaultFn(() => uuid()),
+  key: text('key').notNull().unique(),
+  title: text('title').notNull(),
+  description: text('description'),
+  requiredScopes: text('required_scopes'),
+  groupId: text('group_id')
+    .notNull()
+    .references(() => toolGroup.id, { onDelete: 'cascade' }),
+  createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { mode: 'date' })
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date())
+});
+
 export const artifactTool = pgTable('artifact_tool', {
   id: text('id')
     .primaryKey()
     .$defaultFn(() => uuid()),
-  toolKey: text('tool_key').notNull(),
   config: json('config'),
+  metadata: json('metadata'),
+  toolDefinitionId: text('tool_definition_id')
+    .notNull()
+    .references(() => toolDefinition.id, { onDelete: 'cascade' }),
+  artifactId: text('artifact_id')
+    .notNull()
+    .references(() => artifact.id, { onDelete: 'cascade' }),
+  createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { mode: 'date' })
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date())
+});
+
+export const artifactCredential = pgTable('artifact_credential', {
+  id: text('id')
+    .primaryKey()
+    .$defaultFn(() => uuid()),
+  provider: text('provider').notNull(),
+  accessToken: text('access_token').notNull(),
+  refreshToken: text('refresh_token'),
+  expiresAt: timestamp('expires_at'),
+  scopes: text('scopes'),
   metadata: json('metadata'),
   artifactId: text('artifact_id')
     .notNull()
@@ -337,7 +396,8 @@ export const artifactRelations = relations(artifact, ({ one, many }) => ({
   }),
   artifactPrompts: many(artifactPrompt),
   artifactResources: many(artifactResource),
-  artifactTools: many(artifactTool)
+  artifactTools: many(artifactTool),
+  artifactCredentials: many(artifactCredential)
 }));
 
 export const artifactPromptRelations = relations(artifactPrompt, ({ one }) => ({
@@ -347,12 +407,41 @@ export const artifactPromptRelations = relations(artifactPrompt, ({ one }) => ({
   })
 }));
 
+export const toolGroupRelations = relations(toolGroup, ({ many }) => ({
+  toolDefinitions: many(toolDefinition)
+}));
+
+export const toolDefinitionRelations = relations(
+  toolDefinition,
+  ({ one, many }) => ({
+    group: one(toolGroup, {
+      fields: [toolDefinition.groupId],
+      references: [toolGroup.id]
+    }),
+    artifactTools: many(artifactTool)
+  })
+);
+
 export const artifactToolRelations = relations(artifactTool, ({ one }) => ({
   artifact: one(artifact, {
     fields: [artifactTool.artifactId],
     references: [artifact.id]
+  }),
+  toolDefinition: one(toolDefinition, {
+    fields: [artifactTool.toolDefinitionId],
+    references: [toolDefinition.id]
   })
 }));
+
+export const artifactCredentialRelations = relations(
+  artifactCredential,
+  ({ one }) => ({
+    artifact: one(artifact, {
+      fields: [artifactCredential.artifactId],
+      references: [artifact.id]
+    })
+  })
+);
 
 export const artifactResourceRelations = relations(
   artifactResource,

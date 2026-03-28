@@ -134,6 +134,20 @@
       "when": 1774388624435,
       "tag": "0018_open_hemingway",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1774473885647,
+      "tag": "0019_nice_loners",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1774709070671,
+      "tag": "0020_pale_grey_gargoyle",
+      "breakpoints": true
     }
   ]
 }

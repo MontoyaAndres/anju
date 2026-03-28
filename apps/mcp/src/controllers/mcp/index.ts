@@ -8,8 +8,8 @@ import { JsonSchema, utils } from '@anju/utils';
 import { db } from '@anju/db';
 import { eq } from 'drizzle-orm';
 
-import { readResourceContent } from '../utils';
 import { toolRegistry } from '../../tools';
+import { readResourceContent } from '../../utils';
 
 // types
 import { AppEnv } from '../../types';
@@ -28,7 +28,16 @@ const business = async (c: Context<AppEnv>) => {
     with: {
       artifactPrompts: true,
       artifactResources: true,
-      artifactTools: true,
+      artifactTools: {
+        with: {
+          toolDefinition: {
+            with: {
+              group: true
+            }
+          }
+        }
+      },
+      artifactCredentials: true,
       project: true
     }
   });
@@ -134,23 +143,36 @@ const business = async (c: Context<AppEnv>) => {
   }
 
   for (const artifactTool of artifact.artifactTools) {
-    const definition = toolRegistry.get(artifactTool.toolKey);
+    const toolDef = artifactTool.toolDefinition;
+    if (!toolDef) continue;
 
-    if (!definition) {
-      continue;
-    }
+    const handler = toolRegistry.get(toolDef.key);
+    if (!handler) continue;
 
-    const schema = utils.jsonSchemaToZodShape(definition.schema);
+    const schema = utils.jsonSchemaToZodShape(handler.schema);
     const toolConfig = (artifactTool.config as Record<string, unknown>) || {};
+    const provider = toolDef.group?.provider;
+    const toolCredentials = provider
+      ? artifact.artifactCredentials
+          .filter(c => c.provider === provider)
+          .map(c => ({
+            provider: c.provider,
+            accessToken: c.accessToken,
+            refreshToken: c.refreshToken,
+            expiresAt: c.expiresAt,
+            scopes: c.scopes
+          }))
+      : [];
 
     mcpServer.registerTool(
-      artifactTool.toolKey,
+      toolDef.key,
       {
-        title: definition.title,
-        description: definition.description,
+        title: toolDef.title || handler.title,
+        description: toolDef.description || handler.description,
         inputSchema: schema as any
       },
-      async (args: any) => definition.handler(args, toolConfig)
+      async (args: any) =>
+        handler.handler(args, { config: toolConfig, credentials: toolCredentials })
     );
   }
 

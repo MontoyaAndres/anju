@@ -5,7 +5,9 @@ import { utils } from '@anju/utils';
 import {
   ArtifactController,
   OrganizationController,
-  ProjectController
+  ProjectController,
+  OAuthController,
+  CatalogController
 } from './controllers';
 import { UserMiddleware } from './middleware';
 import { createAuth } from './utils';
@@ -147,7 +149,30 @@ app
     '/organization/:organizationId/project/:projectId/artifact/tool/:toolId',
     UserMiddleware.verify,
     ArtifactController.removeTool
-  );
+  )
+
+  // Artifact Credential controller
+  .get(
+    '/organization/:organizationId/project/:projectId/artifact/credential',
+    UserMiddleware.verify,
+    ArtifactController.listCredentials
+  )
+  .delete(
+    '/organization/:organizationId/project/:projectId/artifact/credential/:credentialId',
+    UserMiddleware.verify,
+    ArtifactController.removeCredential
+  )
+
+  // Tool catalog controller
+  .get('/catalog/tools', UserMiddleware.verify, CatalogController.listGroups)
+
+  // OAuth controller
+  .get(
+    '/oauth/:provider/authorize',
+    UserMiddleware.verify,
+    OAuthController.authorize
+  )
+  .get('/oauth/:provider/callback', OAuthController.callback);
 
 if (process.env.NODE_ENV === 'development') {
   import('@hono/node-server').then(({ serve }) => {
