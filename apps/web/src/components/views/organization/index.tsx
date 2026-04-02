@@ -21,20 +21,23 @@ export const Organization = (props: IProps) => {
     'idle' | 'pending' | 'error' | 'success'
   >('idle');
   const [error, setError] = useState(INITIAL_FORM_STATE);
+  const [apiError, setApiError] = useState('');
   const router = useRouter();
 
   const handleValueChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setValues(prevValues => ({
-      ...prevValues,
-      [e.target.name]: e.target.value,
-    }));
+    const { name, value } = e.target;
+    setValues(prev => ({ ...prev, [name]: value }));
+    if (error[name as keyof typeof error]) {
+      setError(prev => ({ ...prev, [name]: '' }));
+    }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     try {
       setStatus('pending');
+      setApiError('');
       const currentValues =
         await utils.Schema.ORGANIZATION_CREATE_VIEW.parseAsync({
           name: values.name,
@@ -53,29 +56,29 @@ export const Organization = (props: IProps) => {
 
       if (newOrganization?.error) {
         setStatus('error');
+        setApiError(newOrganization.error.message || 'Something went wrong. Please try again.');
         return;
       }
 
       router.push(
         `/organization/${newOrganization.organization.id}/project/${newOrganization.project.id}`
       );
-    } catch (error) {
-      if (Array.isArray((error as any).errors)) {
-        setStatus('error');
-        const zodErrors = (error as any).errors;
-        const formattedErrors = zodErrors.reduce(
-          (acc: any, curr: any) => ({
-            ...acc,
-            [curr.path[0]]: curr.message,
-          }),
-          {}
+    } catch (err) {
+      setStatus('error');
+      if (
+        err &&
+        typeof err === 'object' &&
+        'issues' in err &&
+        Array.isArray((err as { issues: unknown[] }).issues)
+      ) {
+        const formattedErrors = (
+          err as { issues: { path: string[]; message: string }[] }
+        ).issues.reduce(
+          (acc, curr) => ({ ...acc, [curr.path[0]]: curr.message }),
+          {} as typeof INITIAL_FORM_STATE,
         );
         setError(formattedErrors);
-        return;
       }
-
-      setStatus('error');
-      return;
     }
   };
 
@@ -139,6 +142,9 @@ export const Organization = (props: IProps) => {
               helperText={error.projectDescription}
             />
           </div>
+          {apiError && (
+            <p className="create-organization-error">{apiError}</p>
+          )}
           <div className="create-organization-button">
             <UI.Button
               type="submit"
@@ -165,13 +171,27 @@ export const Organization = (props: IProps) => {
           <div
             key={organization.id}
             className="organization-card"
-            onClick={() =>
-              router.push(
-                `/organization/${organization.id}/project/${
-                  organization.projects?.[0]?.id || ''
-                }`
-              )
-            }
+            role="button"
+            tabIndex={0}
+            onKeyDown={e => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                const projectId = organization.projects?.[0]?.id;
+                if (projectId) {
+                  router.push(
+                    `/organization/${organization.id}/project/${projectId}`
+                  );
+                }
+              }
+            }}
+            onClick={() => {
+              const projectId = organization.projects?.[0]?.id;
+              if (projectId) {
+                router.push(
+                  `/organization/${organization.id}/project/${projectId}`
+                );
+              }
+            }}
           >
             <h2 className="organization-card-name">{organization.name}</h2>
             <ul className="organization-info">

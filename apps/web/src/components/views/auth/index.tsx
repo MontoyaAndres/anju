@@ -4,10 +4,7 @@ import { Wrapper } from './styles';
 import { authClient } from '../../../utils';
 
 export const Auth = () => {
-  const signIn = (provider: string) => {
-    if (!provider) return;
-    if (provider !== 'google' && provider !== 'github') return;
-
+  const signIn = (provider: 'google' | 'github') => {
     authClient.signIn.social({
       provider,
       callbackURL: `${process.env.NEXT_PUBLIC_WEB_URL}/organization`,

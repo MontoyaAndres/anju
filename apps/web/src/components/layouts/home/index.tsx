@@ -1,4 +1,10 @@
-import { JSXElementConstructor, ReactElement, useState } from 'react';
+import {
+  JSXElementConstructor,
+  ReactElement,
+  useEffect,
+  useRef,
+  useState
+} from 'react';
 import { useRouter } from 'next/router';
 import { UI } from '@anju/ui';
 import IconButton from '@mui/material/IconButton';
@@ -16,17 +22,42 @@ import {
   EmojiObjects,
   EmojiObjectsOutlined,
   Chat,
-  Settings,
+  Settings
 } from '@mui/icons-material';
 
 import { MobileMenuWrapper, Wrapper } from './styles';
+import { authClient } from '../../../utils';
+
+interface UserProps {
+  name?: string;
+  email?: string;
+  photo?: string;
+}
 
 export const Home = (
   page: ReactElement<unknown, string | JSXElementConstructor<any>>
 ) => {
+  const user = (page.props as { user?: UserProps }).user;
   const [accountClicked, setAccountClicked] = useState(false);
   const [mobileMenuClicked, setMobileMenuClicked] = useState(false);
-  const { pathname, push } = useRouter();
+  const accountMenuRef = useRef<HTMLDivElement>(null);
+  const { pathname } = useRouter();
+
+  useEffect(() => {
+    if (!accountClicked) return;
+
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        accountMenuRef.current &&
+        !accountMenuRef.current.contains(e.target as Node)
+      ) {
+        setAccountClicked(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [accountClicked]);
 
   const handleAccountClicked = () => {
     setAccountClicked(prevValue => !prevValue);
@@ -41,23 +72,32 @@ export const Home = (
   const handleLogoutClicked = () => {
     setAccountClicked(false);
     setMobileMenuClicked(false);
+    authClient.signOut();
   };
 
   return (
-    <Wrapper userPhoto={(page.props as any).user?.photo}>
+    <Wrapper userPhoto={user?.photo}>
       {mobileMenuClicked && (
-        <MobileMenuWrapper userPhoto={(page.props as any).user?.photo}>
-          <div className="background" onClick={handleMobileMenuClicked}></div>
+        <MobileMenuWrapper userPhoto={user?.photo}>
+          <div
+            className="background"
+            role="button"
+            tabIndex={0}
+            aria-label="Close menu"
+            onClick={handleMobileMenuClicked}
+            onKeyDown={e => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                handleMobileMenuClicked();
+              }
+            }}
+          ></div>
           <div className="mobile-menu">
             <div className="mobile-menu-user">
               <div className="mobile-menu-user-pic"></div>
               <div className="mobile-menu-user-texts">
-                <p className="mobile-menu-user-title">
-                  {(page.props as any).user?.name}
-                </p>
-                <p className="mobile-menu-user-subtitle">
-                  {(page.props as any).user?.email}
-                </p>
+                <p className="mobile-menu-user-title">{user?.name}</p>
+                <p className="mobile-menu-user-subtitle">{user?.email}</p>
               </div>
               <IconButton onClick={handleMobileMenuClicked}>
                 <Close />
@@ -92,30 +132,30 @@ export const Home = (
                   onClick={() => {}}
                 >
                   {pathname ===
-                  '/organization/[id]/project/[projectId]/knowledge' ? (
+                  '/organization/[id]/project/[projectId]/prompts' ? (
                     <EmojiObjects />
                   ) : (
                     <EmojiObjectsOutlined />
                   )}
-                  <span className="button-text">Knowledge</span>
+                  <span className="button-text">Prompts</span>
                 </UI.Button>
                 <UI.Button fullWidth>
                   {pathname ===
-                  '/organization/[id]/project/[projectId]/spaces' ? (
+                  '/organization/[id]/project/[projectId]/resources' ? (
                     <Chat />
                   ) : (
                     <ChatOutlined />
                   )}
-                  <span className="button-text">Spaces</span>
+                  <span className="button-text">Resources</span>
                 </UI.Button>
                 <UI.Button fullWidth onClick={() => {}}>
                   {pathname ===
-                  '/organization/[id]/project/[projectId]/settings' ? (
+                  '/organization/[id]/project/[projectId]/tools' ? (
                     <Settings />
                   ) : (
                     <SettingsOutlined />
                   )}
-                  <span className="button-text">Settings</span>
+                  <span className="button-text">Tools</span>
                 </UI.Button>
               </div>
               <div className="options-down">
@@ -147,13 +187,13 @@ export const Home = (
             <UI.Button
               fullWidth
               className={
-                pathname === '/organizations/[id]/projects/[projectId]'
+                pathname === '/organization/[id]/project/[projectId]'
                   ? 'active'
                   : ''
               }
               onClick={() => {}}
             >
-              {pathname === '/organizations/[id]/projects/[projectId]' ? (
+              {pathname === '/organization/[id]/project/[projectId]' ? (
                 <HomeFilled />
               ) : (
                 <HomeOutlined />
@@ -163,41 +203,50 @@ export const Home = (
             <UI.Button
               fullWidth
               className={
-                pathname ===
-                '/organizations/[id]/projects/[projectId]/knowledge'
+                pathname === '/organization/[id]/project/[projectId]/prompts'
                   ? 'active'
                   : ''
               }
               onClick={() => {}}
             >
-              {pathname ===
-              '/organizations/[id]/projects/[projectId]/knowledge' ? (
+              {pathname === '/organization/[id]/project/[projectId]/prompts' ? (
                 <EmojiObjects />
               ) : (
                 <EmojiObjectsOutlined />
               )}
-              <span className="button-text">Knowledge</span>
+              <span className="button-text">Prompts</span>
             </UI.Button>
             <UI.Button fullWidth>
               {pathname ===
-              '/organizations/[id]/projects/[projectId]/spaces' ? (
+              '/organization/[id]/project/[projectId]/resources' ? (
                 <Chat />
               ) : (
                 <ChatOutlined />
               )}
-              <span className="button-text">Spaces</span>
+              <span className="button-text">Resources</span>
             </UI.Button>
             <UI.Button fullWidth onClick={() => {}}>
-              {pathname ===
-              '/organizations/[id]/projects/[projectId]/settings' ? (
+              {pathname === '/organization/[id]/project/[projectId]/tools' ? (
                 <Settings />
               ) : (
                 <SettingsOutlined />
               )}
-              <span className="button-text">Settings</span>
+              <span className="button-text">Tools</span>
             </UI.Button>
           </div>
-          <div className="sub-navbar-user" onClick={handleAccountClicked}></div>
+          <div
+            className="sub-navbar-user"
+            role="button"
+            tabIndex={0}
+            aria-label="Account menu"
+            onClick={handleAccountClicked}
+            onKeyDown={e => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                handleAccountClicked();
+              }
+            }}
+          ></div>
         </div>
         <nav className="navbar">
           <div className="header-logo">
@@ -211,31 +260,38 @@ export const Home = (
           </div>
         </nav>
         {accountClicked && (
-          <div className="account-menu">
+          <div className="account-menu" ref={accountMenuRef} role="menu">
             <div className="account-menu-person">
               <div className="account-menu-person-pic"></div>
               <div className="account-menu-person-texts">
-                <p className="account-menu-person-title">
-                  {(page.props as any).user?.name}
-                </p>
-                <p className="account-menu-person-subtitle">
-                  {(page.props as any).user?.email}
-                </p>
+                <p className="account-menu-person-title">{user?.name}</p>
+                <p className="account-menu-person-subtitle">{user?.email}</p>
               </div>
             </div>
-            <div className="account-menu-item">
+            <div className="account-menu-item" role="menuitem" tabIndex={0}>
               <AccountCircleOutlined />
               <p className="account-menu-item-text">Account</p>
             </div>
-            <div className="account-menu-item">
+            <div className="account-menu-item" role="menuitem" tabIndex={0}>
               <HelpOutline />
               <p className="account-menu-item-text">Help</p>
             </div>
-            <div className="account-menu-item">
+            <div className="account-menu-item" role="menuitem" tabIndex={0}>
               <SettingsOutlined />
               <p className="account-menu-item-text">Settings</p>
             </div>
-            <div className="account-menu-item" onClick={handleLogoutClicked}>
+            <div
+              className="account-menu-item"
+              role="menuitem"
+              tabIndex={0}
+              onClick={handleLogoutClicked}
+              onKeyDown={e => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  handleLogoutClicked();
+                }
+              }}
+            >
               <LogoutOutlined />
               <p className="account-menu-item-text">Logout</p>
             </div>

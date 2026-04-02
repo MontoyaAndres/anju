@@ -232,6 +232,15 @@ export const Wrapper = styled.nav<IProps>`
       }
     }
 
+    .box-container {
+      padding-top: 60px;
+
+      @media (min-width: ${theme.screens.xl}) {
+        padding-top: 80px;
+        margin-left: 93px;
+      }
+    }
+
     .projects-menu {
       position: fixed;
       top: 116px;

@@ -140,6 +140,13 @@ export const CreateOrganizationWrapper = styled.div`
         }
       }
 
+      .create-organization-error {
+        color: ${theme.colors.red};
+        font-size: ${theme.fonts.sm};
+        font-weight: 400;
+        margin: 0;
+      }
+
       .create-organization-button {
         margin-top: 12px;
 
