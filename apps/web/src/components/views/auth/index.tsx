@@ -1,13 +1,17 @@
+import { useState } from 'react';
 import { UI } from '@anju/ui';
 
 import { Wrapper } from './styles';
 import { authClient } from '../../../utils';
 
 export const Auth = () => {
-  const signIn = (provider: 'google' | 'github') => {
-    authClient.signIn.social({
+  const [status, setStatus] = useState('idle');
+
+  const signIn = async (provider: 'google' | 'github') => {
+    setStatus('pending');
+    await authClient.signIn.social({
       provider,
-      callbackURL: `${process.env.NEXT_PUBLIC_WEB_URL}/organization`,
+      callbackURL: `${process.env.NEXT_PUBLIC_WEB_URL}/organization`
     });
   };
 
@@ -25,6 +29,7 @@ export const Auth = () => {
             variant="outlined"
             startIcon="GOOGLE.svg"
             onClick={() => signIn('google')}
+            disabled={status === 'pending'}
           >
             Sign in with Google
           </UI.Button>
@@ -32,6 +37,7 @@ export const Auth = () => {
             variant="outlined"
             startIcon="GITHUB.svg"
             onClick={() => signIn('github')}
+            disabled={status === 'pending'}
           >
             Sign in with GitHub
           </UI.Button>

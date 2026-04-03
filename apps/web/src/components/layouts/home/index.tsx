@@ -69,10 +69,12 @@ export const Home = (
     setAccountClicked(false);
   };
 
-  const handleLogoutClicked = () => {
+  const handleLogoutClicked = async () => {
     setAccountClicked(false);
     setMobileMenuClicked(false);
-    authClient.signOut();
+    await authClient.signOut().then(() => {
+      window.location.reload();
+    });
   };
 
   return (
