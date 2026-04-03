@@ -28,16 +28,16 @@ import {
 import { MobileMenuWrapper, Wrapper } from './styles';
 import { authClient } from '../../../utils';
 
-interface UserProps {
+interface AuthProps {
   name?: string;
   email?: string;
-  photo?: string;
+  image?: string;
 }
 
 export const Home = (
   page: ReactElement<unknown, string | JSXElementConstructor<any>>
 ) => {
-  const user = (page.props as { user?: UserProps }).user;
+  const auth = (page.props as { auth?: AuthProps }).auth;
   const [accountClicked, setAccountClicked] = useState(false);
   const [mobileMenuClicked, setMobileMenuClicked] = useState(false);
   const accountMenuRef = useRef<HTMLDivElement>(null);
@@ -78,9 +78,9 @@ export const Home = (
   };
 
   return (
-    <Wrapper userPhoto={user?.photo}>
+    <Wrapper userPhoto={auth?.image}>
       {mobileMenuClicked && (
-        <MobileMenuWrapper userPhoto={user?.photo}>
+        <MobileMenuWrapper userPhoto={auth?.image}>
           <div
             className="background"
             role="button"
@@ -98,8 +98,8 @@ export const Home = (
             <div className="mobile-menu-user">
               <div className="mobile-menu-user-pic"></div>
               <div className="mobile-menu-user-texts">
-                <p className="mobile-menu-user-title">{user?.name}</p>
-                <p className="mobile-menu-user-subtitle">{user?.email}</p>
+                <p className="mobile-menu-user-title">{auth?.name}</p>
+                <p className="mobile-menu-user-subtitle">{auth?.email}</p>
               </div>
               <IconButton onClick={handleMobileMenuClicked}>
                 <Close />
@@ -266,8 +266,8 @@ export const Home = (
             <div className="account-menu-person">
               <div className="account-menu-person-pic"></div>
               <div className="account-menu-person-texts">
-                <p className="account-menu-person-title">{user?.name}</p>
-                <p className="account-menu-person-subtitle">{user?.email}</p>
+                <p className="account-menu-person-title">{auth?.name}</p>
+                <p className="account-menu-person-subtitle">{auth?.email}</p>
               </div>
             </div>
             <div className="account-menu-item" role="menuitem" tabIndex={0}>

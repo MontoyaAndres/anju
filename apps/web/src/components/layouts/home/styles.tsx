@@ -118,7 +118,7 @@ export const Wrapper = styled.nav<IProps>`
           width: 44px;
           height: 44px;
           border-radius: 9999px;
-          background-image: url(${userPhoto});
+          background-image: url('${userPhoto}');
           background-size: cover;
           background-position: center;
           background-color: ${theme.colors.bastille};
@@ -174,7 +174,7 @@ export const Wrapper = styled.nav<IProps>`
             height: 40px;
             border-radius: 9999px;
             border: 1px solid ${theme.colors.white};
-            background-image: url(${userPhoto});
+            background-image: url('${userPhoto}');
             background-size: cover;
             background-position: center;
             background-color: ${theme.colors.bastille};

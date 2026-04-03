@@ -11,10 +11,10 @@ const getMe = async (context: GetServerSidePropsContext) => {
     config: {
       credentials: 'include',
       headers: {
-        cookie: cookies,
-      },
+        cookie: cookies
+      }
     },
-    ssrContext: context,
+    ssrContext: context
   });
 
   if (me && !me?.error) {
@@ -34,10 +34,10 @@ const getOrganizations = async (context: GetServerSidePropsContext) => {
     config: {
       credentials: 'include',
       headers: {
-        cookie: cookies,
-      },
+        cookie: cookies
+      }
     },
-    ssrContext: context,
+    ssrContext: context
   });
 
   if (organizations && !organizations?.error) {
@@ -54,7 +54,7 @@ const getAuthMe: GetServerSideProps = async context => {
     params,
     query,
     locale,
-    defaultLocale = utils.constants.LANGUAGE_EN,
+    defaultLocale = utils.constants.LANGUAGE_EN
   } = context;
 
   const cookies = req.headers.cookie;
@@ -64,8 +64,8 @@ const getAuthMe: GetServerSideProps = async context => {
       props: {},
       redirect: {
         permanent: false,
-        destination: '/',
-      },
+        destination: '/'
+      }
     };
   }
 
@@ -77,8 +77,8 @@ const getAuthMe: GetServerSideProps = async context => {
         params: params || null,
         query: query || null,
         locale: locale || defaultLocale,
-        auth: me?.user || null,
-      },
+        auth: me?.user || null
+      }
     };
   }
 
@@ -86,8 +86,8 @@ const getAuthMe: GetServerSideProps = async context => {
     props: {},
     redirect: {
       permanent: false,
-      destination: '/',
-    },
+      destination: '/'
+    }
   };
 };
 
@@ -98,7 +98,7 @@ const getAuthOrganizations = async (context: GetServerSidePropsContext) => {
     params,
     query,
     locale,
-    defaultLocale = utils.constants.LANGUAGE_EN,
+    defaultLocale = utils.constants.LANGUAGE_EN
   } = context;
 
   const cookies = req.headers.cookie;
@@ -108,8 +108,8 @@ const getAuthOrganizations = async (context: GetServerSidePropsContext) => {
       props: {},
       redirect: {
         permanent: false,
-        destination: '/',
-      },
+        destination: '/'
+      }
     };
   }
 
@@ -125,8 +125,8 @@ const getAuthOrganizations = async (context: GetServerSidePropsContext) => {
           permanent: false,
           destination: `/organization/${organizations?.[0].id}/project/${
             organizations?.[0].projects?.[0]?.id || ''
-          }`,
-        },
+          }`
+        }
       };
     }
 
@@ -136,8 +136,8 @@ const getAuthOrganizations = async (context: GetServerSidePropsContext) => {
         query: query || null,
         locale: locale || defaultLocale,
         auth: me?.user || null,
-        organizations: organizations || [],
-      },
+        organizations: organizations || []
+      }
     };
   }
 
@@ -145,12 +145,12 @@ const getAuthOrganizations = async (context: GetServerSidePropsContext) => {
     props: {},
     redirect: {
       permanent: false,
-      destination: '/',
-    },
+      destination: '/'
+    }
   };
 };
 
 export const ssr = {
   getAuthMe,
-  getAuthOrganizations,
+  getAuthOrganizations
 };
