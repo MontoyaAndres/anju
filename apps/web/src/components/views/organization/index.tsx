@@ -11,14 +11,14 @@ import { IProps } from '../../../pages/organization';
 const INITIAL_FORM_STATE = {
   name: '',
   projectName: '',
-  projectDescription: '',
+  projectDescription: ''
 };
 
 export const Organization = (props: IProps) => {
   const { organizations } = props;
   const [values, setValues] = useState(INITIAL_FORM_STATE);
   const [status, setStatus] = useState<
-    'idle' | 'pending' | 'error' | 'success'
+    'idle' | 'pending' | 'rejected' | 'resolved'
   >('idle');
   const [error, setError] = useState(INITIAL_FORM_STATE);
   const [apiError, setApiError] = useState('');
@@ -42,7 +42,7 @@ export const Organization = (props: IProps) => {
         await utils.Schema.ORGANIZATION_CREATE_VIEW.parseAsync({
           name: values.name,
           projectName: values.projectName,
-          projectDescription: values.projectDescription,
+          projectDescription: values.projectDescription
         });
 
       const newOrganization = await utils.fetcher({
@@ -50,13 +50,16 @@ export const Organization = (props: IProps) => {
         config: {
           method: 'POST',
           credentials: 'include',
-          body: JSON.stringify(currentValues),
-        },
+          body: JSON.stringify(currentValues)
+        }
       });
 
       if (newOrganization?.error) {
-        setStatus('error');
-        setApiError(newOrganization.error.message || 'Something went wrong. Please try again.');
+        setStatus('rejected');
+        setApiError(
+          newOrganization.error.message ||
+            'Something went wrong. Please try again.'
+        );
         return;
       }
 
@@ -64,7 +67,7 @@ export const Organization = (props: IProps) => {
         `/organization/${newOrganization.organization.id}/project/${newOrganization.project.id}`
       );
     } catch (err) {
-      setStatus('error');
+      setStatus('rejected');
       if (
         err &&
         typeof err === 'object' &&
@@ -75,7 +78,7 @@ export const Organization = (props: IProps) => {
           err as { issues: { path: string[]; message: string }[] }
         ).issues.reduce(
           (acc, curr) => ({ ...acc, [curr.path[0]]: curr.message }),
-          {} as typeof INITIAL_FORM_STATE,
+          {} as typeof INITIAL_FORM_STATE
         );
         setError(formattedErrors);
       }
@@ -142,9 +145,7 @@ export const Organization = (props: IProps) => {
               helperText={error.projectDescription}
             />
           </div>
-          {apiError && (
-            <p className="create-organization-error">{apiError}</p>
-          )}
+          {apiError && <p className="create-organization-error">{apiError}</p>}
           <div className="create-organization-button">
             <UI.Button
               type="submit"

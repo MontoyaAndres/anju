@@ -97,7 +97,7 @@ Consumed as: `Components.Views.Name` or `Components.Layouts.Name`
 ## Export Pattern
 
 All exports use **namespace objects**, never individual named exports at the barrel level:
-- `packages/ui`: `export const UI = { Button, Input, Portal, ... }`
+- `packages/ui`: `export const UI = { Button, Input, Portal, Alert, ... }`
 - `packages/utils`: `export const utils = { Schema, fetcher, constants, ... }`
 - `apps/web`: `export const Components = { Views: { ... }, Layouts: { ... } }`
 
@@ -106,6 +106,8 @@ All exports use **namespace objects**, never individual named exports at the bar
 - Zod schemas defined in `packages/utils/src/schema.ts`, exported via `utils.Schema.SCHEMA_NAME`
 - API calls use `utils.fetcher({ url, config })` with `credentials: 'include'`
 - Form validation: `utils.Schema.SCHEMA_NAME.parseAsync(values)` with try/catch for ZodError
+- Async status state uses: `'idle' | 'pending' | 'resolved' | 'rejected'`
+- Use `UI.Alert` for destructive action confirmations (delete, remove, etc.)
 
 ## Instructions
 

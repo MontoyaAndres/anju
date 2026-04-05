@@ -25,6 +25,7 @@ export const Wrapper = styled.nav<IProps>`
         background-color: ${theme.colors.white};
 
         @media (min-width: ${theme.screens.xl}) {
+          display: none;
           padding: 24px 20px;
           width: calc(100% - 93px);
         }
@@ -236,7 +237,7 @@ export const Wrapper = styled.nav<IProps>`
       padding-top: 60px;
 
       @media (min-width: ${theme.screens.xl}) {
-        padding-top: 80px;
+        padding-top: 0;
         margin-left: 93px;
       }
     }

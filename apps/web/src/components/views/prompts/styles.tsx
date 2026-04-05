@@ -1,0 +1,306 @@
+import { css } from '@emotion/react';
+import styled from '@emotion/styled';
+
+interface IProps {
+  panelWidth: number;
+}
+
+export const Wrapper = styled.div<IProps>`
+  ${({ theme, panelWidth }) => css`
+    display: flex;
+    height: calc(100vh - 60px);
+    position: relative;
+
+    @media (min-width: ${theme.screens.xl}) {
+      height: calc(100vh - 0px);
+    }
+
+    .prompts-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+
+      @media (min-width: ${theme.screens.md}) {
+        padding: 24px 32px;
+      }
+
+      &.has-selection {
+        display: none;
+
+        @media (min-width: ${theme.screens.md}) {
+          display: block;
+        }
+      }
+
+      .prompts-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 20px;
+
+        .prompts-title {
+          font-size: ${theme.fonts['2xl']};
+          color: ${theme.colors.bastille};
+          font-weight: 700;
+          margin: 0;
+        }
+
+        .MuiButtonBase-root {
+          font-size: ${theme.fonts.sm};
+          padding: 6px 14px;
+          border-radius: 8px;
+          text-transform: none;
+          display: flex;
+          align-items: center;
+          gap: 4px;
+
+          .button-text {
+            font-weight: 600;
+          }
+
+          & > svg {
+            width: 18px;
+            height: 18px;
+          }
+        }
+      }
+
+      .prompts-empty {
+        font-size: ${theme.fonts.base};
+        color: ${theme.colors.bastille}99;
+        margin: 40px 0;
+        text-align: center;
+      }
+
+      .prompts-items {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+
+        .prompt-item {
+          padding: 14px 16px;
+          border-radius: 8px;
+          border: 1px solid ${theme.colors.alto};
+          cursor: pointer;
+          transition:
+            border-color 0.15s ease,
+            background-color 0.15s ease;
+
+          &:hover {
+            border-color: ${theme.colors.bastille}40;
+            background-color: ${theme.colors.bastille}05;
+          }
+
+          &.active {
+            border-color: ${theme.colors.bastille}60;
+            background-color: ${theme.colors.bastille}0A;
+          }
+
+          .prompt-item-title {
+            font-size: ${theme.fonts.base};
+            font-weight: 600;
+            color: ${theme.colors.bastille};
+            margin: 0;
+          }
+
+          .prompt-item-description {
+            font-size: ${theme.fonts.sm};
+            color: ${theme.colors.bastille}99;
+            margin: 4px 0 0 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+          }
+
+          .prompt-item-date {
+            font-size: ${theme.fonts.xs};
+            color: ${theme.colors.saltBox};
+            margin: 8px 0 0 0;
+          }
+        }
+      }
+    }
+
+    .prompt-panel {
+      position: fixed;
+      top: 60px;
+      right: 0;
+      bottom: 0;
+      width: 100%;
+      background-color: ${theme.colors.white};
+      z-index: 5;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+
+      @media (min-width: ${theme.screens.md}) {
+        width: ${panelWidth}px;
+        border-left: 1px solid ${theme.colors.alto};
+        position: relative;
+        top: 0;
+        flex-shrink: 0;
+      }
+
+      @media (min-width: ${theme.screens.xl}) {
+        top: 0;
+      }
+
+      .panel-resize-handle {
+        display: none;
+
+        @media (min-width: ${theme.screens.md}) {
+          display: block;
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 4px;
+          height: 100%;
+          cursor: col-resize;
+          z-index: 10;
+
+          &:hover {
+            background-color: ${theme.colors.bastille}1A;
+          }
+        }
+      }
+
+      .panel-header {
+        display: flex;
+        align-items: center;
+        padding: 14px 16px;
+        border-bottom: 1px solid ${theme.colors.alto};
+        gap: 8px;
+
+        .panel-back-btn {
+          display: flex;
+
+          @media (min-width: ${theme.screens.md}) {
+            display: none;
+          }
+        }
+
+        .panel-title {
+          font-size: ${theme.fonts.lg};
+          font-weight: 600;
+          color: ${theme.colors.bastille};
+          margin: 0;
+          flex: 1;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .panel-actions {
+          display: flex;
+          align-items: center;
+          gap: 4px;
+
+          .panel-close-btn {
+            display: none;
+
+            @media (min-width: ${theme.screens.md}) {
+              display: flex;
+            }
+          }
+        }
+      }
+
+      .panel-content {
+        flex: 1;
+        overflow-y: auto;
+        padding: 20px 16px;
+
+        .panel-edit-form {
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+
+          .panel-edit-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+
+            .MuiButtonBase-root {
+              font-size: ${theme.fonts.sm};
+              padding: 6px 16px;
+              border-radius: 6px;
+            }
+          }
+        }
+
+        .panel-view {
+          display: flex;
+          flex-direction: column;
+          gap: 20px;
+
+          .panel-section {
+            .panel-section-label {
+              font-size: ${theme.fonts.sm};
+              font-weight: 600;
+              color: ${theme.colors.bastille};
+              margin: 0 0 8px 0;
+              text-transform: uppercase;
+              letter-spacing: 0.5px;
+            }
+
+            .panel-section-text {
+              font-size: ${theme.fonts.base};
+              color: ${theme.colors.bastille}CC;
+              margin: 0;
+              line-height: 1.5;
+            }
+          }
+
+          .panel-messages {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+
+            .panel-message {
+              padding: 12px;
+              border-radius: 8px;
+              border: 1px solid ${theme.colors.alto};
+
+              &.panel-message-user {
+                background-color: ${theme.colors.bastille}05;
+              }
+
+              &.panel-message-assistant {
+                background-color: ${theme.colors.white};
+              }
+
+              .panel-message-role {
+                font-size: ${theme.fonts.xs};
+                font-weight: 700;
+                color: ${theme.colors.saltBox};
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+              }
+
+              .panel-message-content {
+                font-size: ${theme.fonts.base};
+                color: ${theme.colors.bastille};
+                margin: 6px 0 0 0;
+                line-height: 1.5;
+                white-space: pre-wrap;
+                word-break: break-word;
+              }
+            }
+          }
+
+          .panel-schema {
+            background-color: ${theme.colors.bastille}08;
+            border: 1px solid ${theme.colors.alto};
+            border-radius: 8px;
+            padding: 12px;
+            font-size: ${theme.fonts.sm};
+            color: ${theme.colors.bastille};
+            overflow-x: auto;
+            margin: 0;
+            line-height: 1.5;
+          }
+        }
+      }
+    }
+  `}
+`;

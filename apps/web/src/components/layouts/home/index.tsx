@@ -41,7 +41,10 @@ export const Home = (
   const [accountClicked, setAccountClicked] = useState(false);
   const [mobileMenuClicked, setMobileMenuClicked] = useState(false);
   const accountMenuRef = useRef<HTMLDivElement>(null);
-  const { pathname } = useRouter();
+  const router = useRouter();
+  const { pathname, query } = router;
+
+  const projectBase = `/organization/${query.id}/project/${query.projectId}`;
 
   useEffect(() => {
     if (!accountClicked) return;
@@ -127,11 +130,11 @@ export const Home = (
                   fullWidth
                   className={
                     pathname ===
-                    '/organization/[id]/project/[projectId]/knowledge'
+                    '/organization/[id]/project/[projectId]/prompts'
                       ? 'active'
                       : ''
                   }
-                  onClick={() => {}}
+                  onClick={() => router.push(`${projectBase}/prompts`)}
                 >
                   {pathname ===
                   '/organization/[id]/project/[projectId]/prompts' ? (
@@ -209,7 +212,7 @@ export const Home = (
                   ? 'active'
                   : ''
               }
-              onClick={() => {}}
+              onClick={() => router.push(`${projectBase}/prompts`)}
             >
               {pathname === '/organization/[id]/project/[projectId]/prompts' ? (
                 <EmojiObjects />
