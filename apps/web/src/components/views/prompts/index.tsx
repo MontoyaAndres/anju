@@ -194,7 +194,6 @@ export const Prompts = () => {
   const handleDeleteConfirm = async () => {
     if (!selectedPrompt || submitting) return;
     setSubmitting(true);
-    setDeleteAlert(false);
     try {
       const data = await utils.fetcher({
         url: `${apiBase}/${selectedPrompt.id}`,
@@ -205,6 +204,7 @@ export const Prompts = () => {
       });
 
       if (data && !data.error) {
+        setDeleteAlert(false);
         setSelectedPrompt(null);
         setIsEditing(false);
         fetchPrompts();
@@ -437,6 +437,7 @@ export const Prompts = () => {
         description={`Are you sure you want to delete "${selectedPrompt?.title}"? This action cannot be undone.`}
         confirmText="Delete"
         cancelText="Cancel"
+        loading={submitting}
         onConfirm={handleDeleteConfirm}
         onCancel={() => setDeleteAlert(false)}
       />

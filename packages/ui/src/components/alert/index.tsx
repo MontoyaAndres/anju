@@ -10,6 +10,7 @@ export interface IProps {
   description?: string;
   confirmText?: string;
   cancelText?: string;
+  loading?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
 }
@@ -21,6 +22,7 @@ export const Alert = (props: IProps) => {
     description,
     confirmText = 'Confirm',
     cancelText = 'Cancel',
+    loading = false,
     onConfirm,
     onCancel
   } = props;
@@ -32,9 +34,9 @@ export const Alert = (props: IProps) => {
       <Overlay
         role="button"
         tabIndex={0}
-        onClick={onCancel}
+        onClick={() => { if (!loading) onCancel(); }}
         onKeyDown={e => {
-          if (e.key === 'Escape') onCancel();
+          if (e.key === 'Escape' && !loading) onCancel();
         }}
       >
         <Dialog
@@ -47,7 +49,7 @@ export const Alert = (props: IProps) => {
           </p>
           {description && <p className="alert-description">{description}</p>}
           <div className="alert-actions">
-            <MaterialButton size="small" onClick={onCancel}>
+            <MaterialButton size="small" onClick={onCancel} disabled={loading}>
               {cancelText}
             </MaterialButton>
             <MaterialButton
@@ -55,8 +57,9 @@ export const Alert = (props: IProps) => {
               variant="contained"
               color="error"
               onClick={onConfirm}
+              disabled={loading}
             >
-              {confirmText}
+              {loading ? 'Deleting...' : confirmText}
             </MaterialButton>
           </div>
         </Dialog>
