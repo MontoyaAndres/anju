@@ -265,6 +265,8 @@ const createResource = async (c: Context<AppEnv>) => {
         description: currentValues.description || null,
         mimeType: currentValues.mimeType,
         content: currentValues.content || null,
+        size: currentValues.size,
+        encoding: currentValues.encoding || null,
         fileKey: currentValues.fileKey || null,
         annotations: currentValues.annotations || null,
         icons: currentValues.icons || null,
@@ -333,6 +335,8 @@ const updateResource = async (c: Context<AppEnv>) => {
         description: currentValues.description || null,
         mimeType: currentValues.mimeType,
         content: currentValues.content || null,
+        size: currentValues.size,
+        encoding: currentValues.encoding || null,
         fileKey: currentValues.fileKey || null,
         annotations: currentValues.annotations || null,
         icons: currentValues.icons || null,
@@ -725,7 +729,8 @@ const uploadResourceFile = async (c: Context<AppEnv>) => {
       .update(db.schema.artifactResource)
       .set({
         fileKey: key,
-        mimeType: file.type
+        mimeType: file.type,
+        size: file.size
       })
       .where(
         and(

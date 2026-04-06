@@ -302,6 +302,8 @@ export const artifactResource = pgTable('artifact_resource', {
   description: text('description'),
   mimeType: text('mime_type').notNull(),
   content: text('content'),
+  size: integer('size'),
+  encoding: text('encoding'),
   fileKey: text('file_key'),
   annotations: json('annotations'),
   icons: json('icons'),

@@ -121,6 +121,8 @@ const ARTIFACT_CREATE_RESOURCE = z.object({
   description: z.string().max(1000).optional(),
   mimeType: z.string().min(1).max(200),
   content: z.string().optional(),
+  size: z.number().int().min(0),
+  encoding: z.string().max(50).optional(),
   fileKey: z.string().optional(),
   annotations: z
     .object({
@@ -155,6 +157,8 @@ const ARTIFACT_UPDATE_RESOURCE = z.object({
   description: z.string().max(1000).optional(),
   mimeType: z.string().min(1).max(200),
   content: z.string().optional(),
+  size: z.number().int().min(0),
+  encoding: z.string().max(50).optional(),
   fileKey: z.string().optional(),
   annotations: z
     .object({

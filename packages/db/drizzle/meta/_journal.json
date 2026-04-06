@@ -148,6 +148,13 @@
       "when": 1774709070671,
       "tag": "0020_pale_grey_gargoyle",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1775402201920,
+      "tag": "0021_right_bushwacker",
+      "breakpoints": true
     }
   ]
 }
