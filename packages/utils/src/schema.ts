@@ -203,6 +203,13 @@ const ARTIFACT_UPLOAD_RESOURCE_FILE = z.object({
   organizationId: z.uuid()
 });
 
+const ARTIFACT_DOWNLOAD_RESOURCE_FILE = z.object({
+  resourceId: z.uuid(),
+  projectId: z.uuid(),
+  userId: z.uuid(),
+  organizationId: z.uuid()
+});
+
 const ARTIFACT_CREATE_TOOL = z.object({
   toolDefinitionId: z.uuid(),
   config: z.record(z.string(), z.any()).optional(),
@@ -269,6 +276,7 @@ export const Schema = {
   ARTIFACT_GET_RESOURCE,
   ARTIFACT_REMOVE_RESOURCE,
   ARTIFACT_UPLOAD_RESOURCE_FILE,
+  ARTIFACT_DOWNLOAD_RESOURCE_FILE,
   ARTIFACT_CREATE_TOOL,
   ARTIFACT_UPDATE_TOOL,
   ARTIFACT_GET_TOOL,

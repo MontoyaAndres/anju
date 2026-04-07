@@ -1,3 +1,5 @@
+import { utils } from '@anju/utils';
+
 import { ToolDefinition } from '../types';
 
 const GMAIL_API_BASE = 'https://gmail.googleapis.com/gmail/v1/users/me';
@@ -182,7 +184,9 @@ export const readEmail: ToolDefinition = {
 
     let body = '';
     const parts = detail.payload?.parts || [];
-    const textPart = parts.find((p: any) => p.mimeType === 'text/plain');
+    const textPart = parts.find(
+      (p: any) => p.mimeType === utils.constants.MIMETYPE_TEXT
+    );
 
     if (textPart?.body?.data) {
       body = atob(textPart.body.data.replace(/-/g, '+').replace(/_/g, '/'));

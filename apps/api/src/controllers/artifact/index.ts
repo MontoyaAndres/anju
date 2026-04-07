@@ -838,6 +838,66 @@ const removeCredential = async (c: Context<AppEnv>) => {
   return c.json(currentValues);
 };
 
+const downloadResourceFile = async (c: Context<AppEnv>) => {
+  const currentValues =
+    await utils.Schema.ARTIFACT_DOWNLOAD_RESOURCE_FILE.parseAsync({
+      resourceId: c.req.param('resourceId'),
+      projectId: c.req.param('projectId'),
+      userId: c.get('user').id,
+      organizationId: c.req.param('organizationId')
+    });
+
+  const dbInstance = db.create(c);
+  const bucket = c.env.STORAGE_BUCKET;
+
+  const [currentArtifactByProject] = await dbInstance
+    .select()
+    .from(db.schema.artifact)
+    .where(eq(db.schema.artifact.projectId, currentValues.projectId))
+    .limit(1);
+
+  if (!currentArtifactByProject) {
+    throw new Error('Artifact not found for the project');
+  }
+
+  const [resource] = await dbInstance
+    .select()
+    .from(db.schema.artifactResource)
+    .where(
+      and(
+        eq(db.schema.artifactResource.id, currentValues.resourceId),
+        eq(db.schema.artifactResource.artifactId, currentArtifactByProject.id)
+      )
+    )
+    .limit(1);
+
+  if (!resource) {
+    throw new Error('Resource not found');
+  }
+
+  if (!resource.fileKey) {
+    throw new Error('Resource has no file');
+  }
+
+  if (!bucket) {
+    throw new Error('Storage not available');
+  }
+
+  const object = await bucket.get(resource.fileKey);
+
+  if (!object) {
+    throw new Error('File not found in storage');
+  }
+
+  return new Response(object.body as unknown as ReadableStream, {
+    headers: {
+      'Content-Type': resource.mimeType,
+      'Content-Disposition': `inline; filename="${resource.title}"`,
+      'Cache-Control': 'private, max-age=3600'
+    }
+  });
+};
+
 export const ArtifactController = {
   createPrompt,
   updatePrompt,
@@ -848,6 +908,7 @@ export const ArtifactController = {
   removeResource,
   listResources,
   uploadResourceFile,
+  downloadResourceFile,
   createTool,
   updateTool,
   removeTool,

@@ -9,9 +9,12 @@ export interface IFetcherProps {
 export const fetcher = async (props: IFetcherProps) => {
   const { url, config: fetchConfig, ssrContext } = props;
 
-  const headers: HeadersInit = {
-    'Content-Type': 'application/json',
-  };
+  const isFormData =
+    typeof FormData !== 'undefined' && fetchConfig?.body instanceof FormData;
+
+  const headers: HeadersInit = isFormData
+    ? {}
+    : { 'Content-Type': 'application/json' };
 
   const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}${url}`, {
     headers,

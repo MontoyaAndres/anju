@@ -128,6 +128,11 @@ app
     UserMiddleware.verify,
     ArtifactController.uploadResourceFile
   )
+  .get(
+    '/organization/:organizationId/project/:projectId/artifact/resource/:resourceId/download',
+    UserMiddleware.verify,
+    ArtifactController.downloadResourceFile
+  )
 
   // Artifact Tool controller
   .get(

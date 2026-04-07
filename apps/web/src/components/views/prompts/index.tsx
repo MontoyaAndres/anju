@@ -247,14 +247,12 @@ export const Prompts = () => {
 
   return (
     <Wrapper panelWidth={panelWidth}>
-      <div className={`prompts-list ${selectedPrompt || isCreating ? 'has-selection' : ''}`}>
+      <div
+        className={`prompts-list ${selectedPrompt || isCreating ? 'has-selection' : ''}`}
+      >
         <div className="prompts-header">
           <h1 className="prompts-title">Prompts</h1>
-          <UI.Button
-            variant="contained"
-            size="small"
-            onClick={handleCreate}
-          >
+          <UI.Button variant="contained" size="small" onClick={handleCreate}>
             <Add />
             <span className="button-text">New prompt</span>
           </UI.Button>
@@ -293,7 +291,6 @@ export const Prompts = () => {
           ))}
         </div>
       </div>
-
       {(selectedPrompt || isCreating) && (
         <div className="prompt-panel">
           <div
@@ -327,7 +324,6 @@ export const Prompts = () => {
               </IconButton>
             </div>
           </div>
-
           <div className="panel-content">
             {isCreating || isEditing ? (
               <div className="panel-edit-form">
@@ -430,7 +426,6 @@ export const Prompts = () => {
           </div>
         </div>
       )}
-
       <UI.Alert
         open={deleteAlert}
         title="Delete prompt"

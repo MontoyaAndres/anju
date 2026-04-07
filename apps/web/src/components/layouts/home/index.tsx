@@ -144,7 +144,16 @@ export const Home = (
                   )}
                   <span className="button-text">Prompts</span>
                 </UI.Button>
-                <UI.Button fullWidth>
+                <UI.Button
+                  fullWidth
+                  className={
+                    pathname ===
+                    '/organization/[id]/project/[projectId]/resources'
+                      ? 'active'
+                      : ''
+                  }
+                  onClick={() => router.push(`${projectBase}/resources`)}
+                >
                   {pathname ===
                   '/organization/[id]/project/[projectId]/resources' ? (
                     <Chat />
@@ -221,7 +230,15 @@ export const Home = (
               )}
               <span className="button-text">Prompts</span>
             </UI.Button>
-            <UI.Button fullWidth>
+            <UI.Button
+              fullWidth
+              className={
+                pathname === '/organization/[id]/project/[projectId]/resources'
+                  ? 'active'
+                  : ''
+              }
+              onClick={() => router.push(`${projectBase}/resources`)}
+            >
               {pathname ===
               '/organization/[id]/project/[projectId]/resources' ? (
                 <Chat />
