@@ -262,15 +262,15 @@ const createResource = async (c: Context<AppEnv>) => {
         title: currentValues.title,
         uri: currentValues.uri,
         type: currentValues.type,
-        description: currentValues.description || null,
+        description: currentValues.description ?? null,
         mimeType: currentValues.mimeType,
-        content: currentValues.content || null,
-        size: currentValues.size,
-        encoding: currentValues.encoding || null,
-        fileKey: currentValues.fileKey || null,
-        annotations: currentValues.annotations || null,
-        icons: currentValues.icons || null,
-        metadata: currentValues.metadata || null,
+        content: currentValues.content ?? null,
+        size: currentValues.size ?? null,
+        encoding: currentValues.encoding ?? null,
+        fileKey: currentValues.fileKey ?? null,
+        annotations: currentValues.annotations ?? null,
+        icons: currentValues.icons ?? null,
+        metadata: currentValues.metadata ?? null,
         artifactId: currentArtifactByProject.id
       })
       .returning();
@@ -889,10 +889,12 @@ const downloadResourceFile = async (c: Context<AppEnv>) => {
     throw new Error('File not found in storage');
   }
 
+  const fileName = resource.fileKey.split('/').pop() || resource.title;
+
   return new Response(object.body as unknown as ReadableStream, {
     headers: {
       'Content-Type': resource.mimeType,
-      'Content-Disposition': `inline; filename="${resource.title}"`,
+      'Content-Disposition': `inline; filename="${fileName}"`,
       'Cache-Control': 'private, max-age=3600'
     }
   });

@@ -215,6 +215,230 @@ export const Wrapper = styled.div<IProps>`
           flex-direction: column;
           gap: 16px;
 
+          .panel-messages-section {
+            .panel-messages-header {
+              display: flex;
+              align-items: center;
+              justify-content: space-between;
+              margin-bottom: 12px;
+
+              .panel-messages-label {
+                font-size: ${theme.fonts.sm};
+                font-weight: 600;
+                color: ${theme.colors.bastille};
+                margin: 0;
+              }
+
+              .panel-messages-mode-toggle {
+                display: flex;
+                border: 1px solid ${theme.colors.alto};
+                border-radius: 6px;
+                overflow: hidden;
+
+                .panel-mode-btn {
+                  display: flex;
+                  align-items: center;
+                  gap: 4px;
+                  padding: 4px 10px;
+                  border: none;
+                  background: none;
+                  cursor: pointer;
+                  font-size: ${theme.fonts.xs};
+                  font-weight: 500;
+                  color: ${theme.colors.saltBox};
+                  transition: background-color 0.15s ease, color 0.15s ease;
+
+                  & > svg {
+                    width: 14px;
+                    height: 14px;
+                  }
+
+                  &:hover {
+                    background-color: ${theme.colors.bastille}05;
+                  }
+
+                  &.active {
+                    background-color: ${theme.colors.bastille}0A;
+                    color: ${theme.colors.bastille};
+                    font-weight: 600;
+                  }
+
+                  &:disabled {
+                    opacity: 0.5;
+                    cursor: not-allowed;
+                  }
+
+                  & + .panel-mode-btn {
+                    border-left: 1px solid ${theme.colors.alto};
+                  }
+                }
+              }
+            }
+
+            .panel-messages-error {
+              font-size: ${theme.fonts.sm};
+              color: ${theme.colors.red};
+              margin: 0 0 8px 0;
+            }
+
+            .panel-message-builder {
+              display: flex;
+              flex-direction: column;
+              gap: 12px;
+
+              .panel-message-card {
+                border: 1px solid ${theme.colors.alto};
+                border-radius: 8px;
+                padding: 12px;
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+
+                &.panel-message-card-user {
+                  border-left: 3px solid ${theme.colors.bastille};
+                }
+
+                &.panel-message-card-assistant {
+                  border-left: 3px solid ${theme.colors.saltBox};
+                }
+
+                .panel-message-card-header {
+                  display: flex;
+                  align-items: center;
+                  justify-content: space-between;
+
+                  .panel-message-role-toggle {
+                    display: flex;
+                    border: 1px solid ${theme.colors.alto};
+                    border-radius: 6px;
+                    overflow: hidden;
+
+                    .panel-role-btn {
+                      padding: 3px 10px;
+                      border: none;
+                      background: none;
+                      cursor: pointer;
+                      font-size: ${theme.fonts.xs};
+                      font-weight: 500;
+                      color: ${theme.colors.saltBox};
+                      transition: background-color 0.15s ease, color 0.15s ease;
+
+                      &:hover {
+                        background-color: ${theme.colors.bastille}05;
+                      }
+
+                      &.active {
+                        background-color: ${theme.colors.bastille}0A;
+                        color: ${theme.colors.bastille};
+                        font-weight: 600;
+                      }
+
+                      &:disabled {
+                        opacity: 0.5;
+                        cursor: not-allowed;
+                      }
+
+                      & + .panel-role-btn {
+                        border-left: 1px solid ${theme.colors.alto};
+                      }
+                    }
+                  }
+
+                  .MuiIconButton-root {
+                    padding: 4px;
+
+                    & > svg {
+                      width: 18px;
+                      height: 18px;
+                      color: ${theme.colors.red};
+                    }
+                  }
+                }
+              }
+
+              .panel-add-message {
+                .MuiButtonBase-root {
+                  font-size: ${theme.fonts.sm};
+                  padding: 6px 14px;
+                  border-radius: 6px;
+                  text-transform: none;
+                  display: flex;
+                  align-items: center;
+                  gap: 4px;
+                  width: fit-content;
+
+                  .button-text {
+                    font-weight: 600;
+                  }
+
+                  & > svg {
+                    width: 16px;
+                    height: 16px;
+                  }
+                }
+              }
+
+              .panel-schema-editor {
+                border: 1px solid ${theme.colors.alto};
+                border-radius: 8px;
+                padding: 12px;
+
+                .panel-schema-label {
+                  font-size: ${theme.fonts.sm};
+                  font-weight: 600;
+                  color: ${theme.colors.bastille};
+                  margin: 0 0 4px 0;
+                }
+
+                .panel-schema-hint {
+                  font-size: ${theme.fonts.xs};
+                  color: ${theme.colors.saltBox};
+                  margin: 0 0 12px 0;
+                  line-height: 1.4;
+                }
+
+                .panel-schema-vars {
+                  display: flex;
+                  flex-direction: column;
+                  gap: 12px;
+
+                  .panel-schema-var {
+                    border: 1px solid ${theme.colors.alto};
+                    border-radius: 8px;
+                    padding: 10px;
+
+                    .panel-schema-var-header {
+                      display: flex;
+                      align-items: center;
+                      justify-content: space-between;
+                      margin-bottom: 8px;
+
+                      .panel-schema-var-name {
+                        font-size: ${theme.fonts.sm};
+                        font-weight: 600;
+                        color: ${theme.colors.bastille};
+                        font-family: monospace;
+                        background-color: ${theme.colors.bastille}0A;
+                        padding: 2px 8px;
+                        border-radius: 4px;
+                      }
+
+                      .MuiFormControlLabel-label {
+                        font-size: ${theme.fonts.sm};
+                      }
+                    }
+
+                    .panel-schema-var-fields {
+                      display: grid;
+                      grid-template-columns: 120px 1fr;
+                      gap: 10px;
+                    }
+                  }
+                }
+              }
+            }
+          }
+
           .panel-edit-actions {
             display: flex;
             gap: 8px;

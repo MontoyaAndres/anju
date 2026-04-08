@@ -258,6 +258,32 @@ const BUSINESS_QUERY = z.object({
   hash: z.string().length(8).min(8).max(8)
 });
 
+const ARTIFACT_CREATE_PROMPT_VIEW = ARTIFACT_CREATE_PROMPT.omit({
+  projectId: true,
+  userId: true,
+  organizationId: true
+});
+
+const ARTIFACT_UPDATE_PROMPT_VIEW = ARTIFACT_UPDATE_PROMPT.omit({
+  promptId: true,
+  projectId: true,
+  userId: true,
+  organizationId: true
+});
+
+const ARTIFACT_CREATE_RESOURCE_VIEW = ARTIFACT_CREATE_RESOURCE.omit({
+  projectId: true,
+  userId: true,
+  organizationId: true
+});
+
+const ARTIFACT_UPDATE_RESOURCE_VIEW = ARTIFACT_UPDATE_RESOURCE.omit({
+  resourceId: true,
+  projectId: true,
+  userId: true,
+  organizationId: true
+});
+
 export const Schema = {
   ORGANIZATION_CREATE,
   ORGANIZATION_CREATE_VIEW,
@@ -268,11 +294,15 @@ export const Schema = {
   PROJECT_UPDATE,
   PROJECT_GET,
   ARTIFACT_CREATE_PROMPT,
+  ARTIFACT_CREATE_PROMPT_VIEW,
   ARTIFACT_UPDATE_PROMPT,
+  ARTIFACT_UPDATE_PROMPT_VIEW,
   ARTIFACT_GET_PROMPT,
   ARTIFACT_REMOVE_PROMPT,
   ARTIFACT_CREATE_RESOURCE,
+  ARTIFACT_CREATE_RESOURCE_VIEW,
   ARTIFACT_UPDATE_RESOURCE,
+  ARTIFACT_UPDATE_RESOURCE_VIEW,
   ARTIFACT_GET_RESOURCE,
   ARTIFACT_REMOVE_RESOURCE,
   ARTIFACT_UPLOAD_RESOURCE_FILE,

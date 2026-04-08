@@ -11,8 +11,13 @@ import {
   ArrowBack,
   OpenInNew,
   UploadFile,
-  TextFields
+  TextFields,
+  ExpandMore,
+  ExpandLess,
+  RemoveCircleOutline
 } from '@mui/icons-material';
+import Checkbox from '@mui/material/Checkbox';
+import FormControlLabel from '@mui/material/FormControlLabel';
 
 import { Wrapper } from './styles';
 
@@ -54,16 +59,24 @@ export const Resources = () => {
   );
   const [isEditing, setIsEditing] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  const [uriTouched, setUriTouched] = useState(false);
   const [editValues, setEditValues] = useState(INITIAL_EDIT_VALUES);
   const [status, setStatus] = useState<
     'idle' | 'pending' | 'resolved' | 'rejected'
   >('idle');
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [deleteAlert, setDeleteAlert] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [contentMode, setContentMode] = useState<'text' | 'file'>('text');
   const [file, setFile] = useState<File | null>(null);
   const [filePreviewUrl, setFilePreviewUrl] = useState<string | null>(null);
   const [filePreviewError, setFilePreviewError] = useState<string | null>(null);
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [annotations, setAnnotations] = useState<{
+    audience: string[];
+    priority: string;
+  }>({ audience: [], priority: '' });
+  const [icons, setIcons] = useState<{ src: string; theme: string }[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [panelWidth, setPanelWidth] = useState(480);
   const isResizing = useRef(false);
@@ -150,10 +163,53 @@ export const Resources = () => {
     setEditValues(INITIAL_EDIT_VALUES);
     setContentMode('text');
     setFile(null);
+    setShowAdvanced(false);
+    setAnnotations({ audience: [], priority: '' });
+    setIcons([]);
+    setUriTouched(false);
+  };
+
+  const buildBody = () => ({
+    title: editValues.title,
+    uri: editValues.uri,
+    type: editValues.type,
+    description: editValues.description,
+    mimeType: editValues.mimeType,
+    content:
+      contentMode === 'text' ? editValues.content || undefined : undefined,
+    size: Number(editValues.size),
+    encoding: editValues.encoding || undefined,
+    ...buildAdvancedFields()
+  });
+
+  const parseZodErrors = (err: unknown) => {
+    if (
+      err &&
+      typeof err === 'object' &&
+      'issues' in err &&
+      Array.isArray((err as { issues: unknown[] }).issues)
+    ) {
+      const formatted = (
+        err as { issues: { path: string[]; message: string }[] }
+      ).issues.reduce(
+        (acc, curr) => ({ ...acc, [curr.path[0]]: curr.message }),
+        {} as Record<string, string>
+      );
+      setErrors(formatted);
+    }
   };
 
   const handleCreateSubmit = async () => {
     if (submitting) return;
+    setErrors({});
+    const body = buildBody();
+    try {
+      await utils.Schema.ARTIFACT_CREATE_RESOURCE_VIEW.parseAsync(body);
+    } catch (err) {
+      parseZodErrors(err);
+      return;
+    }
+
     setSubmitting(true);
     try {
       const data = await utils.fetcher({
@@ -161,19 +217,7 @@ export const Resources = () => {
         config: {
           method: 'POST',
           credentials: 'include',
-          body: JSON.stringify({
-            title: editValues.title,
-            uri: editValues.uri,
-            type: editValues.type,
-            description: editValues.description,
-            mimeType: editValues.mimeType,
-            content:
-              contentMode === 'text'
-                ? editValues.content || undefined
-                : undefined,
-            size: Number(editValues.size),
-            encoding: editValues.encoding || undefined
-          })
+          body: JSON.stringify(body)
         }
       });
 
@@ -207,6 +251,21 @@ export const Resources = () => {
     });
     setContentMode(selectedResource.fileKey ? 'file' : 'text');
     setFile(null);
+    const ann = selectedResource.annotations as Record<string, unknown> | null;
+    setAnnotations({
+      audience: Array.isArray(ann?.audience) ? (ann.audience as string[]) : [],
+      priority: ann?.priority != null ? String(ann.priority) : ''
+    });
+    const icn = selectedResource.icons as
+      | { src: string; theme?: string }[]
+      | null;
+    setIcons(
+      Array.isArray(icn)
+        ? icn.map(i => ({ src: i.src, theme: i.theme || '' }))
+        : []
+    );
+    setShowAdvanced(false);
+    setUriTouched(true);
     setIsEditing(true);
   };
 
@@ -225,6 +284,15 @@ export const Resources = () => {
 
   const handleUpdate = async () => {
     if (!selectedResource || submitting) return;
+    setErrors({});
+    const body = buildBody();
+    try {
+      await utils.Schema.ARTIFACT_UPDATE_RESOURCE_VIEW.parseAsync(body);
+    } catch (err) {
+      parseZodErrors(err);
+      return;
+    }
+
     setSubmitting(true);
     try {
       const data = await utils.fetcher({
@@ -232,19 +300,7 @@ export const Resources = () => {
         config: {
           method: 'PUT',
           credentials: 'include',
-          body: JSON.stringify({
-            title: editValues.title,
-            uri: editValues.uri,
-            type: editValues.type,
-            description: editValues.description,
-            mimeType: editValues.mimeType,
-            content:
-              contentMode === 'text'
-                ? editValues.content || undefined
-                : undefined,
-            size: Number(editValues.size),
-            encoding: editValues.encoding || undefined
-          })
+          body: JSON.stringify(body)
         }
       });
 
@@ -262,6 +318,32 @@ export const Resources = () => {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const buildAdvancedFields = () => {
+    const result: Record<string, unknown> = {};
+
+    if (annotations.audience.length > 0 || annotations.priority !== '') {
+      result.annotations = {
+        ...(annotations.audience.length > 0 && {
+          audience: annotations.audience
+        }),
+        ...(annotations.priority !== '' && {
+          priority: Number(annotations.priority)
+        })
+      };
+    }
+
+    if (icons.length > 0 && icons.some(i => i.src)) {
+      result.icons = icons
+        .filter(i => i.src)
+        .map(i => ({
+          src: i.src,
+          ...(i.theme && { theme: i.theme })
+        }));
+    }
+
+    return result;
   };
 
   const handleDeleteClick = () => {
@@ -301,6 +383,9 @@ export const Resources = () => {
   };
 
   const isImageMime = (mime: string) => mime.startsWith('image/');
+
+  const titleToUri = (title: string) =>
+    `resource://${title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}`;
 
   const formatSize = (bytes: number) => {
     if (bytes === 0) return '0 B';
@@ -342,20 +427,41 @@ export const Resources = () => {
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
-    setEditValues(prev => ({ ...prev, [name]: value }));
+    if (name === 'uri') setUriTouched(true);
+    setEditValues(prev => {
+      const next = { ...prev, [name]: value };
+      if (name === 'title' && !uriTouched) {
+        next.uri = titleToUri(value);
+      }
+      return next;
+    });
+    if (errors[name]) {
+      setErrors(prev => {
+        const next = { ...prev };
+        delete next[name];
+        return next;
+      });
+    }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = e.target.files?.[0];
     if (!selected) return;
     setFile(selected);
-    setEditValues(prev => ({
-      ...prev,
-      mimeType:
-        selected.type || utils.constants.MIMETYPE_APPLICATION_OCTET_STREAM,
-      size: String(selected.size),
-      title: prev.title || selected.name
-    }));
+    const nameWithoutExt = selected.name.replace(/\.[^.]+$/, '');
+    setEditValues(prev => {
+      const next = {
+        ...prev,
+        mimeType:
+          selected.type || utils.constants.MIMETYPE_APPLICATION_OCTET_STREAM,
+        size: String(selected.size),
+        title: prev.title || nameWithoutExt
+      };
+      if (!uriTouched) {
+        next.uri = `resource://${selected.name.toLowerCase().replace(/[^a-z0-9.]+/g, '-').replace(/^-|-$/g, '')}`;
+      }
+      return next;
+    });
   };
 
   const handleContentChange = (
@@ -465,16 +571,22 @@ export const Resources = () => {
                 <UI.Input
                   label="Title"
                   name="title"
+                  placeholder="e.g. System Instructions"
                   value={editValues.title}
                   disabled={submitting}
                   onChange={handleEditChange}
+                  error={!!errors.title}
+                  helperText={errors.title || 'A human-readable name for this resource'}
                 />
                 <UI.Input
                   label="URI"
                   name="uri"
+                  placeholder="resource://my-resource"
                   value={editValues.uri}
                   disabled={submitting}
                   onChange={handleEditChange}
+                  error={!!errors.uri}
+                  helperText={errors.uri || 'Auto-generated from title. Edit to customize.'}
                 />
                 <UI.Select
                   label="Type"
@@ -487,17 +599,25 @@ export const Resources = () => {
                       type: e.target.value as string
                     }))
                   }
-                  options={utils.constants.RESOURCE_TYPES.map(t => ({
-                    label: t,
-                    value: t
-                  }))}
+                  helperText={
+                    editValues.type === 'static'
+                      ? 'Fixed content that doesn\'t change'
+                      : 'Dynamic content with variables (e.g. {userId})'
+                  }
+                  options={[
+                    { label: 'Static — Fixed content', value: 'static' },
+                    { label: 'Template — Dynamic with variables', value: 'template' }
+                  ]}
                 />
                 <UI.Input
                   label="Description"
                   name="description"
+                  placeholder="What is this resource about?"
                   value={editValues.description}
                   disabled={submitting}
                   onChange={handleEditChange}
+                  error={!!errors.description}
+                  helperText={errors.description}
                   multiline
                   rows={2}
                 />
@@ -641,6 +761,137 @@ export const Resources = () => {
                     </div>
                   </>
                 )}
+                <div className="panel-advanced">
+                  <button
+                    type="button"
+                    className="panel-advanced-toggle"
+                    onClick={() => setShowAdvanced(prev => !prev)}
+                  >
+                    {showAdvanced ? <ExpandLess /> : <ExpandMore />}
+                    Advanced options
+                  </button>
+                  {showAdvanced && (
+                    <div className="panel-advanced-content">
+                      <div className="panel-advanced-section">
+                        <p className="panel-advanced-label">Audience</p>
+                        <div className="panel-audience-checks">
+                          {utils.constants.ROLE_MESSAGES.map(role => (
+                            <FormControlLabel
+                              key={role}
+                              control={
+                                <Checkbox
+                                  size="small"
+                                  disabled={submitting}
+                                  checked={annotations.audience.includes(role)}
+                                  onChange={e =>
+                                    setAnnotations(prev => ({
+                                      ...prev,
+                                      audience: e.target.checked
+                                        ? [...prev.audience, role]
+                                        : prev.audience.filter(r => r !== role)
+                                    }))
+                                  }
+                                />
+                              }
+                              label={role}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                      <UI.Input
+                        label="Priority (0 to 1)"
+                        name="priority"
+                        type="number"
+                        value={annotations.priority}
+                        disabled={submitting}
+                        slotProps={{ htmlInput: { min: 0, max: 1, step: 0.1 } }}
+                        onChange={e =>
+                          setAnnotations(prev => ({
+                            ...prev,
+                            priority: e.target.value
+                          }))
+                        }
+                      />
+                      <div className="panel-advanced-section">
+                        <div className="panel-advanced-section-header">
+                          <p className="panel-advanced-label">Icons</p>
+                          <IconButton
+                            size="small"
+                            disabled={submitting}
+                            onClick={() =>
+                              setIcons(prev => [
+                                ...prev,
+                                { src: '', theme: '' }
+                              ])
+                            }
+                          >
+                            <Add />
+                          </IconButton>
+                        </div>
+                        {icons.map((icon, i) => (
+                          <div key={i} className="panel-icon-row">
+                            <UI.Input
+                              label="URL"
+                              value={icon.src}
+                              disabled={submitting}
+                              onChange={e =>
+                                setIcons(prev =>
+                                  prev.map((ic, idx) =>
+                                    idx === i
+                                      ? { ...ic, src: e.target.value }
+                                      : ic
+                                  )
+                                )
+                              }
+                            />
+                            <UI.Select
+                              label="Theme"
+                              value={icon.theme}
+                              disabled={submitting}
+                              onChange={e =>
+                                setIcons(prev =>
+                                  prev.map((ic, idx) =>
+                                    idx === i
+                                      ? {
+                                          ...ic,
+                                          theme: e.target.value as string
+                                        }
+                                      : ic
+                                  )
+                                )
+                              }
+                              options={[
+                                { label: 'None', value: '' },
+                                ...utils.constants.RESOURCE_ICON_THEMES.map(
+                                  t => ({
+                                    label: t,
+                                    value: t
+                                  })
+                                )
+                              ]}
+                            />
+                            <IconButton
+                              size="small"
+                              disabled={submitting}
+                              onClick={() =>
+                                setIcons(prev =>
+                                  prev.filter((_, idx) => idx !== i)
+                                )
+                              }
+                            >
+                              <RemoveCircleOutline />
+                            </IconButton>
+                          </div>
+                        ))}
+                        {icons.length === 0 && (
+                          <p className="panel-advanced-hint">
+                            No icons added yet.
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
                 <div className="panel-edit-actions">
                   <UI.Button
                     variant="contained"

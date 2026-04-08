@@ -8,8 +8,13 @@ import {
   Close,
   DeleteOutline,
   EditOutlined,
-  ArrowBack
+  ArrowBack,
+  RemoveCircleOutline,
+  Code,
+  ViewList
 } from '@mui/icons-material';
+import Checkbox from '@mui/material/Checkbox';
+import FormControlLabel from '@mui/material/FormControlLabel';
 
 import { Wrapper } from './styles';
 
@@ -33,11 +38,24 @@ export const Prompts = () => {
   const [editValues, setEditValues] = useState({
     title: '',
     description: '',
-    messages: ''
+    messagesJson: ''
   });
+  const [visualMessages, setVisualMessages] = useState<
+    { role: 'user' | 'assistant'; content: string }[]
+  >([{ role: 'user', content: '' }]);
+  const [messageMode, setMessageMode] = useState<'visual' | 'json'>('visual');
+  const [schemaVars, setSchemaVars] = useState<
+    {
+      name: string;
+      type: 'string' | 'number' | 'boolean';
+      required: boolean;
+      description: string;
+    }[]
+  >([]);
   const [status, setStatus] = useState<
     'idle' | 'pending' | 'resolved' | 'rejected'
   >('idle');
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [deleteAlert, setDeleteAlert] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [panelWidth, setPanelWidth] = useState(480);
@@ -72,6 +90,13 @@ export const Prompts = () => {
     fetchPrompts();
   }, [fetchPrompts]);
 
+  useEffect(() => {
+    if (messageMode === 'visual' && (isCreating || isEditing)) {
+      syncSchemaVars();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visualMessages, messageMode, isCreating, isEditing]);
+
   const handleSelect = (prompt: Prompt) => {
     setSelectedPrompt(prompt);
     setIsEditing(false);
@@ -82,19 +107,109 @@ export const Prompts = () => {
     setSelectedPrompt(null);
     setIsEditing(false);
     setIsCreating(true);
-    setEditValues({
-      title: '',
-      description: '',
-      messages: JSON.stringify([{ role: 'user', content: '' }], null, 2)
+    setEditValues({ title: '', description: '', messagesJson: '' });
+    setVisualMessages([{ role: 'user', content: '' }]);
+    setMessageMode('visual');
+    setSchemaVars([]);
+    setErrors({});
+  };
+
+  const parseZodErrors = (err: unknown) => {
+    if (
+      err &&
+      typeof err === 'object' &&
+      'issues' in err &&
+      Array.isArray((err as { issues: unknown[] }).issues)
+    ) {
+      const formatted = (
+        err as { issues: { path: string[]; message: string }[] }
+      ).issues.reduce(
+        (acc, curr) => ({ ...acc, [curr.path[0]]: curr.message }),
+        {} as Record<string, string>
+      );
+      setErrors(formatted);
+    }
+  };
+
+  const getMessages = (): { role: string; content: string }[] | null => {
+    if (messageMode === 'visual') {
+      return visualMessages.filter(m => m.content.trim());
+    }
+    try {
+      return JSON.parse(editValues.messagesJson);
+    } catch {
+      setErrors({ messages: 'Invalid JSON format' });
+      return null;
+    }
+  };
+
+  const detectVariables = () => {
+    const msgs = messageMode === 'visual' ? visualMessages : [];
+    const allContent = msgs.map(m => m.content).join(' ');
+    const matches = allContent.match(/\{\{(\w+)\}\}/g);
+    if (!matches) return [];
+    return Array.from(new Set(matches.map(m => m.replace(/\{\{|\}\}/g, ''))));
+  };
+
+  const syncSchemaVars = () => {
+    const detected = detectVariables();
+    setSchemaVars(prev => {
+      const existing = new Map(prev.map(v => [v.name, v]));
+      const synced = detected.map(name =>
+        existing.get(name) || {
+          name,
+          type: 'string' as const,
+          required: true,
+          description: ''
+        }
+      );
+      // keep manually-added vars that aren't in detected
+      const manual = prev.filter(
+        v => !detected.includes(v.name) && v.description
+      );
+      return [...synced, ...manual];
     });
+  };
+
+  const buildSchema = () => {
+    const properties: Record<string, Record<string, unknown>> = {};
+    const required: string[] = [];
+
+    for (const v of schemaVars) {
+      const prop: Record<string, unknown> = { type: v.type };
+      if (v.description) prop.description = v.description;
+      properties[v.name] = prop;
+      if (v.required) required.push(v.name);
+    }
+
+    return {
+      type: 'object' as const,
+      properties,
+      ...(required.length > 0 && { required })
+    };
   };
 
   const handleCreateSubmit = async () => {
     if (submitting) return;
-    let parsedMessages;
+    setErrors({});
+    const parsedMessages = getMessages();
+    if (!parsedMessages) return;
+    if (parsedMessages.length === 0) {
+      setErrors({ messages: 'At least one message is required' });
+      return;
+    }
+
+    const body = {
+      title: editValues.title,
+      description: editValues.description,
+      messages: parsedMessages,
+      schema: buildSchema()
+    };
+
     try {
-      parsedMessages = JSON.parse(editValues.messages);
-    } catch {
+      await utils.Schema.ARTIFACT_CREATE_PROMPT_VIEW.parseAsync(body);
+    } catch (err) {
+      parseZodErrors(err);
       return;
     }
 
@@ -105,12 +220,7 @@ export const Prompts = () => {
         config: {
           method: 'POST',
           credentials: 'include',
-          body: JSON.stringify({
-            title: editValues.title,
-            description: editValues.description,
-            messages: parsedMessages,
-            schema: { type: 'object', properties: {} }
-          })
+          body: JSON.stringify(body)
         }
       });
 
@@ -131,8 +241,29 @@ export const Prompts = () => {
     setEditValues({
       title: selectedPrompt.title,
       description: selectedPrompt.description || '',
-      messages: JSON.stringify(selectedPrompt.messages, null, 2)
+      messagesJson: JSON.stringify(selectedPrompt.messages, null, 2)
     });
+    setVisualMessages(
+      selectedPrompt.messages.map(m => ({ role: m.role, content: m.content }))
+    );
+    setMessageMode('visual');
+    setErrors({});
+
+    const schema = selectedPrompt.schema as {
+      properties?: Record<string, { type?: string; description?: string }>;
+      required?: string[];
+    };
+    const props = schema?.properties || {};
+    const required = schema?.required || [];
+    setSchemaVars(
+      Object.entries(props).map(([name, def]) => ({
+        name,
+        type: (def.type as 'string' | 'number' | 'boolean') || 'string',
+        required: required.includes(name),
+        description: def.description || ''
+      }))
+    );
+
     setIsEditing(true);
   };
 
@@ -151,10 +282,25 @@ export const Prompts = () => {
 
   const handleUpdate = async () => {
     if (!selectedPrompt || submitting) return;
-    let parsedMessages;
+    setErrors({});
+    const parsedMessages = getMessages();
+    if (!parsedMessages) return;
+    if (parsedMessages.length === 0) {
+      setErrors({ messages: 'At least one message is required' });
+      return;
+    }
+
+    const body = {
+      title: editValues.title,
+      description: editValues.description,
+      messages: parsedMessages,
+      schema: buildSchema()
+    };
+
     try {
-      parsedMessages = JSON.parse(editValues.messages);
-    } catch {
+      await utils.Schema.ARTIFACT_UPDATE_PROMPT_VIEW.parseAsync(body);
+    } catch (err) {
+      parseZodErrors(err);
       return;
     }
 
@@ -165,12 +311,7 @@ export const Prompts = () => {
         config: {
           method: 'PUT',
           credentials: 'include',
-          body: JSON.stringify({
-            title: editValues.title,
-            description: editValues.description,
-            messages: parsedMessages,
-            schema: selectedPrompt.schema
-          })
+          body: JSON.stringify(body)
         }
       });
 
@@ -330,40 +471,297 @@ export const Prompts = () => {
                 <UI.Input
                   label="Title"
                   name="title"
+                  placeholder="e.g. Summarize Article"
                   value={editValues.title}
                   disabled={submitting}
-                  onChange={e =>
-                    setEditValues(prev => ({ ...prev, title: e.target.value }))
+                  error={!!errors.title}
+                  helperText={
+                    errors.title || 'A short name to identify this prompt'
                   }
+                  onChange={e => {
+                    setEditValues(prev => ({ ...prev, title: e.target.value }));
+                    if (errors.title)
+                      setErrors(prev => {
+                        const n = { ...prev };
+                        delete n.title;
+                        return n;
+                      });
+                  }}
                 />
                 <UI.Input
                   label="Description"
                   name="description"
+                  placeholder="Describe what this prompt does"
                   value={editValues.description}
                   disabled={submitting}
-                  onChange={e =>
+                  error={!!errors.description}
+                  helperText={errors.description}
+                  onChange={e => {
                     setEditValues(prev => ({
                       ...prev,
                       description: e.target.value
-                    }))
-                  }
+                    }));
+                    if (errors.description)
+                      setErrors(prev => {
+                        const n = { ...prev };
+                        delete n.description;
+                        return n;
+                      });
+                  }}
                   multiline
                   rows={2}
                 />
-                <UI.Input
-                  label="Messages (JSON)"
-                  name="messages"
-                  value={editValues.messages}
-                  disabled={submitting}
-                  onChange={e =>
-                    setEditValues(prev => ({
-                      ...prev,
-                      messages: e.target.value
-                    }))
-                  }
-                  multiline
-                  rows={10}
-                />
+                <div className="panel-messages-section">
+                  <div className="panel-messages-header">
+                    <p className="panel-messages-label">Messages</p>
+                    <div className="panel-messages-mode-toggle">
+                      <button
+                        type="button"
+                        className={`panel-mode-btn ${messageMode === 'visual' ? 'active' : ''}`}
+                        disabled={submitting}
+                        onClick={() => {
+                          if (messageMode === 'json') {
+                            try {
+                              const parsed = JSON.parse(
+                                editValues.messagesJson
+                              );
+                              setVisualMessages(parsed);
+                            } catch {
+                              // keep current visual messages
+                            }
+                          }
+                          setMessageMode('visual');
+                        }}
+                      >
+                        <ViewList />
+                        Visual
+                      </button>
+                      <button
+                        type="button"
+                        className={`panel-mode-btn ${messageMode === 'json' ? 'active' : ''}`}
+                        disabled={submitting}
+                        onClick={() => {
+                          setEditValues(prev => ({
+                            ...prev,
+                            messagesJson: JSON.stringify(
+                              visualMessages,
+                              null,
+                              2
+                            )
+                          }));
+                          setMessageMode('json');
+                        }}
+                      >
+                        <Code />
+                        JSON
+                      </button>
+                    </div>
+                  </div>
+                  {errors.messages && (
+                    <p className="panel-messages-error">{errors.messages}</p>
+                  )}
+                  {messageMode === 'visual' ? (
+                    <div className="panel-message-builder">
+                      {visualMessages.map((msg, i) => (
+                        <div
+                          key={i}
+                          className={`panel-message-card panel-message-card-${msg.role}`}
+                        >
+                          <div className="panel-message-card-header">
+                            <div className="panel-message-role-toggle">
+                              <button
+                                type="button"
+                                className={`panel-role-btn ${msg.role === 'user' ? 'active' : ''}`}
+                                disabled={submitting}
+                                onClick={() =>
+                                  setVisualMessages(prev =>
+                                    prev.map((m, idx) =>
+                                      idx === i ? { ...m, role: 'user' } : m
+                                    )
+                                  )
+                                }
+                              >
+                                User
+                              </button>
+                              <button
+                                type="button"
+                                className={`panel-role-btn ${msg.role === 'assistant' ? 'active' : ''}`}
+                                disabled={submitting}
+                                onClick={() =>
+                                  setVisualMessages(prev =>
+                                    prev.map((m, idx) =>
+                                      idx === i
+                                        ? { ...m, role: 'assistant' }
+                                        : m
+                                    )
+                                  )
+                                }
+                              >
+                                Assistant
+                              </button>
+                            </div>
+                            {visualMessages.length > 1 && (
+                              <IconButton
+                                size="small"
+                                disabled={submitting}
+                                onClick={() =>
+                                  setVisualMessages(prev =>
+                                    prev.filter((_, idx) => idx !== i)
+                                  )
+                                }
+                              >
+                                <RemoveCircleOutline />
+                              </IconButton>
+                            )}
+                          </div>
+                          <UI.Input
+                            placeholder={
+                              msg.role === 'user'
+                                ? 'Write the user message... Use {{variable}} for dynamic values'
+                                : 'Write the assistant response...'
+                            }
+                            value={msg.content}
+                            disabled={submitting}
+                            onChange={e =>
+                              setVisualMessages(prev =>
+                                prev.map((m, idx) =>
+                                  idx === i
+                                    ? { ...m, content: e.target.value }
+                                    : m
+                                )
+                              )
+                            }
+                            multiline
+                            rows={3}
+                          />
+                        </div>
+                      ))}
+                      <div className="panel-add-message">
+                        <UI.Button
+                          size="small"
+                          disabled={submitting}
+                          onClick={() =>
+                            setVisualMessages(prev => [
+                              ...prev,
+                              { role: 'user', content: '' }
+                            ])
+                          }
+                        >
+                          <Add />
+                          <span className="button-text">Add message</span>
+                        </UI.Button>
+                      </div>
+
+                      {schemaVars.length > 0 && (
+                        <div className="panel-schema-editor">
+                          <p className="panel-schema-label">
+                            Variables
+                          </p>
+                          <p className="panel-schema-hint">
+                            Auto-detected from {'{{variables}}'} in your messages. Customize type and requirements below.
+                          </p>
+                          <div className="panel-schema-vars">
+                            {schemaVars.map((v, i) => (
+                              <div key={v.name} className="panel-schema-var">
+                                <div className="panel-schema-var-header">
+                                  <span className="panel-schema-var-name">
+                                    {`{{${v.name}}}`}
+                                  </span>
+                                  <FormControlLabel
+                                    control={
+                                      <Checkbox
+                                        size="small"
+                                        checked={v.required}
+                                        disabled={submitting}
+                                        onChange={e =>
+                                          setSchemaVars(prev =>
+                                            prev.map((sv, idx) =>
+                                              idx === i
+                                                ? { ...sv, required: e.target.checked }
+                                                : sv
+                                            )
+                                          )
+                                        }
+                                      />
+                                    }
+                                    label="Required"
+                                  />
+                                </div>
+                                <div className="panel-schema-var-fields">
+                                  <UI.Select
+                                    label="Type"
+                                    value={v.type}
+                                    disabled={submitting}
+                                    onChange={e =>
+                                      setSchemaVars(prev =>
+                                        prev.map((sv, idx) =>
+                                          idx === i
+                                            ? {
+                                                ...sv,
+                                                type: e.target.value as
+                                                  | 'string'
+                                                  | 'number'
+                                                  | 'boolean'
+                                              }
+                                            : sv
+                                        )
+                                      )
+                                    }
+                                    options={[
+                                      { label: 'String', value: 'string' },
+                                      { label: 'Number', value: 'number' },
+                                      { label: 'Boolean', value: 'boolean' }
+                                    ]}
+                                  />
+                                  <UI.Input
+                                    label="Description"
+                                    placeholder="What is this variable for?"
+                                    value={v.description}
+                                    disabled={submitting}
+                                    onChange={e =>
+                                      setSchemaVars(prev =>
+                                        prev.map((sv, idx) =>
+                                          idx === i
+                                            ? { ...sv, description: e.target.value }
+                                            : sv
+                                        )
+                                      )
+                                    }
+                                  />
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <UI.Input
+                      label="Messages (JSON)"
+                      name="messagesJson"
+                      value={editValues.messagesJson}
+                      disabled={submitting}
+                      error={!!errors.messages}
+                      helperText={
+                        errors.messages || 'Array of {role, content} objects'
+                      }
+                      onChange={e => {
+                        setEditValues(prev => ({
+                          ...prev,
+                          messagesJson: e.target.value
+                        }));
+                        if (errors.messages)
+                          setErrors(prev => {
+                            const n = { ...prev };
+                            delete n.messages;
+                            return n;
+                          });
+                      }}
+                      multiline
+                      rows={10}
+                    />
+                  )}
+                </div>
                 <div className="panel-edit-actions">
                   <UI.Button
                     variant="contained"

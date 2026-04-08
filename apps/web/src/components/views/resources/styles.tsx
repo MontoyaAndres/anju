@@ -365,6 +365,102 @@ export const Wrapper = styled.div<IProps>`
             }
           }
 
+          .panel-advanced {
+            border: 1px solid ${theme.colors.alto};
+            border-radius: 8px;
+            overflow: hidden;
+
+            .panel-advanced-toggle {
+              width: 100%;
+              display: flex;
+              align-items: center;
+              gap: 6px;
+              padding: 10px 12px;
+              border: none;
+              background: none;
+              cursor: pointer;
+              font-size: ${theme.fonts.sm};
+              font-weight: 600;
+              color: ${theme.colors.saltBox};
+              transition: background-color 0.15s ease;
+
+              & > svg {
+                width: 18px;
+                height: 18px;
+              }
+
+              &:hover {
+                background-color: ${theme.colors.bastille}05;
+              }
+            }
+
+            .panel-advanced-content {
+              padding: 0 12px 12px;
+              display: flex;
+              flex-direction: column;
+              gap: 16px;
+              border-top: 1px solid ${theme.colors.alto};
+              padding-top: 12px;
+
+              .panel-advanced-section {
+                .panel-advanced-section-header {
+                  display: flex;
+                  align-items: center;
+                  justify-content: space-between;
+
+                  .MuiIconButton-root {
+                    padding: 4px;
+
+                    & > svg {
+                      width: 18px;
+                      height: 18px;
+                    }
+                  }
+                }
+
+                .panel-advanced-label {
+                  font-size: ${theme.fonts.sm};
+                  font-weight: 600;
+                  color: ${theme.colors.bastille};
+                  margin: 0 0 8px 0;
+                }
+
+                .panel-audience-checks {
+                  display: flex;
+                  gap: 8px;
+
+                  .MuiFormControlLabel-label {
+                    font-size: ${theme.fonts.sm};
+                  }
+                }
+
+                .panel-icon-row {
+                  display: grid;
+                  grid-template-columns: 1fr 120px auto;
+                  gap: 12px;
+                  align-items: center;
+                  margin-top: 8px;
+
+                  .MuiIconButton-root {
+                    padding: 4px;
+
+                    & > svg {
+                      width: 18px;
+                      height: 18px;
+                      color: ${theme.colors.red};
+                    }
+                  }
+                }
+
+                .panel-advanced-hint {
+                  font-size: ${theme.fonts.xs};
+                  color: ${theme.colors.saltBox};
+                  margin: 0;
+                }
+              }
+            }
+          }
+
           .panel-edit-actions {
             display: flex;
             gap: 8px;
