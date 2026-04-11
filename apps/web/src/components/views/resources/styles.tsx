@@ -351,6 +351,14 @@ export const Wrapper = styled.div<IProps>`
                 word-break: break-all;
               }
 
+              .panel-file-original {
+                font-size: ${theme.fonts.sm};
+                color: ${theme.colors.saltBox};
+                font-family: monospace;
+                margin: 4px 0 0 0;
+                word-break: break-all;
+              }
+
               .panel-file-meta {
                 font-size: ${theme.fonts.sm};
                 color: ${theme.colors.saltBox};

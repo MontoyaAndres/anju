@@ -119,11 +119,16 @@ const ARTIFACT_CREATE_RESOURCE = z.object({
     .enum(constants.RESOURCE_TYPES)
     .default(constants.RESOURCE_TYPE_STATIC),
   description: z.string().max(1000).optional(),
-  mimeType: z.string().min(1).max(200),
+  mimeType: z.enum(constants.MIMETYPES, {
+    message: 'Unsupported mime type'
+  }),
   content: z.string().optional(),
-  size: z.number().int().min(0),
+  size: z.number().int().min(0).max(constants.MAX_FILE_SIZE, {
+    message: 'File size exceeds the 10MB limit'
+  }),
   encoding: z.string().max(50).optional(),
   fileKey: z.string().optional(),
+  fileName: z.string().optional(),
   annotations: z
     .object({
       audience: z.array(z.enum(constants.ROLE_MESSAGES)).optional(),
@@ -155,11 +160,16 @@ const ARTIFACT_UPDATE_RESOURCE = z.object({
     .enum(constants.RESOURCE_TYPES)
     .default(constants.RESOURCE_TYPE_STATIC),
   description: z.string().max(1000).optional(),
-  mimeType: z.string().min(1).max(200),
+  mimeType: z.enum(constants.MIMETYPES, {
+    message: 'Unsupported mime type'
+  }),
   content: z.string().optional(),
-  size: z.number().int().min(0),
+  size: z.number().int().min(0).max(constants.MAX_FILE_SIZE, {
+    message: 'File size exceeds the 10MB limit'
+  }),
   encoding: z.string().max(50).optional(),
   fileKey: z.string().optional(),
+  fileName: z.string().optional(),
   annotations: z
     .object({
       audience: z.array(z.enum(constants.ROLE_MESSAGES)).optional(),

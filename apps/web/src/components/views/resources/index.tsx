@@ -32,6 +32,7 @@ interface Resource {
   size: number;
   encoding: string | null;
   fileKey: string | null;
+  fileName: string | null;
   annotations: Record<string, unknown> | null;
   icons: { src: string }[] | null;
   metadata: Record<string, unknown> | null;
@@ -182,6 +183,10 @@ export const Resources = () => {
       contentMode === 'text' ? editValues.content || undefined : undefined,
     size: Number(editValues.size),
     encoding: editValues.encoding || undefined,
+    fileName:
+      contentMode === 'file'
+        ? file?.name || selectedResource?.fileName || undefined
+        : undefined,
     ...buildAdvancedFields()
   });
 
@@ -453,13 +458,42 @@ export const Resources = () => {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = e.target.files?.[0];
     if (!selected) return;
+
+    if (selected.size > utils.constants.MAX_FILE_SIZE) {
+      setErrors(prev => ({
+        ...prev,
+        file: 'File size exceeds the 10MB limit'
+      }));
+      e.target.value = '';
+      return;
+    }
+
+    const detectedMime =
+      selected.type || utils.constants.MIMETYPE_APPLICATION_OCTET_STREAM;
+    if (
+      !(utils.constants.MIMETYPES as readonly string[]).includes(detectedMime)
+    ) {
+      setErrors(prev => ({
+        ...prev,
+        file: `Unsupported mime type: ${detectedMime}`
+      }));
+      e.target.value = '';
+      return;
+    }
+
+    setErrors(prev => {
+      const next = { ...prev };
+      delete next.file;
+      delete next.mimeType;
+      delete next.size;
+      return next;
+    });
     setFile(selected);
     const nameWithoutExt = selected.name.replace(/\.[^.]+$/, '');
     setEditValues(prev => {
       const next = {
         ...prev,
-        mimeType:
-          selected.type || utils.constants.MIMETYPE_APPLICATION_OCTET_STREAM,
+        mimeType: detectedMime,
         size: String(selected.size),
         title: prev.title || nameWithoutExt
       };
@@ -761,6 +795,11 @@ export const Resources = () => {
                           <p className="panel-file-name">
                             {selectedResource.title}
                           </p>
+                          {selectedResource.fileName && (
+                            <p className="panel-file-original">
+                              {selectedResource.fileName}
+                            </p>
+                          )}
                           <p className="panel-file-meta">
                             {selectedResource.mimeType} &middot;{' '}
                             {formatSize(selectedResource.size)}
@@ -776,6 +815,9 @@ export const Resources = () => {
                         </div>
                       )}
                     </div>
+                    {errors.file && (
+                      <p className="panel-file-error">{errors.file}</p>
+                    )}
                   </>
                 )}
                 <div className="panel-advanced">
@@ -959,6 +1001,14 @@ export const Resources = () => {
                       <span className="panel-info-label">Encoding</span>
                       <span className="panel-info-value">
                         {selectedResource.encoding}
+                      </span>
+                    </div>
+                  )}
+                  {selectedResource.fileName && (
+                    <div className="panel-info-item">
+                      <span className="panel-info-label">File name</span>
+                      <span className="panel-info-value">
+                        {selectedResource.fileName}
                       </span>
                     </div>
                   )}

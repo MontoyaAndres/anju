@@ -268,6 +268,7 @@ const createResource = async (c: Context<AppEnv>) => {
         size: currentValues.size ?? null,
         encoding: currentValues.encoding ?? null,
         fileKey: currentValues.fileKey ?? null,
+        fileName: currentValues.fileName ?? null,
         annotations: currentValues.annotations ?? null,
         icons: currentValues.icons ?? null,
         metadata: currentValues.metadata ?? null,
@@ -338,6 +339,7 @@ const updateResource = async (c: Context<AppEnv>) => {
         size: currentValues.size,
         encoding: currentValues.encoding || null,
         fileKey: currentValues.fileKey || null,
+        fileName: currentValues.fileName || null,
         annotations: currentValues.annotations || null,
         icons: currentValues.icons || null,
         metadata: currentValues.metadata || null
@@ -688,6 +690,12 @@ const uploadResourceFile = async (c: Context<AppEnv>) => {
     throw new Error('File size exceeds the 10MB limit');
   }
 
+  if (
+    !(utils.constants.MIMETYPES as readonly string[]).includes(file.type)
+  ) {
+    throw new Error(`Unsupported mime type: ${file.type}`);
+  }
+
   const dbInstance = db.create(c);
   const bucket = c.env.STORAGE_BUCKET;
 
@@ -729,6 +737,7 @@ const uploadResourceFile = async (c: Context<AppEnv>) => {
       .update(db.schema.artifactResource)
       .set({
         fileKey: key,
+        fileName: file.name,
         mimeType: file.type,
         size: file.size
       })

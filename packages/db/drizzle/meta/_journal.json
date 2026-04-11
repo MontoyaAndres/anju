@@ -155,6 +155,13 @@
       "when": 1775402201920,
       "tag": "0021_right_bushwacker",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1775935694452,
+      "tag": "0022_legal_paper_doll",
+      "breakpoints": true
     }
   ]
 }
