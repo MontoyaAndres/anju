@@ -99,7 +99,6 @@ export const Prompts = () => {
   useEffect(() => {
     if (!isCreating && !isEditing) return;
     syncSchemaVars();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     visualMessages,
     editValues.messagesJson,

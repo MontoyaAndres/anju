@@ -111,7 +111,6 @@ export const Resources = () => {
     const controller = new AbortController();
     fetchResources(controller.signal);
     return () => controller.abort();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [organizationId, projectId]);
 
   useEffect(() => {
@@ -389,7 +388,10 @@ export const Resources = () => {
   const isImageMime = (mime: string) => mime.startsWith('image/');
 
   const titleToUri = (title: string) =>
-    `resource://${title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}`;
+    `resource://${title
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '')}`;
 
   const formatSize = (bytes: number) => {
     if (bytes === 0) return '0 B';
@@ -462,7 +464,10 @@ export const Resources = () => {
         title: prev.title || nameWithoutExt
       };
       if (!uriTouched) {
-        next.uri = `resource://${selected.name.toLowerCase().replace(/[^a-z0-9.]+/g, '-').replace(/^-|-$/g, '')}`;
+        next.uri = `resource://${selected.name
+          .toLowerCase()
+          .replace(/[^a-z0-9.]+/g, '-')
+          .replace(/^-|-$/g, '')}`;
       }
       return next;
     });
@@ -580,7 +585,9 @@ export const Resources = () => {
                   disabled={submitting}
                   onChange={handleEditChange}
                   error={!!errors.title}
-                  helperText={errors.title || 'A human-readable name for this resource'}
+                  helperText={
+                    errors.title || 'A human-readable name for this resource'
+                  }
                 />
                 <UI.Input
                   label="URI"
@@ -590,7 +597,10 @@ export const Resources = () => {
                   disabled={submitting}
                   onChange={handleEditChange}
                   error={!!errors.uri}
-                  helperText={errors.uri || 'Auto-generated from title. Edit to customize.'}
+                  helperText={
+                    errors.uri ||
+                    'Auto-generated from title. Edit to customize.'
+                  }
                 />
                 <UI.Select
                   label="Type"
@@ -605,12 +615,15 @@ export const Resources = () => {
                   }
                   helperText={
                     editValues.type === 'static'
-                      ? 'Fixed content that doesn\'t change'
+                      ? "Fixed content that doesn't change"
                       : 'Dynamic content with variables (e.g. {userId})'
                   }
                   options={[
                     { label: 'Static — Fixed content', value: 'static' },
-                    { label: 'Template — Dynamic with variables', value: 'template' }
+                    {
+                      label: 'Template — Dynamic with variables',
+                      value: 'template'
+                    }
                   ]}
                 />
                 <UI.Input
