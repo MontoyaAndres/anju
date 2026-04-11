@@ -1,0 +1,846 @@
+import { useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/router';
+import { UI } from '@anju/ui';
+import { utils } from '@anju/utils';
+import IconButton from '@mui/material/IconButton';
+import Tooltip from '@mui/material/Tooltip';
+import Switch from '@mui/material/Switch';
+import {
+  Close,
+  CheckCircle,
+  DeleteOutline,
+  EditOutlined,
+  LinkOff,
+  Link as LinkIcon,
+  Search,
+  Warning,
+  ExtensionOutlined,
+  ArrowBack,
+  ExpandMore
+} from '@mui/icons-material';
+
+import { ModalDialog, ModalOverlay, Wrapper } from './styles';
+
+interface ToolDefinition {
+  id: string;
+  key: string;
+  title: string;
+  description: string | null;
+  requiredScopes: string | null;
+  groupId: string;
+}
+
+interface ToolGroup {
+  id: string;
+  key: string;
+  title: string;
+  description: string | null;
+  icon: string | null;
+  provider: string | null;
+  toolDefinitions: ToolDefinition[];
+}
+
+interface ArtifactTool {
+  id: string;
+  config: Record<string, unknown> | null;
+  metadata: Record<string, unknown> | null;
+  toolDefinitionId: string;
+  artifactId: string;
+  createdAt: string;
+  updatedAt: string;
+  toolDefinition?: ToolDefinition & {
+    group?: ToolGroup;
+  };
+}
+
+interface ArtifactCredential {
+  id: string;
+  provider: string;
+  accessToken: string;
+  refreshToken: string | null;
+  expiresAt: string | null;
+  scopes: string | null;
+  artifactId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+const EXPANDED_GROUP_KEY = 'anju:expandedToolGroupId';
+
+export const Tools = () => {
+  const router = useRouter();
+  const [tab, setTab] = useState<'installed' | 'catalog'>('installed');
+  const [catalog, setCatalog] = useState<ToolGroup[]>([]);
+  const [installed, setInstalled] = useState<ArtifactTool[]>([]);
+  const [credentials, setCredentials] = useState<ArtifactCredential[]>([]);
+  const [search, setSearch] = useState('');
+  const [expandedGroupId, setExpandedGroupId] = useState<string | null>(null);
+  const [expandedInstalled, setExpandedInstalled] = useState<Set<string>>(
+    new Set()
+  );
+  const [status, setStatus] = useState<
+    'idle' | 'pending' | 'resolved' | 'rejected'
+  >('idle');
+  const [togglingDefId, setTogglingDefId] = useState<string | null>(null);
+  const [connectingProvider, setConnectingProvider] = useState<string | null>(
+    null
+  );
+  const [submitting, setSubmitting] = useState(false);
+  const [editTool, setEditTool] = useState<ArtifactTool | null>(null);
+  const [configJson, setConfigJson] = useState('{}');
+  const [configError, setConfigError] = useState<string | null>(null);
+  const [removeAlert, setRemoveAlert] = useState<ArtifactTool | null>(null);
+  const [disconnectAlert, setDisconnectAlert] = useState<{
+    provider: string;
+    affected: number;
+  } | null>(null);
+  const [connectedBanner, setConnectedBanner] = useState<string | null>(null);
+
+  const { id: organizationId, projectId } = router.query as {
+    id: string;
+    projectId: string;
+  };
+  const apiBase = `/organization/${organizationId}/project/${projectId}/artifact`;
+  const toolApiBase = `${apiBase}/tool`;
+  const credentialApiBase = `${apiBase}/credential`;
+
+  const fetchAll = async (signal?: AbortSignal) => {
+    if (!organizationId || !projectId) return;
+    setStatus('pending');
+    try {
+      const [catalogData, installedData, credentialData] = await Promise.all([
+        utils.fetcher({
+          url: '/catalog/tools',
+          config: { credentials: 'include', signal }
+        }),
+        utils.fetcher({
+          url: toolApiBase,
+          config: { credentials: 'include', signal }
+        }),
+        utils.fetcher({
+          url: credentialApiBase,
+          config: { credentials: 'include', signal }
+        })
+      ]);
+      if (signal?.aborted) return;
+      if (Array.isArray(catalogData)) setCatalog(catalogData);
+      if (Array.isArray(installedData)) setInstalled(installedData);
+      if (Array.isArray(credentialData)) setCredentials(credentialData);
+      setStatus('resolved');
+    } catch {
+      if (!signal?.aborted) setStatus('rejected');
+    }
+  };
+
+  useEffect(() => {
+    if (!organizationId || !projectId) return;
+    const controller = new AbortController();
+    fetchAll(controller.signal);
+    return () => controller.abort();
+  }, [organizationId, projectId]);
+
+  useEffect(() => {
+    if (!router.isReady) return;
+    const connected = router.query.connected as string | undefined;
+    if (!connected) return;
+    setConnectedBanner(connected);
+    setTab('catalog');
+    const { connected: _c, ...rest } = router.query;
+    router.replace(
+      { pathname: router.pathname, query: rest },
+      undefined,
+      { shallow: true }
+    );
+  }, [router.isReady]);
+
+  useEffect(() => {
+    if (status !== 'resolved') return;
+    if (typeof window === 'undefined') return;
+    const pendingId = sessionStorage.getItem(EXPANDED_GROUP_KEY);
+    if (!pendingId) return;
+    sessionStorage.removeItem(EXPANDED_GROUP_KEY);
+    if (catalog.some(g => g.id === pendingId)) {
+      setExpandedGroupId(pendingId);
+      setTab('catalog');
+    }
+  }, [status]);
+
+  useEffect(() => {
+    if (installed.length === 0) return;
+    setExpandedInstalled(prev => {
+      if (prev.size > 0) return prev;
+      const first = installed[0]?.toolDefinition?.group?.provider || '__none__';
+      return new Set([first]);
+    });
+  }, [installed]);
+
+  const toggleInstalledProvider = (provider: string) => {
+    setExpandedInstalled(prev => {
+      const next = new Set(prev);
+      if (next.has(provider)) next.delete(provider);
+      else next.add(provider);
+      return next;
+    });
+  };
+
+  const installedByDefId = useMemo(() => {
+    const map = new Map<string, ArtifactTool>();
+    for (const t of installed) map.set(t.toolDefinitionId, t);
+    return map;
+  }, [installed]);
+
+  const installedByProvider = useMemo(() => {
+    const map = new Map<string, ArtifactTool[]>();
+    for (const t of installed) {
+      const provider = t.toolDefinition?.group?.provider || '__none__';
+      if (!map.has(provider)) map.set(provider, []);
+      map.get(provider)!.push(t);
+    }
+    return map;
+  }, [installed]);
+
+  const credentialByProvider = useMemo(() => {
+    const map = new Map<string, ArtifactCredential[]>();
+    for (const c of credentials) {
+      if (!map.has(c.provider)) map.set(c.provider, []);
+      map.get(c.provider)!.push(c);
+    }
+    return map;
+  }, [credentials]);
+
+  const filteredCatalog = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return catalog;
+    return catalog.filter(
+      g =>
+        g.title.toLowerCase().includes(q) ||
+        (g.description || '').toLowerCase().includes(q) ||
+        g.toolDefinitions.some(d =>
+          d.title.toLowerCase().includes(q)
+        )
+    );
+  }, [catalog, search]);
+
+  const expandedGroup = useMemo(
+    () =>
+      expandedGroupId ? catalog.find(g => g.id === expandedGroupId) : null,
+    [catalog, expandedGroupId]
+  );
+
+  const renderGroupIcon = (group: ToolGroup) => {
+    if (group.icon && /^https?:\/\//.test(group.icon)) {
+      return <img src={group.icon} alt={group.title} />;
+    }
+    return <span>{group.title.charAt(0).toUpperCase()}</span>;
+  };
+
+  const getProviderLabel = (provider: string) => {
+    const g = catalog.find(g => g.provider === provider);
+    return g?.title || provider;
+  };
+
+  const handleConnectGroup = async (group: ToolGroup) => {
+    if (!group.provider || connectingProvider) return;
+    setConnectingProvider(group.provider);
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem(EXPANDED_GROUP_KEY, group.id);
+    }
+    try {
+      const data = await utils.fetcher({
+        url: `/oauth/${group.provider}/authorize?organizationId=${organizationId}&projectId=${projectId}`,
+        config: { credentials: 'include' }
+      });
+      if (data?.url) {
+        window.location.href = data.url;
+        return;
+      }
+    } catch {
+      // fall through
+    }
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem(EXPANDED_GROUP_KEY);
+    }
+    setConnectingProvider(null);
+  };
+
+  const handleToggleTool = async (
+    def: ToolDefinition,
+    enabled: boolean
+  ) => {
+    if (togglingDefId) return;
+    const existing = installedByDefId.get(def.id);
+    setTogglingDefId(def.id);
+    try {
+      if (enabled && !existing) {
+        await utils.fetcher({
+          url: toolApiBase,
+          config: {
+            method: 'POST',
+            credentials: 'include',
+            body: JSON.stringify({
+              toolDefinitionId: def.id,
+              config: {}
+            })
+          }
+        });
+      } else if (!enabled && existing) {
+        await utils.fetcher({
+          url: `${toolApiBase}/${existing.id}`,
+          config: { method: 'DELETE', credentials: 'include' }
+        });
+      }
+      await fetchAll();
+    } finally {
+      setTogglingDefId(null);
+    }
+  };
+
+  const handleEdit = (tool: ArtifactTool) => {
+    setConfigJson(JSON.stringify(tool.config || {}, null, 2));
+    setConfigError(null);
+    setEditTool(tool);
+  };
+
+  const handleCloseEdit = () => {
+    setEditTool(null);
+    setConfigError(null);
+  };
+
+  const parseConfig = (): Record<string, unknown> | null => {
+    const trimmed = configJson.trim();
+    if (!trimmed) return {};
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (
+        typeof parsed !== 'object' ||
+        parsed === null ||
+        Array.isArray(parsed)
+      ) {
+        setConfigError('Config must be a JSON object');
+        return null;
+      }
+      return parsed as Record<string, unknown>;
+    } catch {
+      setConfigError('Invalid JSON');
+      return null;
+    }
+  };
+
+  const handleUpdateSubmit = async () => {
+    if (!editTool || submitting) return;
+    const config = parseConfig();
+    if (!config) return;
+
+    setSubmitting(true);
+    try {
+      const data = await utils.fetcher({
+        url: `${toolApiBase}/${editTool.id}`,
+        config: {
+          method: 'PUT',
+          credentials: 'include',
+          body: JSON.stringify({ config })
+        }
+      });
+      if (data && !data.error) {
+        handleCloseEdit();
+        fetchAll();
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleRemoveConfirm = async () => {
+    if (!removeAlert || submitting) return;
+    setSubmitting(true);
+    try {
+      const data = await utils.fetcher({
+        url: `${toolApiBase}/${removeAlert.id}`,
+        config: { method: 'DELETE', credentials: 'include' }
+      });
+      if (data && !data.error) {
+        setRemoveAlert(null);
+        fetchAll();
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDisconnectConfirm = async () => {
+    if (!disconnectAlert || submitting) return;
+    const creds = credentialByProvider.get(disconnectAlert.provider) || [];
+    setSubmitting(true);
+    try {
+      await Promise.all(
+        creds.map(c =>
+          utils.fetcher({
+            url: `${credentialApiBase}/${c.id}`,
+            config: { method: 'DELETE', credentials: 'include' }
+          })
+        )
+      );
+      setDisconnectAlert(null);
+      fetchAll();
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const isGroupConnected = (group: ToolGroup) =>
+    !group.provider || credentialByProvider.has(group.provider);
+
+  return (
+    <Wrapper>
+      <div className="tools-container">
+        <div className="tools-header">
+          <div>
+            <h1 className="tools-title">Tools</h1>
+            <p className="tools-subtitle">
+              Connect integrations and choose which tools this MCP server
+              exposes.
+            </p>
+          </div>
+        </div>
+
+        {connectedBanner && (
+          <div className="tools-banner tools-banner-success">
+            <CheckCircle />
+            <span>
+              Connected <strong>{getProviderLabel(connectedBanner)}</strong>.
+              Toggle the tools you want to enable below.
+            </span>
+            <IconButton size="small" onClick={() => setConnectedBanner(null)}>
+              <Close />
+            </IconButton>
+          </div>
+        )}
+
+        <div className="tools-tabs">
+          <button
+            type="button"
+            className={`tools-tab ${tab === 'installed' ? 'active' : ''}`}
+            onClick={() => setTab('installed')}
+          >
+            Installed
+            <span className="tools-tab-count">{installed.length}</span>
+          </button>
+          <button
+            type="button"
+            className={`tools-tab ${tab === 'catalog' ? 'active' : ''}`}
+            onClick={() => setTab('catalog')}
+          >
+            Catalog
+          </button>
+        </div>
+
+        {tab === 'installed' && (
+          <div className="tools-installed">
+            {status === 'pending' && installed.length === 0 && (
+              <p className="tools-empty">Loading...</p>
+            )}
+            {status === 'resolved' && installed.length === 0 && (
+              <div className="tools-empty-state">
+                <ExtensionOutlined />
+                <h3>No tools installed</h3>
+                <p>Browse the catalog to add tools to this project.</p>
+                <UI.Button
+                  variant="contained"
+                  size="small"
+                  onClick={() => setTab('catalog')}
+                >
+                  <span className="button-text">Browse catalog</span>
+                </UI.Button>
+              </div>
+            )}
+            {Array.from(installedByProvider.entries()).map(
+              ([provider, tools]) => {
+                const creds = credentialByProvider.get(provider) || [];
+                const groupTitle =
+                  tools[0]?.toolDefinition?.group?.title ||
+                  (provider === '__none__' ? 'Other' : provider);
+                const expired =
+                  creds.length > 0 &&
+                  creds.every(
+                    c => c.expiresAt && new Date(c.expiresAt) < new Date()
+                  );
+                const isExpanded = expandedInstalled.has(provider);
+
+                return (
+                  <div
+                    key={provider}
+                    className={`tools-accordion ${isExpanded ? 'expanded' : ''}`}
+                  >
+                    <button
+                      type="button"
+                      className="tools-accordion-header"
+                      onClick={() => toggleInstalledProvider(provider)}
+                      aria-expanded={isExpanded}
+                    >
+                      <div className="tools-accordion-header-info">
+                        <div className="tools-group-icon">
+                          {tools[0]?.toolDefinition?.group
+                            ? renderGroupIcon(tools[0].toolDefinition.group)
+                            : groupTitle.charAt(0)}
+                        </div>
+                        <div className="tools-accordion-header-texts">
+                          <p className="tools-group-title">{groupTitle}</p>
+                          <p className="tools-group-meta">
+                            {tools.length} tool{tools.length === 1 ? '' : 's'}
+                            {creds.length > 0 &&
+                              ` · ${creds.length} credential${creds.length === 1 ? '' : 's'} connected`}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="tools-accordion-header-actions">
+                        {provider !== '__none__' && creds.length > 0 && (
+                          <UI.Button
+                            size="small"
+                            onClick={e => {
+                              e.stopPropagation();
+                              setDisconnectAlert({
+                                provider,
+                                affected: tools.length
+                              });
+                            }}
+                          >
+                            <LinkOff />
+                            <span className="button-text">Disconnect</span>
+                          </UI.Button>
+                        )}
+                        <span className="tools-accordion-chevron-wrap">
+                          <ExpandMore className="tools-accordion-chevron" />
+                        </span>
+                      </div>
+                    </button>
+                    {isExpanded && (
+                      <div className="tools-accordion-body">
+                        {expired && (
+                          <div className="tools-banner tools-banner-warning">
+                            <Warning />
+                            <span>
+                              Credential expired. Reconnect to keep these tools
+                              working.
+                            </span>
+                          </div>
+                        )}
+                        <div className="tools-installed-list">
+                          {tools.map(t => {
+                        const def = t.toolDefinition;
+                        const configKeys = t.config
+                          ? Object.keys(t.config).length
+                          : 0;
+                        return (
+                          <div key={t.id} className="tools-installed-item">
+                            <div className="tools-installed-item-main">
+                              <p className="tools-installed-item-title">
+                                {def?.title || t.toolDefinitionId}
+                              </p>
+                              {def?.description && (
+                                <p className="tools-installed-item-description">
+                                  {def.description}
+                                </p>
+                              )}
+                              <p className="tools-installed-item-meta">
+                                {configKeys > 0
+                                  ? `${configKeys} config field${configKeys > 1 ? 's' : ''}`
+                                  : 'No custom config'}
+                              </p>
+                            </div>
+                            <div className="tools-installed-item-actions">
+                              <Tooltip title="Edit config">
+                                <IconButton
+                                  size="small"
+                                  onClick={() => handleEdit(t)}
+                                >
+                                  <EditOutlined />
+                                </IconButton>
+                              </Tooltip>
+                              <Tooltip title="Remove">
+                                <IconButton
+                                  size="small"
+                                  onClick={() => setRemoveAlert(t)}
+                                >
+                                  <DeleteOutline />
+                                </IconButton>
+                              </Tooltip>
+                            </div>
+                          </div>
+                        );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+            )}
+          </div>
+        )}
+
+        {tab === 'catalog' && !expandedGroup && (
+          <div className="tools-catalog">
+            <div className="tools-catalog-controls">
+              <div className="tools-search">
+                <Search />
+                <input
+                  type="text"
+                  placeholder="Search integrations..."
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                />
+              </div>
+            </div>
+            {status === 'pending' && catalog.length === 0 && (
+              <p className="tools-empty">Loading...</p>
+            )}
+            {filteredCatalog.length === 0 && status === 'resolved' && (
+              <p className="tools-empty">No integrations match your search.</p>
+            )}
+            <div className="tools-catalog-groups">
+              {filteredCatalog.map(group => {
+                const installedCount = group.toolDefinitions.filter(d =>
+                  installedByDefId.has(d.id)
+                ).length;
+                const connected = isGroupConnected(group);
+                return (
+                  <button
+                    type="button"
+                    key={group.id}
+                    className="tools-catalog-group-card"
+                    onClick={() => setExpandedGroupId(group.id)}
+                  >
+                    <div className="tools-catalog-group-icon">
+                      {renderGroupIcon(group)}
+                    </div>
+                    <div className="tools-catalog-group-body">
+                      <div className="tools-catalog-group-title-row">
+                        <p className="tools-catalog-group-title">
+                          {group.title}
+                        </p>
+                        {connected && group.provider && (
+                          <span className="tools-catalog-group-connected">
+                            <CheckCircle />
+                            Connected
+                          </span>
+                        )}
+                      </div>
+                      {group.description && (
+                        <p className="tools-catalog-group-description">
+                          {group.description}
+                        </p>
+                      )}
+                      <p className="tools-catalog-group-meta">
+                        {installedCount}/{group.toolDefinitions.length} tools
+                        enabled
+                      </p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {tab === 'catalog' && expandedGroup && (
+          <div className="tools-group-detail">
+            <button
+              type="button"
+              className="tools-group-detail-back"
+              onClick={() => setExpandedGroupId(null)}
+            >
+              <ArrowBack />
+              Back to catalog
+            </button>
+            <div className="tools-group-detail-header">
+              <div className="tools-group-detail-icon">
+                {renderGroupIcon(expandedGroup)}
+              </div>
+              <div className="tools-group-detail-info">
+                <p className="tools-group-detail-title">
+                  {expandedGroup.title}
+                </p>
+                {expandedGroup.description && (
+                  <p className="tools-group-detail-description">
+                    {expandedGroup.description}
+                  </p>
+                )}
+              </div>
+              <div className="tools-group-detail-actions">
+                {expandedGroup.provider &&
+                  (isGroupConnected(expandedGroup) ? (
+                    <>
+                      <span className="tools-group-detail-connected-pill">
+                        <CheckCircle />
+                        Connected
+                      </span>
+                      <UI.Button
+                        size="small"
+                        onClick={() =>
+                          setDisconnectAlert({
+                            provider: expandedGroup.provider!,
+                            affected: expandedGroup.toolDefinitions.filter(
+                              d => installedByDefId.has(d.id)
+                            ).length
+                          })
+                        }
+                      >
+                        <LinkOff />
+                        <span className="button-text">Disconnect</span>
+                      </UI.Button>
+                    </>
+                  ) : (
+                    <UI.Button
+                      variant="contained"
+                      size="small"
+                      disabled={connectingProvider === expandedGroup.provider}
+                      onClick={() => handleConnectGroup(expandedGroup)}
+                    >
+                      <LinkIcon />
+                      <span className="button-text">
+                        {connectingProvider === expandedGroup.provider
+                          ? 'Redirecting...'
+                          : `Connect ${expandedGroup.title}`}
+                      </span>
+                    </UI.Button>
+                  ))}
+              </div>
+            </div>
+            {!isGroupConnected(expandedGroup) && expandedGroup.provider && (
+              <div className="tools-banner tools-banner-warning">
+                <Warning />
+                <span>
+                  Connect {expandedGroup.title} to enable these tools. You
+                  only need to connect once for the whole integration.
+                </span>
+              </div>
+            )}
+            <div className="tools-group-detail-list">
+              {expandedGroup.toolDefinitions.map(def => {
+                const isInstalled = installedByDefId.has(def.id);
+                const connected = isGroupConnected(expandedGroup);
+                const disabled =
+                  !connected ||
+                  (togglingDefId !== null && togglingDefId !== def.id);
+                return (
+                  <div
+                    key={def.id}
+                    className={`tools-group-detail-item ${!connected ? 'disabled' : ''}`}
+                  >
+                    <div className="tools-group-detail-item-main">
+                      <p className="tools-group-detail-item-title">
+                        {def.title}
+                      </p>
+                      {def.description && (
+                        <p className="tools-group-detail-item-description">
+                          {def.description}
+                        </p>
+                      )}
+                      {def.requiredScopes && (
+                        <Tooltip
+                          title={`Required scopes: ${def.requiredScopes}`}
+                        >
+                          <span className="tools-group-detail-item-scopes">
+                            Scopes
+                          </span>
+                        </Tooltip>
+                      )}
+                    </div>
+                    <Switch
+                      checked={isInstalled}
+                      disabled={disabled}
+                      onChange={e =>
+                        handleToggleTool(def, e.target.checked)
+                      }
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {editTool && (
+        <UI.Portal>
+          <ModalOverlay onClick={handleCloseEdit}>
+            <ModalDialog
+              role="dialog"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="tools-modal-header">
+                <h2 className="tools-modal-title">
+                  Configure {editTool.toolDefinition?.title || 'Tool'}
+                </h2>
+                <IconButton size="small" onClick={handleCloseEdit}>
+                  <Close />
+                </IconButton>
+              </div>
+              <div className="tools-modal-body">
+                <p className="tools-configure-help">
+                  Optional tool configuration as JSON. Leave as{' '}
+                  <code>{'{}'}</code> if none is needed.
+                </p>
+                <UI.Input
+                  label="Config (JSON)"
+                  multiline
+                  rows={8}
+                  value={configJson}
+                  disabled={submitting}
+                  error={!!configError}
+                  helperText={
+                    configError ||
+                    'e.g. {"label": "inbox", "maxResults": 20}'
+                  }
+                  onChange={e => {
+                    setConfigJson(e.target.value);
+                    if (configError) setConfigError(null);
+                  }}
+                />
+              </div>
+              <div className="tools-modal-actions">
+                <UI.Button
+                  size="small"
+                  disabled={submitting}
+                  onClick={handleCloseEdit}
+                >
+                  Cancel
+                </UI.Button>
+                <UI.Button
+                  variant="contained"
+                  size="small"
+                  disabled={submitting}
+                  onClick={handleUpdateSubmit}
+                >
+                  {submitting ? 'Saving...' : 'Save'}
+                </UI.Button>
+              </div>
+            </ModalDialog>
+          </ModalOverlay>
+        </UI.Portal>
+      )}
+
+      <UI.Alert
+        open={!!removeAlert}
+        title="Remove tool"
+        description={`Remove "${removeAlert?.toolDefinition?.title || 'this tool'}" from the server? You can add it back anytime from the catalog.`}
+        confirmText="Remove"
+        cancelText="Cancel"
+        loading={submitting}
+        onConfirm={handleRemoveConfirm}
+        onCancel={() => setRemoveAlert(null)}
+      />
+
+      <UI.Alert
+        open={!!disconnectAlert}
+        title={`Disconnect ${disconnectAlert ? getProviderLabel(disconnectAlert.provider) : ''}`}
+        description={`This will revoke access and ${disconnectAlert?.affected || 0} tool${(disconnectAlert?.affected || 0) === 1 ? '' : 's'} from this provider will stop working until you reconnect.`}
+        confirmText="Disconnect"
+        cancelText="Cancel"
+        loading={submitting}
+        onConfirm={handleDisconnectConfirm}
+        onCancel={() => setDisconnectAlert(null)}
+      />
+    </Wrapper>
+  );
+};

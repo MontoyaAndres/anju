@@ -416,7 +416,13 @@ export const Prompts = () => {
         className={`prompts-list ${selectedPrompt || isCreating ? 'has-selection' : ''}`}
       >
         <div className="prompts-header">
-          <h1 className="prompts-title">Prompts</h1>
+          <div>
+            <h1 className="prompts-title">Prompts</h1>
+            <p className="prompts-subtitle">
+              Reusable prompt templates with variables this MCP server can
+              expose.
+            </p>
+          </div>
           <UI.Button variant="contained" size="small" onClick={handleCreate}>
             <Add />
             <span className="button-text">New prompt</span>

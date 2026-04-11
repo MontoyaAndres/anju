@@ -154,7 +154,7 @@ const callback = async (c: Context<AppEnv>) => {
       .where(eq(db.schema.artifact.id, currentArtifactByProject.id));
   });
 
-  const redirectUrl = `${process.env.NEXT_PUBLIC_WEB_URL || ''}/organization/${organizationId}/project/${projectId}/credentials?connected=${provider}`;
+  const redirectUrl = `${process.env.NEXT_PUBLIC_WEB_URL || ''}/organization/${organizationId}/project/${projectId}/tools?connected=${provider}`;
 
   return c.redirect(redirectUrl);
 };

@@ -10,6 +10,8 @@ export const Wrapper = styled.div<IProps>`
     display: flex;
     height: calc(100vh - 60px);
     position: relative;
+    max-width: 1100px;
+    margin: 0 auto;
 
     @media (min-width: ${theme.screens.xl}) {
       height: calc(100vh - 0px);
@@ -34,8 +36,9 @@ export const Wrapper = styled.div<IProps>`
 
       .prompts-header {
         display: flex;
-        align-items: center;
+        align-items: flex-start;
         justify-content: space-between;
+        gap: 12px;
         margin-bottom: 20px;
 
         .prompts-title {
@@ -43,6 +46,13 @@ export const Wrapper = styled.div<IProps>`
           color: ${theme.colors.bastille};
           font-weight: 700;
           margin: 0;
+        }
+
+        .prompts-subtitle {
+          font-size: ${theme.fonts.sm};
+          color: ${theme.colors.bastille}99;
+          margin: 6px 0 0 0;
+          line-height: 1.4;
         }
 
         .MuiButtonBase-root {

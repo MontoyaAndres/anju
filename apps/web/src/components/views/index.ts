@@ -1,11 +1,13 @@
 import { Auth } from './auth';
-import { Organization } from './organization';
+import { Tools } from './tools';
 import { Prompts } from './prompts';
 import { Resources } from './resources';
+import { Organization } from './organization';
 
 export const Views = {
   Auth,
-  Organization,
+  Tools,
   Prompts,
   Resources,
+  Organization
 };

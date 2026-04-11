@@ -535,7 +535,12 @@ export const Resources = () => {
         className={`resources-list ${selectedResource || isCreating ? 'has-selection' : ''}`}
       >
         <div className="resources-header">
-          <h1 className="resources-title">Resources</h1>
+          <div>
+            <h1 className="resources-title">Resources</h1>
+            <p className="resources-subtitle">
+              Static files and templates this MCP server can serve to clients.
+            </p>
+          </div>
           <UI.Button variant="contained" size="small" onClick={handleCreate}>
             <Add />
             <span className="button-text">New resource</span>
