@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/router';
 import { UI } from '@anju/ui';
 import { utils } from '@anju/utils';
@@ -88,27 +88,31 @@ export const Resources = () => {
   };
   const apiBase = `/organization/${organizationId}/project/${projectId}/artifact/resource`;
 
-  const fetchResources = useCallback(async () => {
+  const fetchResources = async (signal?: AbortSignal) => {
     if (!organizationId || !projectId) return;
     setStatus('pending');
     try {
       const data = await utils.fetcher({
         url: apiBase,
-        config: { credentials: 'include' }
+        config: { credentials: 'include', signal }
       });
+      if (signal?.aborted) return;
       if (data && !data.error) {
         setResources(data);
       }
+      setStatus('resolved');
     } catch {
-      setStatus('rejected');
-      return;
+      if (!signal?.aborted) setStatus('rejected');
     }
-    setStatus('resolved');
-  }, [organizationId, projectId, apiBase]);
+  };
 
   useEffect(() => {
-    fetchResources();
-  }, [fetchResources]);
+    if (!organizationId || !projectId) return;
+    const controller = new AbortController();
+    fetchResources(controller.signal);
+    return () => controller.abort();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [organizationId, projectId]);
 
   useEffect(() => {
     if (!selectedResource?.fileKey) {

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/router';
 import { UI } from '@anju/ui';
 import { utils } from '@anju/utils';
@@ -58,6 +58,9 @@ export const Prompts = () => {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [deleteAlert, setDeleteAlert] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [schemaViewMode, setSchemaViewMode] = useState<'visual' | 'json'>(
+    'visual'
+  );
   const [panelWidth, setPanelWidth] = useState(480);
   const isResizing = useRef(false);
   const startX = useRef(0);
@@ -68,34 +71,42 @@ export const Prompts = () => {
   };
   const apiBase = `/organization/${organizationId}/project/${projectId}/artifact/prompt`;
 
-  const fetchPrompts = useCallback(async () => {
+  const fetchPrompts = async (signal?: AbortSignal) => {
     if (!organizationId || !projectId) return;
     setStatus('pending');
     try {
       const data = await utils.fetcher({
         url: apiBase,
-        config: { credentials: 'include' }
+        config: { credentials: 'include', signal }
       });
+      if (signal?.aborted) return;
       if (data && !data.error) {
         setPrompts(data);
       }
+      setStatus('resolved');
     } catch {
-      setStatus('rejected');
-      return;
+      if (!signal?.aborted) setStatus('rejected');
     }
-    setStatus('resolved');
-  }, [organizationId, projectId, apiBase]);
+  };
 
   useEffect(() => {
-    fetchPrompts();
-  }, [fetchPrompts]);
+    if (!organizationId || !projectId) return;
+    const controller = new AbortController();
+    fetchPrompts(controller.signal);
+    return () => controller.abort();
+  }, [organizationId, projectId]);
 
   useEffect(() => {
-    if (messageMode === 'visual' && (isCreating || isEditing)) {
-      syncSchemaVars();
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visualMessages, messageMode, isCreating, isEditing]);
+    if (!isCreating && !isEditing) return;
+    syncSchemaVars();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    visualMessages,
+    editValues.messagesJson,
+    messageMode,
+    isCreating,
+    isEditing
+  ]);
 
   const handleSelect = (prompt: Prompt) => {
     setSelectedPrompt(prompt);
@@ -144,8 +155,21 @@ export const Prompts = () => {
   };
 
   const detectVariables = () => {
-    const msgs = messageMode === 'visual' ? visualMessages : [];
-    const allContent = msgs.map(m => m.content).join(' ');
+    let allContent = '';
+    if (messageMode === 'visual') {
+      allContent = visualMessages.map(m => m.content).join(' ');
+    } else {
+      try {
+        const parsed = JSON.parse(editValues.messagesJson);
+        if (Array.isArray(parsed)) {
+          allContent = parsed
+            .map((m: { content?: string }) => m?.content || '')
+            .join(' ');
+        }
+      } catch {
+        return [];
+      }
+    }
     const matches = allContent.match(/\{\{(\w+)\}\}/g);
     if (!matches) return [];
     return Array.from(new Set(matches.map(m => m.replace(/\{\{|\}\}/g, ''))));
@@ -155,13 +179,14 @@ export const Prompts = () => {
     const detected = detectVariables();
     setSchemaVars(prev => {
       const existing = new Map(prev.map(v => [v.name, v]));
-      const synced = detected.map(name =>
-        existing.get(name) || {
-          name,
-          type: 'string' as const,
-          required: true,
-          description: ''
-        }
+      const synced = detected.map(
+        name =>
+          existing.get(name) || {
+            name,
+            type: 'string' as const,
+            required: true,
+            description: ''
+          }
       );
       // keep manually-added vars that aren't in detected
       const manual = prev.filter(
@@ -651,89 +676,6 @@ export const Prompts = () => {
                           <span className="button-text">Add message</span>
                         </UI.Button>
                       </div>
-
-                      {schemaVars.length > 0 && (
-                        <div className="panel-schema-editor">
-                          <p className="panel-schema-label">
-                            Variables
-                          </p>
-                          <p className="panel-schema-hint">
-                            Auto-detected from {'{{variables}}'} in your messages. Customize type and requirements below.
-                          </p>
-                          <div className="panel-schema-vars">
-                            {schemaVars.map((v, i) => (
-                              <div key={v.name} className="panel-schema-var">
-                                <div className="panel-schema-var-header">
-                                  <span className="panel-schema-var-name">
-                                    {`{{${v.name}}}`}
-                                  </span>
-                                  <FormControlLabel
-                                    control={
-                                      <Checkbox
-                                        size="small"
-                                        checked={v.required}
-                                        disabled={submitting}
-                                        onChange={e =>
-                                          setSchemaVars(prev =>
-                                            prev.map((sv, idx) =>
-                                              idx === i
-                                                ? { ...sv, required: e.target.checked }
-                                                : sv
-                                            )
-                                          )
-                                        }
-                                      />
-                                    }
-                                    label="Required"
-                                  />
-                                </div>
-                                <div className="panel-schema-var-fields">
-                                  <UI.Select
-                                    label="Type"
-                                    value={v.type}
-                                    disabled={submitting}
-                                    onChange={e =>
-                                      setSchemaVars(prev =>
-                                        prev.map((sv, idx) =>
-                                          idx === i
-                                            ? {
-                                                ...sv,
-                                                type: e.target.value as
-                                                  | 'string'
-                                                  | 'number'
-                                                  | 'boolean'
-                                              }
-                                            : sv
-                                        )
-                                      )
-                                    }
-                                    options={[
-                                      { label: 'String', value: 'string' },
-                                      { label: 'Number', value: 'number' },
-                                      { label: 'Boolean', value: 'boolean' }
-                                    ]}
-                                  />
-                                  <UI.Input
-                                    label="Description"
-                                    placeholder="What is this variable for?"
-                                    value={v.description}
-                                    disabled={submitting}
-                                    onChange={e =>
-                                      setSchemaVars(prev =>
-                                        prev.map((sv, idx) =>
-                                          idx === i
-                                            ? { ...sv, description: e.target.value }
-                                            : sv
-                                        )
-                                      )
-                                    }
-                                  />
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
                     </div>
                   ) : (
                     <UI.Input
@@ -760,6 +702,93 @@ export const Prompts = () => {
                       multiline
                       rows={10}
                     />
+                  )}
+                  {schemaVars.length > 0 && (
+                    <div className="panel-schema-editor">
+                      <p className="panel-schema-label">Variables</p>
+                      <p className="panel-schema-hint">
+                        Auto-detected from {'{{variables}}'} in your messages.
+                        Customize type and requirements below.
+                      </p>
+                      <div className="panel-schema-vars">
+                        {schemaVars.map((v, i) => (
+                          <div key={v.name} className="panel-schema-var">
+                            <div className="panel-schema-var-header">
+                              <span className="panel-schema-var-name">
+                                {`{{${v.name}}}`}
+                              </span>
+                              <FormControlLabel
+                                control={
+                                  <Checkbox
+                                    size="small"
+                                    checked={v.required}
+                                    disabled={submitting}
+                                    onChange={e =>
+                                      setSchemaVars(prev =>
+                                        prev.map((sv, idx) =>
+                                          idx === i
+                                            ? {
+                                                ...sv,
+                                                required: e.target.checked
+                                              }
+                                            : sv
+                                        )
+                                      )
+                                    }
+                                  />
+                                }
+                                label="Required"
+                              />
+                            </div>
+                            <div className="panel-schema-var-fields">
+                              <UI.Select
+                                label="Type"
+                                value={v.type}
+                                disabled={submitting}
+                                onChange={e =>
+                                  setSchemaVars(prev =>
+                                    prev.map((sv, idx) =>
+                                      idx === i
+                                        ? {
+                                            ...sv,
+                                            type: e.target.value as
+                                              | 'string'
+                                              | 'number'
+                                              | 'boolean'
+                                          }
+                                        : sv
+                                    )
+                                  )
+                                }
+                                options={[
+                                  { label: 'String', value: 'string' },
+                                  { label: 'Number', value: 'number' },
+                                  { label: 'Boolean', value: 'boolean' }
+                                ]}
+                              />
+                              <UI.Input
+                                label="Description"
+                                placeholder="What is this variable for?"
+                                value={v.description}
+                                disabled={submitting}
+                                onChange={e =>
+                                  setSchemaVars(prev =>
+                                    prev.map((sv, idx) =>
+                                      idx === i
+                                        ? {
+                                            ...sv,
+                                            description: e.target.value
+                                          }
+                                        : sv
+                                    )
+                                  )
+                                }
+                              />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   )}
                 </div>
                 <div className="panel-edit-actions">
@@ -811,12 +840,80 @@ export const Prompts = () => {
                   </div>
                 </div>
                 {selectedPrompt.schema &&
-                  Object.keys(selectedPrompt.schema).length > 0 && (
+                  Object.keys(
+                    (selectedPrompt.schema as { properties?: object })
+                      ?.properties || {}
+                  ).length > 0 && (
                     <div className="panel-section">
-                      <h3 className="panel-section-label">Schema</h3>
-                      <pre className="panel-schema">
-                        {JSON.stringify(selectedPrompt.schema, null, 2)}
-                      </pre>
+                      <div className="panel-schema-header">
+                        <h3 className="panel-section-label">Variables</h3>
+                        <div className="panel-schema-view-toggle">
+                          <button
+                            type="button"
+                            className={`panel-mode-btn ${schemaViewMode === 'visual' ? 'active' : ''}`}
+                            onClick={() => setSchemaViewMode('visual')}
+                          >
+                            <ViewList />
+                            Visual
+                          </button>
+                          <button
+                            type="button"
+                            className={`panel-mode-btn ${schemaViewMode === 'json' ? 'active' : ''}`}
+                            onClick={() => setSchemaViewMode('json')}
+                          >
+                            <Code />
+                            JSON
+                          </button>
+                        </div>
+                      </div>
+                      {schemaViewMode === 'visual' ? (
+                        <div className="panel-schema-visual">
+                          {(() => {
+                            const schema = selectedPrompt.schema as {
+                              properties?: Record<
+                                string,
+                                { type?: string; description?: string }
+                              >;
+                              required?: string[];
+                            };
+                            const props = schema?.properties || {};
+                            const required = schema?.required || [];
+                            return Object.entries(props).map(([name, def]) => (
+                              <div
+                                key={name}
+                                className="panel-schema-visual-var"
+                              >
+                                <div className="panel-schema-visual-row">
+                                  <span className="panel-schema-visual-name">
+                                    {`{{${name}}}`}
+                                  </span>
+                                  <span className="panel-schema-visual-type">
+                                    {def.type || 'string'}
+                                  </span>
+                                  {required.includes(name) ? (
+                                    <span className="panel-schema-visual-required">
+                                      Required
+                                    </span>
+                                  ) : (
+                                    <span className="panel-schema-visual-optional">
+                                      Optional
+                                    </span>
+                                  )}
+                                </div>
+                                {def.description && (
+                                  <p className="panel-schema-visual-description">
+                                    {def.description}
+                                  </p>
+                                )}
+                              </div>
+                            ));
+                          })()}
+                        </div>
+                      ) : (
+                        <pre className="panel-schema">
+                          {JSON.stringify(selectedPrompt.schema, null, 2)}
+                        </pre>
+                      )}
                     </div>
                   )}
               </div>
