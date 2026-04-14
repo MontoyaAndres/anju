@@ -31,6 +31,7 @@ export const Wrapper = styled.div<IProps>`
 
         @media (min-width: ${theme.screens.md}) {
           display: block;
+          padding-right: ${panelWidth - 80}px;
         }
       }
 
@@ -133,7 +134,7 @@ export const Wrapper = styled.div<IProps>`
 
     .prompt-panel {
       position: fixed;
-      top: 60px;
+      top: 68px;
       right: 0;
       bottom: 0;
       width: 100%;
@@ -146,8 +147,6 @@ export const Wrapper = styled.div<IProps>`
       @media (min-width: ${theme.screens.md}) {
         width: ${panelWidth}px;
         border-left: 1px solid ${theme.colors.alto};
-        position: relative;
-        top: 0;
         flex-shrink: 0;
       }
 
@@ -180,6 +179,10 @@ export const Wrapper = styled.div<IProps>`
         padding: 14px 16px;
         border-bottom: 1px solid ${theme.colors.alto};
         gap: 8px;
+
+        @media (min-width: ${theme.screens.md}) {
+          border-top: 1px solid ${theme.colors.alto};
+        }
 
         .panel-back-btn {
           display: flex;
@@ -256,7 +259,9 @@ export const Wrapper = styled.div<IProps>`
                   font-size: ${theme.fonts.xs};
                   font-weight: 500;
                   color: ${theme.colors.saltBox};
-                  transition: background-color 0.15s ease, color 0.15s ease;
+                  transition:
+                    background-color 0.15s ease,
+                    color 0.15s ease;
 
                   & > svg {
                     width: 14px;
@@ -331,7 +336,9 @@ export const Wrapper = styled.div<IProps>`
                       font-size: ${theme.fonts.xs};
                       font-weight: 500;
                       color: ${theme.colors.saltBox};
-                      transition: background-color 0.15s ease, color 0.15s ease;
+                      transition:
+                        background-color 0.15s ease,
+                        color 0.15s ease;
 
                       &:hover {
                         background-color: ${theme.colors.bastille}05;
@@ -387,7 +394,6 @@ export const Wrapper = styled.div<IProps>`
                   }
                 }
               }
-
             }
 
             .panel-schema-editor {

@@ -1,0 +1,7 @@
+- When creating/uploading a resource create the vector data (Use postgres vector or cloudflare vector)
+- Create the channels(?) functinality for connecting mcp client with telegram, whatsapp, slack etc etc
+- Create outlook tool
+- Create slack tool
+- Search for more tools (Existing MCP's?)
+- Create landing
+- Create docs

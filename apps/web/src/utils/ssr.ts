@@ -150,7 +150,32 @@ const getAuthOrganizations = async (context: GetServerSidePropsContext) => {
   };
 };
 
+const redirectIfAuthenticated: GetServerSideProps = async context => {
+  const { req } = context;
+
+  const cookies = req.headers.cookie;
+
+  if (!cookies) {
+    return { props: {} };
+  }
+
+  const me = await getMe(context);
+
+  if (me) {
+    return {
+      props: {},
+      redirect: {
+        permanent: false,
+        destination: '/organization'
+      }
+    };
+  }
+
+  return { props: {} };
+};
+
 export const ssr = {
   getAuthMe,
-  getAuthOrganizations
+  getAuthOrganizations,
+  redirectIfAuthenticated
 };
