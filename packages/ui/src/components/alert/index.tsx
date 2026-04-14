@@ -1,8 +1,18 @@
-import { ReactNode } from 'react';
+import {
+  ReactNode,
+  createContext,
+  useCallback,
+  useContext,
+  useMemo,
+  useRef,
+  useState
+} from 'react';
 import MaterialButton from '@mui/material/Button';
 
 import { Portal } from '../portal';
-import { Overlay, Dialog } from './styles';
+import { Overlay, Dialog, SnackbarContainer, Snackbar } from './styles';
+
+declare const setTimeout: (cb: () => void, ms: number) => number;
 
 export interface IProps {
   open: boolean;
@@ -15,7 +25,7 @@ export interface IProps {
   onCancel: () => void;
 }
 
-export const Alert = (props: IProps) => {
+const ConfirmAlert = (props: IProps) => {
   const {
     open,
     title,
@@ -34,7 +44,9 @@ export const Alert = (props: IProps) => {
       <Overlay
         role="button"
         tabIndex={0}
-        onClick={() => { if (!loading) onCancel(); }}
+        onClick={() => {
+          if (!loading) onCancel();
+        }}
         onKeyDown={e => {
           if (e.key === 'Escape' && !loading) onCancel();
         }}
@@ -67,3 +79,95 @@ export const Alert = (props: IProps) => {
     </Portal>
   );
 };
+
+type SnackbarVariant = 'success' | 'error';
+
+interface SnackbarItem {
+  id: number;
+  variant: SnackbarVariant;
+  message: string;
+}
+
+interface SnackbarContextValue {
+  show: (variant: SnackbarVariant, message: string) => void;
+  success: (message: string) => void;
+  error: (message: string) => void;
+}
+
+const SnackbarContext = createContext<SnackbarContextValue | null>(null);
+
+export interface ISnackbarProviderProps {
+  children: ReactNode;
+  duration?: number;
+}
+
+const SnackbarProvider = (props: ISnackbarProviderProps) => {
+  const { children, duration = 6000 } = props;
+  const [items, setItems] = useState<SnackbarItem[]>([]);
+  const idRef = useRef(0);
+
+  const dismiss = useCallback((id: number) => {
+    setItems(prev => prev.filter(item => item.id !== id));
+  }, []);
+
+  const show = useCallback(
+    (variant: SnackbarVariant, message: string) => {
+      idRef.current += 1;
+      const id = idRef.current;
+      setItems(prev => [...prev, { id, variant, message }]);
+      if (duration > 0) {
+        setTimeout(() => dismiss(id), duration);
+      }
+    },
+    [dismiss, duration]
+  );
+
+  const value = useMemo<SnackbarContextValue>(
+    () => ({
+      show,
+      success: message => show('success', message),
+      error: message => show('error', message)
+    }),
+    [show]
+  );
+
+  return (
+    <SnackbarContext.Provider value={value}>
+      {children}
+      <Portal>
+        <SnackbarContainer>
+          {items.map(item => (
+            <Snackbar
+              key={item.id}
+              variant={item.variant}
+              role={item.variant === 'error' ? 'alert' : 'status'}
+            >
+              <span className="snackbar-message">{item.message}</span>
+              <button
+                type="button"
+                className="snackbar-close"
+                aria-label="Dismiss"
+                onClick={() => dismiss(item.id)}
+              >
+                x
+              </button>
+            </Snackbar>
+          ))}
+        </SnackbarContainer>
+      </Portal>
+    </SnackbarContext.Provider>
+  );
+};
+
+const useSnackbar = (): SnackbarContextValue => {
+  const ctx = useContext(SnackbarContext);
+  if (!ctx) {
+    throw new Error('useSnackbar must be used within SnackbarProvider');
+  }
+  return ctx;
+};
+
+export const Alert = Object.assign(ConfirmAlert, {
+  SnackbarProvider,
+  useSnackbar
+});

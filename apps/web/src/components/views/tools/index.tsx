@@ -69,6 +69,7 @@ const EXPANDED_GROUP_KEY = 'anju:expandedToolGroupId';
 
 export const Tools = () => {
   const router = useRouter();
+  const snackbar = UI.Alert.useSnackbar();
   const [tab, setTab] = useState<'installed' | 'catalog'>('installed');
   const [catalog, setCatalog] = useState<ToolGroup[]>([]);
   const [installed, setInstalled] = useState<ArtifactTool[]>([]);
@@ -93,6 +94,11 @@ export const Tools = () => {
   const [disconnectAlert, setDisconnectAlert] = useState<{
     provider: string;
     affected: number;
+  } | null>(null);
+  const [scopeAlert, setScopeAlert] = useState<{
+    group: ToolGroup;
+    def: ToolDefinition;
+    missing: string[];
   } | null>(null);
   const [connectedBanner, setConnectedBanner] = useState<string | null>(null);
 
@@ -259,13 +265,62 @@ export const Tools = () => {
     setConnectingProvider(null);
   };
 
+  const getMissingScopes = (
+    def: ToolDefinition,
+    provider: string | null
+  ): string[] => {
+    if (!provider || !def.requiredScopes) return [];
+    const required = def.requiredScopes
+      .split(/[\s,]+/)
+      .map(s => s.trim())
+      .filter(Boolean);
+    if (required.length === 0) return [];
+    const creds = credentialByProvider.get(provider) || [];
+    const granted = new Set<string>();
+    for (const c of creds) {
+      if (!c.scopes) continue;
+      for (const s of c.scopes.split(/[\s,]+/)) {
+        const v = s.trim();
+        if (v) granted.add(v);
+      }
+    }
+    return required.filter(s => !granted.has(s));
+  };
+
+  const handleReauthorize = async (provider: string, scopes: string[]) => {
+    if (connectingProvider) return;
+    setConnectingProvider(provider);
+    try {
+      const data = await utils.fetcher({
+        url: `/oauth/${provider}/authorize?organizationId=${organizationId}&projectId=${projectId}&scopes=${encodeURIComponent(scopes.join(','))}`,
+        config: { credentials: 'include' }
+      });
+      if (data?.url) {
+        window.location.href = data.url;
+        return;
+      }
+    } catch {
+      // fall through
+    }
+    setConnectingProvider(null);
+  };
+
   const handleToggleTool = async (def: ToolDefinition, enabled: boolean) => {
     if (togglingDefId) return;
     const existing = installedByDefId.get(def.id);
+    if (enabled && !existing) {
+      const provider = expandedGroup?.provider || null;
+      const missing = getMissingScopes(def, provider);
+      if (missing.length > 0 && provider && expandedGroup) {
+        setScopeAlert({ group: expandedGroup, def, missing });
+        return;
+      }
+    }
     setTogglingDefId(def.id);
     try {
+      let data: { error?: string } | undefined;
       if (enabled && !existing) {
-        await utils.fetcher({
+        data = await utils.fetcher({
           url: toolApiBase,
           config: {
             method: 'POST',
@@ -277,12 +332,19 @@ export const Tools = () => {
           }
         });
       } else if (!enabled && existing) {
-        await utils.fetcher({
+        data = await utils.fetcher({
           url: `${toolApiBase}/${existing.id}`,
           config: { method: 'DELETE', credentials: 'include' }
         });
       }
+      if (data && data.error) {
+        snackbar.error(data.error);
+      } else {
+        snackbar.success(enabled ? 'Tool enabled' : 'Tool disabled');
+      }
       await fetchAll();
+    } catch {
+      snackbar.error('Failed to update tool');
     } finally {
       setTogglingDefId(null);
     }
@@ -337,7 +399,12 @@ export const Tools = () => {
       if (data && !data.error) {
         handleCloseEdit();
         fetchAll();
+        snackbar.success('Tool updated');
+      } else {
+        snackbar.error(data?.error || 'Failed to update tool');
       }
+    } catch {
+      snackbar.error('Failed to update tool');
     } finally {
       setSubmitting(false);
     }
@@ -354,7 +421,12 @@ export const Tools = () => {
       if (data && !data.error) {
         setRemoveAlert(null);
         fetchAll();
+        snackbar.success('Tool removed');
+      } else {
+        snackbar.error(data?.error || 'Failed to remove tool');
       }
+    } catch {
+      snackbar.error('Failed to remove tool');
     } finally {
       setSubmitting(false);
     }
@@ -395,7 +467,6 @@ export const Tools = () => {
             </p>
           </div>
         </div>
-
         {connectedBanner && (
           <div className="tools-banner tools-banner-success">
             <CheckCircle />
@@ -408,7 +479,6 @@ export const Tools = () => {
             </IconButton>
           </div>
         )}
-
         <div className="tools-tabs">
           <button
             type="button"
@@ -426,7 +496,6 @@ export const Tools = () => {
             Catalog
           </button>
         </div>
-
         {tab === 'installed' && (
           <div className="tools-installed">
             {status === 'pending' && installed.length === 0 && (
@@ -484,27 +553,29 @@ export const Tools = () => {
                               ` · ${creds.length} credential${creds.length === 1 ? '' : 's'} connected`}
                           </p>
                         </div>
-                      </div>
-                      <div className="tools-accordion-header-actions">
-                        {provider !== 'none' && creds.length > 0 && (
-                          <UI.Button
-                            size="small"
-                            onClick={e => {
-                              e.stopPropagation();
-                              setDisconnectAlert({
-                                provider,
-                                affected: tools.length
-                              });
-                            }}
-                          >
-                            <LinkOff />
-                            <span className="button-text">Disconnect</span>
-                          </UI.Button>
-                        )}
-                        <span className="tools-accordion-chevron-wrap">
+                        <span className="tools-accordion-chevron-wrap inline">
                           <ExpandMore className="tools-accordion-chevron" />
                         </span>
                       </div>
+                      {provider !== 'none' && (
+                        <div className="tools-accordion-header-actions">
+                          {creds.length > 0 && (
+                            <UI.Button
+                              size="small"
+                              onClick={e => {
+                                e.stopPropagation();
+                                setDisconnectAlert({
+                                  provider,
+                                  affected: tools.length
+                                });
+                              }}
+                            >
+                              <LinkOff />
+                              <span className="button-text">Disconnect</span>
+                            </UI.Button>
+                          )}
+                        </div>
+                      )}
                     </button>
                     {isExpanded && (
                       <div className="tools-accordion-body">
@@ -570,7 +641,6 @@ export const Tools = () => {
             )}
           </div>
         )}
-
         {tab === 'catalog' && !expandedGroup && (
           <div className="tools-catalog">
             <div className="tools-catalog-controls">
@@ -634,7 +704,6 @@ export const Tools = () => {
             </div>
           </div>
         )}
-
         {tab === 'catalog' && expandedGroup && (
           <div className="tools-group-detail">
             <button
@@ -659,14 +728,33 @@ export const Tools = () => {
                   </p>
                 )}
               </div>
-              <div className="tools-group-detail-actions">
-                {expandedGroup.provider &&
-                  (isGroupConnected(expandedGroup) ? (
+              {expandedGroup.provider && (
+                <div className="tools-group-detail-actions">
+                  {isGroupConnected(expandedGroup) ? (
                     <>
-                      <span className="tools-group-detail-connected-pill">
-                        <CheckCircle />
-                        Connected
-                      </span>
+                      {(() => {
+                        const expandedCreds =
+                          credentialByProvider.get(expandedGroup.provider!) ||
+                          [];
+                        const expandedExpired =
+                          expandedCreds.length > 0 &&
+                          expandedCreds.every(
+                            c =>
+                              c.expiresAt &&
+                              new Date(c.expiresAt) < new Date()
+                          );
+                        return expandedExpired ? (
+                          <span className="tools-group-detail-expired-pill">
+                            <Warning />
+                            Expired
+                          </span>
+                        ) : (
+                          <span className="tools-group-detail-connected-pill">
+                            <CheckCircle />
+                            Connected
+                          </span>
+                        );
+                      })()}
                       <UI.Button
                         size="small"
                         onClick={() =>
@@ -696,8 +784,9 @@ export const Tools = () => {
                           : `Connect ${expandedGroup.title}`}
                       </span>
                     </UI.Button>
-                  ))}
-              </div>
+                  )}
+                </div>
+              )}
             </div>
             {!isGroupConnected(expandedGroup) && expandedGroup.provider && (
               <div className="tools-banner tools-banner-warning">
@@ -751,7 +840,6 @@ export const Tools = () => {
           </div>
         )}
       </div>
-
       {editTool && (
         <UI.Portal>
           <ModalOverlay onClick={handleCloseEdit}>
@@ -806,7 +894,6 @@ export const Tools = () => {
           </ModalOverlay>
         </UI.Portal>
       )}
-
       <UI.Alert
         open={!!removeAlert}
         title="Remove tool"
@@ -817,16 +904,43 @@ export const Tools = () => {
         onConfirm={handleRemoveConfirm}
         onCancel={() => setRemoveAlert(null)}
       />
-
       <UI.Alert
         open={!!disconnectAlert}
-        title={`Disconnect ${disconnectAlert ? getProviderLabel(disconnectAlert.provider) : ''}`}
-        description={`This will revoke access and ${disconnectAlert?.affected || 0} tool${(disconnectAlert?.affected || 0) === 1 ? '' : 's'} from this provider will stop working until you reconnect.`}
+        title={`Disconnect ${disconnectAlert ? getProviderLabel(disconnectAlert.provider) : ''}?`}
+        description={`Are you sure? This revokes stored credentials for ${disconnectAlert ? getProviderLabel(disconnectAlert.provider) : 'this provider'}. ${disconnectAlert?.affected || 0} enabled tool${(disconnectAlert?.affected || 0) === 1 ? '' : 's'} will stop working immediately and any request from the MCP server to this provider will fail until you reconnect. Your installed tools stay listed so you can resume after reconnecting.`}
         confirmText="Disconnect"
         cancelText="Cancel"
         loading={submitting}
         onConfirm={handleDisconnectConfirm}
         onCancel={() => setDisconnectAlert(null)}
+      />
+      <UI.Alert
+        open={!!scopeAlert}
+        title={`Additional permissions required`}
+        description={
+          scopeAlert
+            ? `Enabling "${scopeAlert.def.title}" needs permissions you haven't granted to ${scopeAlert.group.title} yet: ${scopeAlert.missing.join(', ')}. We'll send you back to ${scopeAlert.group.title} to approve them — your existing connection stays in place and the new scopes are added on top.`
+            : ''
+        }
+        confirmText="Grant permissions"
+        cancelText="Cancel"
+        loading={connectingProvider === scopeAlert?.group.provider}
+        onConfirm={() => {
+          if (!scopeAlert?.group.provider) return;
+          const existing = (
+            credentialByProvider.get(scopeAlert.group.provider) || []
+          )
+            .flatMap(c => (c.scopes ? c.scopes.split(/[\s,]+/) : []))
+            .map(s => s.trim())
+            .filter(Boolean);
+          const merged = Array.from(
+            new Set([...existing, ...scopeAlert.missing])
+          );
+          const provider = scopeAlert.group.provider;
+          setScopeAlert(null);
+          handleReauthorize(provider, merged);
+        }}
+        onCancel={() => setScopeAlert(null)}
       />
     </Wrapper>
   );

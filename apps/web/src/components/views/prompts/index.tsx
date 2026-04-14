@@ -31,6 +31,7 @@ interface Prompt {
 
 export const Prompts = () => {
   const router = useRouter();
+  const snackbar = UI.Alert.useSnackbar();
   const [prompts, setPrompts] = useState<Prompt[]>([]);
   const [selectedPrompt, setSelectedPrompt] = useState<Prompt | null>(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -252,9 +253,12 @@ export const Prompts = () => {
         setIsCreating(false);
         setSelectedPrompt(data);
         fetchPrompts();
+        snackbar.success('Prompt created');
+      } else {
+        snackbar.error(data?.error || 'Failed to create prompt');
       }
     } catch {
-      // handle error
+      snackbar.error('Failed to create prompt');
     } finally {
       setSubmitting(false);
     }
@@ -343,9 +347,12 @@ export const Prompts = () => {
         setSelectedPrompt(data);
         setIsEditing(false);
         fetchPrompts();
+        snackbar.success('Prompt updated');
+      } else {
+        snackbar.error(data?.error || 'Failed to update prompt');
       }
     } catch {
-      // handle error
+      snackbar.error('Failed to update prompt');
     } finally {
       setSubmitting(false);
     }
@@ -373,9 +380,12 @@ export const Prompts = () => {
         setSelectedPrompt(null);
         setIsEditing(false);
         fetchPrompts();
+        snackbar.success('Prompt deleted');
+      } else {
+        snackbar.error(data?.error || 'Failed to delete prompt');
       }
     } catch {
-      // handle error
+      snackbar.error('Failed to delete prompt');
     } finally {
       setSubmitting(false);
     }

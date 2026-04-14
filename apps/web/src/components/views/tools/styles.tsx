@@ -273,8 +273,9 @@ export const Wrapper = styled.div`
 
     .tools-accordion-header {
       display: flex;
-      align-items: center;
-      justify-content: space-between;
+      flex-direction: column;
+      align-items: stretch;
+      justify-content: flex-start;
       width: 100%;
       padding: 14px 16px;
       border: none;
@@ -282,6 +283,25 @@ export const Wrapper = styled.div`
       cursor: pointer;
       text-align: left;
       gap: 12px;
+
+      .tools-accordion-chevron-wrap {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: ${theme.colors.saltBox};
+        transition:
+          background-color 0.2s ease,
+          color 0.2s ease;
+      }
+
+      .tools-accordion-chevron {
+        width: 20px;
+        height: 20px;
+        transition: transform 0.25s ease;
+      }
 
       &:hover {
         background-color: ${theme.colors.bastille}04;
@@ -303,6 +323,10 @@ export const Wrapper = styled.div`
         gap: 14px;
         flex: 1;
         min-width: 0;
+
+        .tools-accordion-chevron-wrap.inline {
+          margin-left: auto;
+        }
       }
 
       .tools-group-icon {
@@ -339,8 +363,11 @@ export const Wrapper = styled.div`
       .tools-accordion-header-actions {
         display: flex;
         align-items: center;
+        justify-content: flex-end;
+        align-self: stretch;
         gap: 8px;
         flex-shrink: 0;
+        flex-wrap: wrap;
 
         .MuiButtonBase-root {
           font-size: ${theme.fonts.xs};
@@ -359,25 +386,6 @@ export const Wrapper = styled.div`
           .button-text {
             font-weight: 600;
           }
-        }
-
-        .tools-accordion-chevron-wrap {
-          width: 32px;
-          height: 32px;
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: ${theme.colors.saltBox};
-          transition:
-            background-color 0.2s ease,
-            color 0.2s ease;
-        }
-
-        .tools-accordion-chevron {
-          width: 20px;
-          height: 20px;
-          transition: transform 0.25s ease;
         }
       }
     }
@@ -637,13 +645,19 @@ export const Wrapper = styled.div`
 
     .tools-group-detail-header {
       display: flex;
-      align-items: center;
+      flex-direction: column;
+      align-items: stretch;
       gap: 14px;
       padding: 18px;
       border: 1px solid ${theme.colors.alto};
       border-radius: 10px;
       background-color: ${theme.colors.white};
       margin-bottom: 16px;
+
+      @media (min-width: ${theme.screens.md}) {
+        flex-direction: row;
+        align-items: center;
+      }
 
       .tools-group-detail-icon {
         width: 52px;
@@ -687,8 +701,10 @@ export const Wrapper = styled.div`
       .tools-group-detail-actions {
         display: flex;
         align-items: center;
+        justify-content: flex-end;
         gap: 8px;
         flex-shrink: 0;
+        flex-wrap: wrap;
 
         .MuiButtonBase-root {
           font-size: ${theme.fonts.sm};
@@ -717,6 +733,25 @@ export const Wrapper = styled.div`
           font-weight: 700;
           color: #2e7d32;
           background-color: #e8f5e9;
+          padding: 6px 10px;
+          border-radius: 8px;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+
+          & > svg {
+            width: 14px;
+            height: 14px;
+          }
+        }
+
+        .tools-group-detail-expired-pill {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+          font-size: ${theme.fonts.xs};
+          font-weight: 700;
+          color: #c62828;
+          background-color: #ffebee;
           padding: 6px 10px;
           border-radius: 8px;
           text-transform: uppercase;

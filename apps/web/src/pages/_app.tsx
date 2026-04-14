@@ -6,6 +6,7 @@ import { AppCacheProvider } from '@mui/material-nextjs/v15-pagesRouter';
 import { ThemeProvider } from '@mui/material/styles';
 import { ThemeProvider as EmotionThemeProvider } from '@emotion/react';
 import CssBaseline from '@mui/material/CssBaseline';
+import { UI } from '@anju/ui';
 
 import { materialTheme } from '../theme';
 import { globalStyles } from '../global-styles';
@@ -78,7 +79,9 @@ const MyApp = (props: MyAppProps) => {
         <EmotionThemeProvider theme={materialTheme}>
           {globalStyles}
           <CssBaseline />
-          <>{getLayout(<Component {...pageProps} />)}</>
+          <UI.Alert.SnackbarProvider>
+            <>{getLayout(<Component {...pageProps} />)}</>
+          </UI.Alert.SnackbarProvider>
         </EmotionThemeProvider>
       </ThemeProvider>
     </AppCacheProvider>

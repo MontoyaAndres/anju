@@ -256,6 +256,21 @@ const createResource = async (c: Context<AppEnv>) => {
       throw new Error('Artifact not found for the project');
     }
 
+    const [existingResource] = await tx
+      .select()
+      .from(db.schema.artifactResource)
+      .where(
+        and(
+          eq(db.schema.artifactResource.artifactId, currentArtifactByProject.id),
+          eq(db.schema.artifactResource.uri, currentValues.uri)
+        )
+      )
+      .limit(1);
+
+    if (existingResource) {
+      throw new Error('Resource URI must be unique');
+    }
+
     const artifactResource = await tx
       .insert(db.schema.artifactResource)
       .values({
@@ -325,6 +340,22 @@ const updateResource = async (c: Context<AppEnv>) => {
 
     if (!currentArtifactByProject) {
       throw new Error('Artifact not found for the project');
+    }
+
+    const [existingResource] = await tx
+      .select()
+      .from(db.schema.artifactResource)
+      .where(
+        and(
+          eq(db.schema.artifactResource.artifactId, currentArtifactByProject.id),
+          eq(db.schema.artifactResource.uri, currentValues.uri),
+          sql`${db.schema.artifactResource.id} <> ${currentValues.resourceId}`
+        )
+      )
+      .limit(1);
+
+    if (existingResource) {
+      throw new Error('Resource URI must be unique');
     }
 
     const artifactResource = await tx

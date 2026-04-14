@@ -54,6 +54,7 @@ const INITIAL_EDIT_VALUES = {
 
 export const Resources = () => {
   const router = useRouter();
+  const snackbar = UI.Alert.useSnackbar();
   const [resources, setResources] = useState<Resource[]>([]);
   const [selectedResource, setSelectedResource] = useState<Resource | null>(
     null
@@ -237,9 +238,12 @@ export const Resources = () => {
         setFile(null);
         setSelectedResource(data);
         fetchResources();
+        snackbar.success('Resource created');
+      } else {
+        snackbar.error(data?.error || 'Failed to create resource');
       }
     } catch {
-      // handle error
+      snackbar.error('Failed to create resource');
     } finally {
       setSubmitting(false);
     }
@@ -320,9 +324,12 @@ export const Resources = () => {
         setFile(null);
         setIsEditing(false);
         fetchResources();
+        snackbar.success('Resource updated');
+      } else {
+        snackbar.error(data?.error || 'Failed to update resource');
       }
     } catch {
-      // handle error
+      snackbar.error('Failed to update resource');
     } finally {
       setSubmitting(false);
     }
@@ -376,9 +383,12 @@ export const Resources = () => {
         setSelectedResource(null);
         setIsEditing(false);
         fetchResources();
+        snackbar.success('Resource deleted');
+      } else {
+        snackbar.error(data?.error || 'Failed to delete resource');
       }
     } catch {
-      // handle error
+      snackbar.error('Failed to delete resource');
     } finally {
       setSubmitting(false);
     }
@@ -575,6 +585,9 @@ export const Resources = () => {
                 <span>{resource.mimeType}</span>
                 {resource.encoding && <span>{resource.encoding}</span>}
                 {resource.size > 0 && <span>{formatSize(resource.size)}</span>}
+                <span>
+                  {new Date(resource.updatedAt).toLocaleDateString()}
+                </span>
               </div>
             </div>
           ))}

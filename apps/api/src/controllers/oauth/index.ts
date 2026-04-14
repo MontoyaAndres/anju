@@ -141,23 +141,48 @@ const callback = async (c: Context<AppEnv>) => {
       throw new Error('Artifact not found for the project');
     }
 
-    await tx.insert(db.schema.artifactCredential).values({
-      provider,
-      accessToken: tokens.access_token,
-      refreshToken: tokens.refresh_token || null,
-      expiresAt: tokens.expires_in
-        ? new Date(Date.now() + tokens.expires_in * 1000)
-        : null,
-      scopes: tokens.scope || null,
-      artifactId: currentArtifactByProject.id
-    });
+    const [existingCredential] = await tx
+      .select()
+      .from(db.schema.artifactCredential)
+      .where(
+        and(
+          eq(db.schema.artifactCredential.artifactId, currentArtifactByProject.id),
+          eq(db.schema.artifactCredential.provider, provider)
+        )
+      )
+      .limit(1);
 
-    await tx
-      .update(db.schema.artifact)
-      .set({
-        artifactCredentialCount: sql`(${db.schema.artifact.artifactCredentialCount}::int + 1)::int`
-      })
-      .where(eq(db.schema.artifact.id, currentArtifactByProject.id));
+    const expiresAt = tokens.expires_in
+      ? new Date(Date.now() + tokens.expires_in * 1000)
+      : null;
+
+    if (existingCredential) {
+      await tx
+        .update(db.schema.artifactCredential)
+        .set({
+          accessToken: tokens.access_token,
+          refreshToken: tokens.refresh_token || existingCredential.refreshToken,
+          expiresAt,
+          scopes: tokens.scope || existingCredential.scopes
+        })
+        .where(eq(db.schema.artifactCredential.id, existingCredential.id));
+    } else {
+      await tx.insert(db.schema.artifactCredential).values({
+        provider,
+        accessToken: tokens.access_token,
+        refreshToken: tokens.refresh_token || null,
+        expiresAt,
+        scopes: tokens.scope || null,
+        artifactId: currentArtifactByProject.id
+      });
+
+      await tx
+        .update(db.schema.artifact)
+        .set({
+          artifactCredentialCount: sql`(${db.schema.artifact.artifactCredentialCount}::int + 1)::int`
+        })
+        .where(eq(db.schema.artifact.id, currentArtifactByProject.id));
+    }
   });
 
   const redirectUrl = `${process.env.NEXT_PUBLIC_WEB_URL || ''}/organization/${organizationId}/project/${projectId}/tools?connected=${provider}`;
