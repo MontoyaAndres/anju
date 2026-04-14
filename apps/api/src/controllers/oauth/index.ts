@@ -23,7 +23,9 @@ const authorize = async (c: Context<AppEnv>) => {
     throw new Error(`Unsupported provider: ${provider}`);
   }
 
-  const clientId = (c.env as any)[providerConfig.clientIdEnv];
+  const clientId =
+    (c.env as any)?.[providerConfig.clientIdEnv] ||
+    process.env[providerConfig.clientIdEnv];
   if (!clientId) {
     throw new Error(`Missing env: ${providerConfig.clientIdEnv}`);
   }
@@ -77,8 +79,12 @@ const callback = async (c: Context<AppEnv>) => {
     throw new Error('Invalid state: missing organizationId or projectId');
   }
 
-  const clientId = (c.env as any)[providerConfig.clientIdEnv];
-  const clientSecret = (c.env as any)[providerConfig.clientSecretEnv];
+  const clientId =
+    (c.env as any)?.[providerConfig.clientIdEnv] ||
+    process.env[providerConfig.clientIdEnv];
+  const clientSecret =
+    (c.env as any)?.[providerConfig.clientSecretEnv] ||
+    process.env[providerConfig.clientSecretEnv];
 
   if (!clientId || !clientSecret) {
     throw new Error(

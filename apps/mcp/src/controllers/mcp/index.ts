@@ -172,7 +172,10 @@ const business = async (c: Context<AppEnv>) => {
         inputSchema: schema as any
       },
       async (args: any) =>
-        handler.handler(args, { config: toolConfig, credentials: toolCredentials })
+        handler.handler(args, {
+          config: toolConfig,
+          credentials: toolCredentials
+        })
     );
   }
 

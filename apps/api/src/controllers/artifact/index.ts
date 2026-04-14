@@ -690,9 +690,7 @@ const uploadResourceFile = async (c: Context<AppEnv>) => {
     throw new Error('File size exceeds the 10MB limit');
   }
 
-  if (
-    !(utils.constants.MIMETYPES as readonly string[]).includes(file.type)
-  ) {
+  if (!(utils.constants.MIMETYPES as readonly string[]).includes(file.type)) {
     throw new Error(`Unsupported mime type: ${file.type}`);
   }
 
