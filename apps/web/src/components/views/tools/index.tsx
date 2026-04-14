@@ -146,11 +146,9 @@ export const Tools = () => {
     setConnectedBanner(connected);
     setTab('catalog');
     const { connected: _c, ...rest } = router.query;
-    router.replace(
-      { pathname: router.pathname, query: rest },
-      undefined,
-      { shallow: true }
-    );
+    router.replace({ pathname: router.pathname, query: rest }, undefined, {
+      shallow: true
+    });
   }, [router.isReady]);
 
   useEffect(() => {
@@ -169,7 +167,7 @@ export const Tools = () => {
     if (installed.length === 0) return;
     setExpandedInstalled(prev => {
       if (prev.size > 0) return prev;
-      const first = installed[0]?.toolDefinition?.group?.provider || '__none__';
+      const first = installed[0]?.toolDefinition?.group?.provider || 'none';
       return new Set([first]);
     });
   }, [installed]);
@@ -192,7 +190,7 @@ export const Tools = () => {
   const installedByProvider = useMemo(() => {
     const map = new Map<string, ArtifactTool[]>();
     for (const t of installed) {
-      const provider = t.toolDefinition?.group?.provider || '__none__';
+      const provider = t.toolDefinition?.group?.provider || 'none';
       if (!map.has(provider)) map.set(provider, []);
       map.get(provider)!.push(t);
     }
@@ -215,9 +213,7 @@ export const Tools = () => {
       g =>
         g.title.toLowerCase().includes(q) ||
         (g.description || '').toLowerCase().includes(q) ||
-        g.toolDefinitions.some(d =>
-          d.title.toLowerCase().includes(q)
-        )
+        g.toolDefinitions.some(d => d.title.toLowerCase().includes(q))
     );
   }, [catalog, search]);
 
@@ -263,10 +259,7 @@ export const Tools = () => {
     setConnectingProvider(null);
   };
 
-  const handleToggleTool = async (
-    def: ToolDefinition,
-    enabled: boolean
-  ) => {
+  const handleToggleTool = async (def: ToolDefinition, enabled: boolean) => {
     if (togglingDefId) return;
     const existing = installedByDefId.get(def.id);
     setTogglingDefId(def.id);
@@ -458,7 +451,7 @@ export const Tools = () => {
                 const creds = credentialByProvider.get(provider) || [];
                 const groupTitle =
                   tools[0]?.toolDefinition?.group?.title ||
-                  (provider === '__none__' ? 'Other' : provider);
+                  (provider === 'none' ? 'Other' : provider);
                 const expired =
                   creds.length > 0 &&
                   creds.every(
@@ -493,7 +486,7 @@ export const Tools = () => {
                         </div>
                       </div>
                       <div className="tools-accordion-header-actions">
-                        {provider !== '__none__' && creds.length > 0 && (
+                        {provider !== 'none' && creds.length > 0 && (
                           <UI.Button
                             size="small"
                             onClick={e => {
@@ -526,47 +519,47 @@ export const Tools = () => {
                         )}
                         <div className="tools-installed-list">
                           {tools.map(t => {
-                        const def = t.toolDefinition;
-                        const configKeys = t.config
-                          ? Object.keys(t.config).length
-                          : 0;
-                        return (
-                          <div key={t.id} className="tools-installed-item">
-                            <div className="tools-installed-item-main">
-                              <p className="tools-installed-item-title">
-                                {def?.title || t.toolDefinitionId}
-                              </p>
-                              {def?.description && (
-                                <p className="tools-installed-item-description">
-                                  {def.description}
-                                </p>
-                              )}
-                              <p className="tools-installed-item-meta">
-                                {configKeys > 0
-                                  ? `${configKeys} config field${configKeys > 1 ? 's' : ''}`
-                                  : 'No custom config'}
-                              </p>
-                            </div>
-                            <div className="tools-installed-item-actions">
-                              <Tooltip title="Edit config">
-                                <IconButton
-                                  size="small"
-                                  onClick={() => handleEdit(t)}
-                                >
-                                  <EditOutlined />
-                                </IconButton>
-                              </Tooltip>
-                              <Tooltip title="Remove">
-                                <IconButton
-                                  size="small"
-                                  onClick={() => setRemoveAlert(t)}
-                                >
-                                  <DeleteOutline />
-                                </IconButton>
-                              </Tooltip>
-                            </div>
-                          </div>
-                        );
+                            const def = t.toolDefinition;
+                            const configKeys = t.config
+                              ? Object.keys(t.config).length
+                              : 0;
+                            return (
+                              <div key={t.id} className="tools-installed-item">
+                                <div className="tools-installed-item-main">
+                                  <p className="tools-installed-item-title">
+                                    {def?.title || t.toolDefinitionId}
+                                  </p>
+                                  {def?.description && (
+                                    <p className="tools-installed-item-description">
+                                      {def.description}
+                                    </p>
+                                  )}
+                                  <p className="tools-installed-item-meta">
+                                    {configKeys > 0
+                                      ? `${configKeys} config field${configKeys > 1 ? 's' : ''}`
+                                      : 'No custom config'}
+                                  </p>
+                                </div>
+                                <div className="tools-installed-item-actions">
+                                  <Tooltip title="Edit config">
+                                    <IconButton
+                                      size="small"
+                                      onClick={() => handleEdit(t)}
+                                    >
+                                      <EditOutlined />
+                                    </IconButton>
+                                  </Tooltip>
+                                  <Tooltip title="Remove">
+                                    <IconButton
+                                      size="small"
+                                      onClick={() => setRemoveAlert(t)}
+                                    >
+                                      <DeleteOutline />
+                                    </IconButton>
+                                  </Tooltip>
+                                </div>
+                              </div>
+                            );
                           })}
                         </div>
                       </div>
@@ -679,8 +672,8 @@ export const Tools = () => {
                         onClick={() =>
                           setDisconnectAlert({
                             provider: expandedGroup.provider!,
-                            affected: expandedGroup.toolDefinitions.filter(
-                              d => installedByDefId.has(d.id)
+                            affected: expandedGroup.toolDefinitions.filter(d =>
+                              installedByDefId.has(d.id)
                             ).length
                           })
                         }
@@ -710,8 +703,8 @@ export const Tools = () => {
               <div className="tools-banner tools-banner-warning">
                 <Warning />
                 <span>
-                  Connect {expandedGroup.title} to enable these tools. You
-                  only need to connect once for the whole integration.
+                  Connect {expandedGroup.title} to enable these tools. You only
+                  need to connect once for the whole integration.
                 </span>
               </div>
             )}
@@ -749,9 +742,7 @@ export const Tools = () => {
                     <Switch
                       checked={isInstalled}
                       disabled={disabled}
-                      onChange={e =>
-                        handleToggleTool(def, e.target.checked)
-                      }
+                      onChange={e => handleToggleTool(def, e.target.checked)}
                     />
                   </div>
                 );
@@ -764,10 +755,7 @@ export const Tools = () => {
       {editTool && (
         <UI.Portal>
           <ModalOverlay onClick={handleCloseEdit}>
-            <ModalDialog
-              role="dialog"
-              onClick={e => e.stopPropagation()}
-            >
+            <ModalDialog role="dialog" onClick={e => e.stopPropagation()}>
               <div className="tools-modal-header">
                 <h2 className="tools-modal-title">
                   Configure {editTool.toolDefinition?.title || 'Tool'}
@@ -789,8 +777,7 @@ export const Tools = () => {
                   disabled={submitting}
                   error={!!configError}
                   helperText={
-                    configError ||
-                    'e.g. {"label": "inbox", "maxResults": 20}'
+                    configError || 'e.g. {"label": "inbox", "maxResults": 20}'
                   }
                   onChange={e => {
                     setConfigJson(e.target.value);

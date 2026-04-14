@@ -7,11 +7,11 @@ export interface OAuthProviderConfig {
 }
 
 export const providers: Record<string, OAuthProviderConfig> = {
-  google_gmail: {
+  'google-gmail': {
     authUrl: 'https://accounts.google.com/o/oauth2/v2/auth',
     tokenUrl: 'https://oauth2.googleapis.com/token',
-    clientIdEnv: 'GOOGLE_CLIENT_ID',
-    clientSecretEnv: 'GOOGLE_CLIENT_SECRET',
+    clientIdEnv: 'GOOGLE_GMAIL_CLIENT_ID',
+    clientSecretEnv: 'GOOGLE_GMAIL_CLIENT_SECRET',
     defaultScopes: [
       'https://www.googleapis.com/auth/gmail.readonly',
       'https://www.googleapis.com/auth/gmail.send',
@@ -20,11 +20,11 @@ export const providers: Record<string, OAuthProviderConfig> = {
       'https://www.googleapis.com/auth/gmail.labels'
     ]
   },
-  microsoft_outlook: {
+  'microsoft-outlook': {
     authUrl: 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize',
     tokenUrl: 'https://login.microsoftonline.com/common/oauth2/v2.0/token',
-    clientIdEnv: 'MICROSOFT_CLIENT_ID',
-    clientSecretEnv: 'MICROSOFT_CLIENT_SECRET',
+    clientIdEnv: 'MICROSOFT_OUTLOOK_CLIENT_ID',
+    clientSecretEnv: 'MICROSOFT_OUTLOOK_CLIENT_SECRET',
     defaultScopes: [
       'https://graph.microsoft.com/Mail.ReadWrite',
       'offline_access'
