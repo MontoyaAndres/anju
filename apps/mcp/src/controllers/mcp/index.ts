@@ -9,7 +9,7 @@ import { db } from '@anju/db';
 import { eq } from 'drizzle-orm';
 
 import { toolRegistry } from '../../tools';
-import { readResourceContent } from '../../utils';
+import { readResourceContent, refreshCredentialIfNeeded } from '../../utils';
 
 // types
 import { AppEnv } from '../../types';
@@ -45,6 +45,10 @@ const business = async (c: Context<AppEnv>) => {
   if (!artifact) {
     throw new Error('MCP Server not found');
   }
+
+  const refreshedCredentials = await Promise.all(
+    artifact.artifactCredentials.map(cred => refreshCredentialIfNeeded(c, cred))
+  );
 
   const mcpServer = new McpServer({
     name: artifact.project.name || 'MCP Server',
@@ -153,14 +157,14 @@ const business = async (c: Context<AppEnv>) => {
     const toolConfig = (artifactTool.config as Record<string, unknown>) || {};
     const provider = toolDef.group?.provider;
     const toolCredentials = provider
-      ? artifact.artifactCredentials
-          .filter(c => c.provider === provider)
-          .map(c => ({
-            provider: c.provider,
-            accessToken: c.accessToken,
-            refreshToken: c.refreshToken,
-            expiresAt: c.expiresAt,
-            scopes: c.scopes
+      ? refreshedCredentials
+          .filter(cred => cred.provider === provider)
+          .map(cred => ({
+            provider: cred.provider,
+            accessToken: cred.accessToken,
+            refreshToken: cred.refreshToken,
+            expiresAt: cred.expiresAt,
+            scopes: cred.scopes
           }))
       : [];
 

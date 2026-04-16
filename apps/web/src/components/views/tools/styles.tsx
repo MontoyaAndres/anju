@@ -583,14 +583,13 @@ export const Wrapper = styled.div`
         margin: 0;
       }
 
-      .tools-catalog-group-connected {
+      .tools-catalog-group-connected,
+      .tools-catalog-group-expired {
         display: inline-flex;
         align-items: center;
         gap: 2px;
         font-size: 10px;
         font-weight: 700;
-        color: #2e7d32;
-        background-color: #e8f5e9;
         padding: 2px 6px;
         border-radius: 8px;
         text-transform: uppercase;
@@ -600,6 +599,16 @@ export const Wrapper = styled.div`
           width: 10px;
           height: 10px;
         }
+      }
+
+      .tools-catalog-group-connected {
+        color: #2e7d32;
+        background-color: #e8f5e9;
+      }
+
+      .tools-catalog-group-expired {
+        color: #c62828;
+        background-color: #ffebee;
       }
 
       .tools-catalog-group-description {

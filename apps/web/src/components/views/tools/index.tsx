@@ -455,6 +455,18 @@ export const Tools = () => {
   const isGroupConnected = (group: ToolGroup) =>
     !group.provider || credentialByProvider.has(group.provider);
 
+  const isProviderExpired = (provider: string | null) => {
+    if (!provider) return false;
+    const creds = credentialByProvider.get(provider) || [];
+    if (creds.length === 0) return false;
+    return creds.every(
+      c =>
+        !c.refreshToken &&
+        c.expiresAt &&
+        new Date(c.expiresAt) < new Date()
+    );
+  };
+
   return (
     <Wrapper>
       <div className="tools-container">
@@ -521,11 +533,7 @@ export const Tools = () => {
                 const groupTitle =
                   tools[0]?.toolDefinition?.group?.title ||
                   (provider === 'none' ? 'Other' : provider);
-                const expired =
-                  creds.length > 0 &&
-                  creds.every(
-                    c => c.expiresAt && new Date(c.expiresAt) < new Date()
-                  );
+                const expired = isProviderExpired(provider);
                 const isExpanded = expandedInstalled.has(provider);
 
                 return (
@@ -666,6 +674,7 @@ export const Tools = () => {
                   installedByDefId.has(d.id)
                 ).length;
                 const connected = isGroupConnected(group);
+                const expired = isProviderExpired(group.provider);
                 return (
                   <button
                     type="button"
@@ -681,12 +690,19 @@ export const Tools = () => {
                         <p className="tools-catalog-group-title">
                           {group.title}
                         </p>
-                        {connected && group.provider && (
-                          <span className="tools-catalog-group-connected">
-                            <CheckCircle />
-                            Connected
-                          </span>
-                        )}
+                        {connected &&
+                          group.provider &&
+                          (expired ? (
+                            <span className="tools-catalog-group-expired">
+                              <Warning />
+                              Expired
+                            </span>
+                          ) : (
+                            <span className="tools-catalog-group-connected">
+                              <CheckCircle />
+                              Connected
+                            </span>
+                          ))}
                       </div>
                       {group.description && (
                         <p className="tools-catalog-group-description">
@@ -732,29 +748,17 @@ export const Tools = () => {
                 <div className="tools-group-detail-actions">
                   {isGroupConnected(expandedGroup) ? (
                     <>
-                      {(() => {
-                        const expandedCreds =
-                          credentialByProvider.get(expandedGroup.provider!) ||
-                          [];
-                        const expandedExpired =
-                          expandedCreds.length > 0 &&
-                          expandedCreds.every(
-                            c =>
-                              c.expiresAt &&
-                              new Date(c.expiresAt) < new Date()
-                          );
-                        return expandedExpired ? (
-                          <span className="tools-group-detail-expired-pill">
-                            <Warning />
-                            Expired
-                          </span>
-                        ) : (
-                          <span className="tools-group-detail-connected-pill">
-                            <CheckCircle />
-                            Connected
-                          </span>
-                        );
-                      })()}
+                      {isProviderExpired(expandedGroup.provider) ? (
+                        <span className="tools-group-detail-expired-pill">
+                          <Warning />
+                          Expired
+                        </span>
+                      ) : (
+                        <span className="tools-group-detail-connected-pill">
+                          <CheckCircle />
+                          Connected
+                        </span>
+                      )}
                       <UI.Button
                         size="small"
                         onClick={() =>
