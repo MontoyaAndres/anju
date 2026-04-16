@@ -3,6 +3,11 @@ import { fetcher } from './fetcher';
 import { constants } from './constants';
 import { hashObject } from './hashObject';
 import { errorHandler } from './errorHandler';
+import {
+  encryptString,
+  decryptString,
+  getCredentialEncryptionKey
+} from './crypto';
 import { validateMessageVariables } from './validateMessageVariables';
 import { JsonSchema, jsonSchemaToZodShape } from './jsonSchemaToZodShape';
 
@@ -12,6 +17,9 @@ export const utils = {
   constants,
   hashObject,
   errorHandler,
+  encryptString,
+  decryptString,
+  getCredentialEncryptionKey,
   jsonSchemaToZodShape,
   validateMessageVariables
 };

@@ -808,7 +808,14 @@ const listCredentials = async (c: Context<AppEnv>) => {
     throw new Error('Artifact not found for the project');
   }
 
-  return c.json(artifact.artifactCredentials);
+  return c.json(
+    artifact.artifactCredentials.map(
+      ({ accessToken: _a, refreshToken, ...rest }) => ({
+        ...rest,
+        hasRefreshToken: Boolean(refreshToken)
+      })
+    )
+  );
 };
 
 const removeCredential = async (c: Context<AppEnv>) => {

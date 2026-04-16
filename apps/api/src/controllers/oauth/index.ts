@@ -1,6 +1,7 @@
 import { Context } from 'hono';
 import { and, eq, sql } from 'drizzle-orm';
 import { db } from '@anju/db';
+import { utils } from '@anju/utils';
 
 import { oauthState, providers } from '../../utils';
 
@@ -113,6 +114,15 @@ const callback = async (c: Context<AppEnv>) => {
 
   const tokens: any = await tokenResponse.json();
 
+  const encryptionKey = utils.getCredentialEncryptionKey(c);
+  const encryptedAccessToken = utils.encryptString(
+    tokens.access_token,
+    encryptionKey
+  );
+  const encryptedRefreshToken = tokens.refresh_token
+    ? utils.encryptString(tokens.refresh_token, encryptionKey)
+    : null;
+
   const dbInstance = db.create(c);
 
   await dbInstance.transaction(async tx => {
@@ -160,8 +170,8 @@ const callback = async (c: Context<AppEnv>) => {
       await tx
         .update(db.schema.artifactCredential)
         .set({
-          accessToken: tokens.access_token,
-          refreshToken: tokens.refresh_token || existingCredential.refreshToken,
+          accessToken: encryptedAccessToken,
+          refreshToken: encryptedRefreshToken || existingCredential.refreshToken,
           expiresAt,
           scopes: tokens.scope || existingCredential.scopes
         })
@@ -169,8 +179,8 @@ const callback = async (c: Context<AppEnv>) => {
     } else {
       await tx.insert(db.schema.artifactCredential).values({
         provider,
-        accessToken: tokens.access_token,
-        refreshToken: tokens.refresh_token || null,
+        accessToken: encryptedAccessToken,
+        refreshToken: encryptedRefreshToken,
         expiresAt,
         scopes: tokens.scope || null,
         artifactId: currentArtifactByProject.id

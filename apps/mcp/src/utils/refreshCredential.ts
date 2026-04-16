@@ -1,6 +1,7 @@
 import { Context } from 'hono';
 import { eq } from 'drizzle-orm';
 import { db } from '@anju/db';
+import { utils } from '@anju/utils';
 
 import { AppEnv } from '../types';
 
@@ -45,15 +46,29 @@ export const refreshCredentialIfNeeded = async (
   ctx: Context<AppEnv>,
   credential: RefreshableCredential
 ): Promise<RefreshableCredential> => {
-  if (!credential.refreshToken) return credential;
-  if (!credential.expiresAt) return credential;
+  const encryptionKey = utils.getCredentialEncryptionKey(ctx);
+  const accessTokenPlain = utils.decryptString(
+    credential.accessToken,
+    encryptionKey
+  );
+  const refreshTokenPlain = credential.refreshToken
+    ? utils.decryptString(credential.refreshToken, encryptionKey)
+    : null;
+  const decrypted: RefreshableCredential = {
+    ...credential,
+    accessToken: accessTokenPlain,
+    refreshToken: refreshTokenPlain
+  };
+
+  if (!refreshTokenPlain) return decrypted;
+  if (!credential.expiresAt) return decrypted;
   if (credential.expiresAt.getTime() - EXPIRY_BUFFER_MS > Date.now()) {
-    return credential;
+    return decrypted;
   }
 
   const tokenUrl = TOKEN_URLS[credential.provider];
   const envConfig = ENV_NAMES[credential.provider];
-  if (!tokenUrl || !envConfig) return credential;
+  if (!tokenUrl || !envConfig) return decrypted;
 
   const envBag = ctx.env as unknown as Record<string, string | undefined>;
   const clientId =
@@ -61,7 +76,7 @@ export const refreshCredentialIfNeeded = async (
   const clientSecret =
     envBag?.[envConfig.clientSecretEnv] ||
     process.env[envConfig.clientSecretEnv];
-  if (!clientId || !clientSecret) return credential;
+  if (!clientId || !clientSecret) return decrypted;
 
   try {
     const response = await fetch(tokenUrl, {
@@ -71,10 +86,10 @@ export const refreshCredentialIfNeeded = async (
         client_id: clientId,
         client_secret: clientSecret,
         grant_type: 'refresh_token',
-        refresh_token: credential.refreshToken
+        refresh_token: refreshTokenPlain
       })
     });
-    if (!response.ok) return credential;
+    if (!response.ok) return decrypted;
 
     const tokens = (await response.json()) as {
       access_token?: string;
@@ -82,10 +97,10 @@ export const refreshCredentialIfNeeded = async (
       expires_in?: number;
       scope?: string;
     };
-    if (!tokens.access_token) return credential;
+    if (!tokens.access_token) return decrypted;
 
     const nextAccessToken = tokens.access_token;
-    const nextRefreshToken = tokens.refresh_token || credential.refreshToken;
+    const nextRefreshToken = tokens.refresh_token || refreshTokenPlain;
     const nextExpiresAt = tokens.expires_in
       ? new Date(Date.now() + tokens.expires_in * 1000)
       : null;
@@ -96,8 +111,8 @@ export const refreshCredentialIfNeeded = async (
     await dbInstance
       .update(db.schema.artifactCredential)
       .set({
-        accessToken: nextAccessToken,
-        refreshToken: nextRefreshToken,
+        accessToken: utils.encryptString(nextAccessToken, encryptionKey),
+        refreshToken: utils.encryptString(nextRefreshToken, encryptionKey),
         expiresAt: nextExpiresAt,
         scopes: nextScopes
       })
@@ -111,6 +126,6 @@ export const refreshCredentialIfNeeded = async (
       scopes: nextScopes
     };
   } catch {
-    return credential;
+    return decrypted;
   }
 };

@@ -56,8 +56,7 @@ interface ArtifactTool {
 interface ArtifactCredential {
   id: string;
   provider: string;
-  accessToken: string;
-  refreshToken: string | null;
+  hasRefreshToken: boolean;
   expiresAt: string | null;
   scopes: string | null;
   artifactId: string;
@@ -461,7 +460,7 @@ export const Tools = () => {
     if (creds.length === 0) return false;
     return creds.every(
       c =>
-        !c.refreshToken &&
+        !c.hasRefreshToken &&
         c.expiresAt &&
         new Date(c.expiresAt) < new Date()
     );
