@@ -430,7 +430,7 @@ export const MobileMenuWrapper = styled.div<IMobileMenuWrapperProps>`
         display: flex;
         flex-direction: column;
         justify-content: space-between;
-        height: calc(100vh - 202px);
+        height: calc(100vh - 68px);
         overflow-y: auto;
 
         .MuiButtonBase-root {
@@ -475,6 +475,175 @@ export const MobileMenuWrapper = styled.div<IMobileMenuWrapperProps>`
             }
           }
         }
+      }
+    }
+  `}
+`;
+
+export const ModalOverlay = styled.div`
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 16px;
+`;
+
+export const ModalDialog = styled.div`
+  ${({ theme }) => css`
+    background-color: ${theme.colors.white};
+    border-radius: 12px;
+    width: 100%;
+    max-width: 480px;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+
+    .profile-modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      border-bottom: 1px solid ${theme.colors.alto};
+
+      .profile-modal-title {
+        font-size: ${theme.fonts.lg};
+        font-weight: 600;
+        color: ${theme.colors.bastille};
+        margin: 0;
+      }
+
+      .MuiButtonBase-root {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+
+        svg {
+          width: 20px;
+          height: 20px;
+          margin: 0;
+        }
+      }
+    }
+
+    .profile-modal-body {
+      padding: 20px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+
+      .profile-avatar-section {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 0;
+
+        .profile-avatar-preview {
+          width: 88px;
+          height: 88px;
+          border-radius: 9999px;
+          background-color: ${theme.colors.bastille}1A;
+          background-size: cover;
+          background-position: center;
+          border: 1px solid ${theme.colors.alto};
+        }
+
+        .profile-avatar-actions {
+          display: flex;
+          gap: 8px;
+          flex-wrap: wrap;
+          justify-content: center;
+        }
+      }
+
+      .profile-linked-accounts {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        padding-top: 8px;
+        border-top: 1px solid ${theme.colors.alto};
+
+        .profile-section-title {
+          font-size: ${theme.fonts.sm};
+          font-weight: 700;
+          color: ${theme.colors.bastille};
+          margin: 4px 0 4px 0;
+        }
+
+        .profile-linked-row {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 8px 10px;
+          border: 1px solid ${theme.colors.alto};
+          border-radius: 8px;
+
+          .profile-linked-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+
+            & > svg {
+              width: 20px;
+              height: 20px;
+              color: ${theme.colors.bastille};
+            }
+
+            .profile-linked-label {
+              font-size: ${theme.fonts.sm};
+              font-weight: 600;
+              color: ${theme.colors.bastille};
+            }
+
+            .profile-linked-badge {
+              font-size: 10px;
+              font-weight: 700;
+              color: #2e7d32;
+              background-color: #e8f5e9;
+              padding: 2px 6px;
+              border-radius: 8px;
+              text-transform: uppercase;
+              letter-spacing: 0.4px;
+            }
+          }
+        }
+      }
+    }
+
+    .profile-modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      padding: 14px 20px;
+      border-top: 1px solid ${theme.colors.alto};
+    }
+
+    .MuiButtonBase-root {
+      font-size: ${theme.fonts.base};
+      padding: 6px 16px;
+      min-height: 0;
+      border-radius: 6px;
+      text-transform: none;
+      color: ${theme.colors.bastille};
+
+      & > svg {
+        width: 14px;
+        height: 14px;
+        margin-right: 4px;
+      }
+
+      .button-text {
+        font-size: ${theme.fonts.base};
+      }
+
+      &.MuiButton-contained {
+        background-color: ${theme.colors.bastille};
+        color: ${theme.colors.white};
       }
     }
   `}

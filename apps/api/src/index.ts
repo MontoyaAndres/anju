@@ -3,6 +3,7 @@ import { cors } from 'hono/cors';
 import { utils } from '@anju/utils';
 
 import {
+  UserController,
   ArtifactController,
   OrganizationController,
   ProjectController,
@@ -38,6 +39,10 @@ app
     const user = c.get('user');
     return c.json({ user });
   })
+
+  // User controller
+  .post('/user/avatar', UserMiddleware.verify, UserController.uploadAvatar)
+  .get('/user/:userId/avatar/:filename', UserController.downloadAvatar)
 
   // Organization controller
   .get('/organization', UserMiddleware.verify, OrganizationController.list)
