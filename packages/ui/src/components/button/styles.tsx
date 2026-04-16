@@ -15,10 +15,6 @@ export const Wrapper = styled.div<IProps>`
       border-radius: 8px;
       padding: 12px 24px;
 
-      @media (min-width: ${theme.screens.xl}) {
-        padding: 14px 34px;
-      }
-
       ${startIcon &&
       css`
         display: flex;

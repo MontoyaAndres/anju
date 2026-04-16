@@ -50,6 +50,11 @@ const PROJECT_CREATE = z.object({
   description: z.string().max(500).optional()
 });
 
+const PROJECT_CREATE_VIEW = PROJECT_CREATE.omit({
+  userId: true,
+  organizationId: true
+});
+
 const PROJECT_UPDATE = z.object({
   id: z.uuid(),
   userId: z.uuid(),
@@ -301,6 +306,7 @@ export const Schema = {
   ORGANIZATION_GET,
   AUTH_USER_GET,
   PROJECT_CREATE,
+  PROJECT_CREATE_VIEW,
   PROJECT_UPDATE,
   PROJECT_GET,
   ARTIFACT_CREATE_PROMPT,

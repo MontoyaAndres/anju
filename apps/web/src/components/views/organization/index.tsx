@@ -2,8 +2,15 @@ import { useState } from 'react';
 import { useRouter } from 'next/router';
 import { UI } from '@anju/ui';
 import { utils } from '@anju/utils';
+import IconButton from '@mui/material/IconButton';
+import { AddOutlined, Close } from '@mui/icons-material';
 
-import { CreateOrganizationWrapper, Wrapper } from './styles';
+import {
+  CreateOrganizationWrapper,
+  ModalDialog,
+  ModalOverlay,
+  Wrapper
+} from './styles';
 
 // types
 import { IProps } from '../../../pages/organization';
@@ -22,6 +29,7 @@ export const Organization = (props: IProps) => {
   >('idle');
   const [error, setError] = useState(INITIAL_FORM_STATE);
   const [apiError, setApiError] = useState('');
+  const [modalOpen, setModalOpen] = useState(false);
   const router = useRouter();
 
   const handleValueChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -30,6 +38,23 @@ export const Organization = (props: IProps) => {
     if (error[name as keyof typeof error]) {
       setError(prev => ({ ...prev, [name]: '' }));
     }
+  };
+
+  const resetForm = () => {
+    setValues(INITIAL_FORM_STATE);
+    setError(INITIAL_FORM_STATE);
+    setApiError('');
+    setStatus('idle');
+  };
+
+  const handleModalOpen = () => {
+    resetForm();
+    setModalOpen(true);
+  };
+
+  const handleModalClose = () => {
+    if (status === 'pending') return;
+    setModalOpen(false);
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -125,7 +150,7 @@ export const Organization = (props: IProps) => {
             </div>
             <UI.Input
               label="Name"
-              placeholder="Enter your first project name"
+              placeholder="Enter your project name"
               name="projectName"
               value={values.projectName}
               onChange={handleValueChange}
@@ -153,7 +178,7 @@ export const Organization = (props: IProps) => {
               size="small"
               disabled={status === 'pending'}
             >
-              Create Organization
+              {status === 'pending' ? 'Creating...' : 'Create Organization'}
             </UI.Button>
           </div>
         </form>
@@ -163,10 +188,20 @@ export const Organization = (props: IProps) => {
 
   return (
     <Wrapper>
-      <h1 className="organization-title">Organizations</h1>
-      <p className="create-organization-subtitle">
-        You are a member of the following organizations:
-      </p>
+      <div className="organization-header">
+        <div className="organization-heading">
+          <h1 className="organization-title">Organizations</h1>
+          <p className="create-organization-subtitle">
+            You are a member of the following organizations:
+          </p>
+        </div>
+        <div className="organization-new-button">
+          <UI.Button variant="contained" size="small" onClick={handleModalOpen}>
+            <AddOutlined />
+            New organization
+          </UI.Button>
+        </div>
+      </div>
       <div className="organization-list">
         {organizations.map(organization => (
           <div
@@ -210,6 +245,89 @@ export const Organization = (props: IProps) => {
           </div>
         ))}
       </div>
+      {modalOpen && (
+        <UI.Portal>
+          <ModalOverlay onClick={handleModalClose}>
+            <ModalDialog role="dialog" onClick={e => e.stopPropagation()}>
+              <div className="modal-header">
+                <h2 className="modal-title">Create a new organization</h2>
+                <IconButton size="small" onClick={handleModalClose}>
+                  <Close />
+                </IconButton>
+              </div>
+              <form onSubmit={handleSubmit}>
+                <div className="modal-body">
+                  <div className="form-section">
+                    <div className="form-section-header">
+                      <h3 className="form-section-title">Organization</h3>
+                      <p className="form-section-description">
+                        This is your workspace name. You can change it later.
+                      </p>
+                    </div>
+                    <UI.Input
+                      label="Name"
+                      placeholder="Enter organization name"
+                      name="name"
+                      value={values.name}
+                      onChange={handleValueChange}
+                      required
+                      error={!!error.name}
+                      helperText={error.name}
+                    />
+                  </div>
+                  <div className="form-section">
+                    <div className="form-section-header">
+                      <h3 className="form-section-title">Project</h3>
+                      <p className="form-section-description">
+                        Every organization starts with one project.
+                      </p>
+                    </div>
+                    <UI.Input
+                      label="Project name"
+                      placeholder="Enter your project name"
+                      name="projectName"
+                      value={values.projectName}
+                      onChange={handleValueChange}
+                      required
+                      error={!!error.projectName}
+                      helperText={error.projectName}
+                    />
+                    <UI.Input
+                      label="Project description"
+                      placeholder="Describe your project"
+                      name="projectDescription"
+                      value={values.projectDescription}
+                      onChange={handleValueChange}
+                      multiline
+                      rows={2}
+                      error={!!error.projectDescription}
+                      helperText={error.projectDescription}
+                    />
+                  </div>
+                  {apiError && <p className="modal-error">{apiError}</p>}
+                </div>
+                <div className="modal-actions">
+                  <UI.Button
+                    size="small"
+                    disabled={status === 'pending'}
+                    onClick={handleModalClose}
+                  >
+                    Cancel
+                  </UI.Button>
+                  <UI.Button
+                    type="submit"
+                    variant="contained"
+                    size="small"
+                    disabled={status === 'pending'}
+                  >
+                    {status === 'pending' ? 'Creating...' : 'Create'}
+                  </UI.Button>
+                </div>
+              </form>
+            </ModalDialog>
+          </ModalOverlay>
+        </UI.Portal>
+      )}
     </Wrapper>
   );
 };
