@@ -779,6 +779,44 @@ export const OrgSwitcherWrapper = styled.div`
       text-align: center;
     }
 
+    .switcher-accordion-skeleton {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      gap: 12px;
+      padding: 14px;
+      border-radius: 10px;
+    }
+
+    .switcher-accordion-skeleton-texts {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-width: 0;
+    }
+
+    .switcher-list-skeleton {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .switcher-item-skeleton {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 14px;
+      border-radius: 10px;
+    }
+
+    .switcher-item-skeleton-texts {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-width: 0;
+    }
+
     .switcher-footer {
       padding: 10px 12px;
       border-top: 1px solid ${theme.colors.alto};

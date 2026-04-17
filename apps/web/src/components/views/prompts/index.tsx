@@ -11,7 +11,8 @@ import {
   ArrowBack,
   RemoveCircleOutline,
   Code,
-  ViewList
+  ViewList,
+  ChatBubbleOutlineOutlined
 } from '@mui/icons-material';
 import Checkbox from '@mui/material/Checkbox';
 import FormControlLabel from '@mui/material/FormControlLabel';
@@ -439,10 +440,30 @@ export const Prompts = () => {
           </UI.Button>
         </div>
         {status === 'pending' && prompts.length === 0 && (
-          <p className="prompts-empty">Loading...</p>
+          <div className="prompts-items">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="prompt-item prompt-item-skeleton">
+                <UI.Skeleton variant="text" width="35%" height={18} />
+                <UI.Skeleton variant="text" width="85%" height={14} />
+                <UI.Skeleton variant="text" width="25%" height={12} />
+              </div>
+            ))}
+          </div>
         )}
         {status !== 'pending' && prompts.length === 0 && (
-          <p className="prompts-empty">No prompts yet.</p>
+          <div className="prompts-empty-state">
+            <ChatBubbleOutlineOutlined />
+            <h3>No prompts yet</h3>
+            <p>Create a prompt template to expose through this MCP server.</p>
+            <UI.Button
+              variant="contained"
+              size="small"
+              onClick={handleCreate}
+            >
+              <Add />
+              <span className="button-text">New prompt</span>
+            </UI.Button>
+          </div>
         )}
         <div className="prompts-items">
           {prompts.map(prompt => (

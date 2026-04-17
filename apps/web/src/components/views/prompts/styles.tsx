@@ -37,10 +37,16 @@ export const Wrapper = styled.div<IProps>`
 
       .prompts-header {
         display: flex;
-        align-items: flex-start;
-        justify-content: space-between;
+        flex-direction: column;
+        align-items: stretch;
         gap: 12px;
         margin-bottom: 20px;
+
+        @media (min-width: ${theme.screens.md}) {
+          flex-direction: row;
+          align-items: flex-start;
+          justify-content: space-between;
+        }
 
         .prompts-title {
           font-size: ${theme.fonts['2xl']};
@@ -61,9 +67,10 @@ export const Wrapper = styled.div<IProps>`
           padding: 6px 14px;
           border-radius: 8px;
           text-transform: none;
-          display: flex;
+          display: inline-flex;
           align-items: center;
           gap: 4px;
+          width: auto;
 
           .button-text {
             font-weight: 600;
@@ -81,6 +88,53 @@ export const Wrapper = styled.div<IProps>`
         color: ${theme.colors.bastille}99;
         margin: 40px 0;
         text-align: center;
+      }
+
+      .prompts-empty-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 12px;
+        padding: 56px 20px;
+        text-align: center;
+
+        & > svg {
+          width: 48px;
+          height: 48px;
+          color: ${theme.colors.bastille}40;
+        }
+
+        h3 {
+          font-size: ${theme.fonts.lg};
+          color: ${theme.colors.bastille};
+          margin: 0;
+        }
+
+        p {
+          font-size: ${theme.fonts.sm};
+          color: ${theme.colors.bastille}99;
+          margin: 0 0 8px 0;
+        }
+
+        .MuiButtonBase-root {
+          font-size: ${theme.fonts.sm};
+          padding: 6px 16px;
+          border-radius: 8px;
+          text-transform: none;
+          display: flex;
+          align-items: center;
+          gap: 4px;
+
+          .button-text {
+            font-weight: 600;
+          }
+
+          & > svg {
+            width: 18px;
+            height: 18px;
+            color: inherit;
+          }
+        }
       }
 
       .prompts-items {
@@ -105,6 +159,18 @@ export const Wrapper = styled.div<IProps>`
           &.active {
             border-color: ${theme.colors.bastille}60;
             background-color: ${theme.colors.bastille}0A;
+          }
+
+          &.prompt-item-skeleton {
+            cursor: default;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+
+            &:hover {
+              border-color: ${theme.colors.alto};
+              background-color: transparent;
+            }
           }
 
           .prompt-item-title {

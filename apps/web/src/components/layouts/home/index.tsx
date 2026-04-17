@@ -521,7 +521,10 @@ const HomeLayout = ({ page }: { page: HomePage }) => {
                       ? 'active'
                       : ''
                   }
-                  onClick={() => router.push(`${projectBase}/prompts`)}
+                  onClick={() => {
+                    setMobileMenuClicked(false);
+                    router.push(`${projectBase}/prompts`);
+                  }}
                 >
                   {pathname ===
                   '/organization/[id]/project/[projectId]/prompts' ? (
@@ -539,7 +542,10 @@ const HomeLayout = ({ page }: { page: HomePage }) => {
                       ? 'active'
                       : ''
                   }
-                  onClick={() => router.push(`${projectBase}/resources`)}
+                  onClick={() => {
+                    setMobileMenuClicked(false);
+                    router.push(`${projectBase}/resources`);
+                  }}
                 >
                   {pathname ===
                   '/organization/[id]/project/[projectId]/resources' ? (
@@ -556,7 +562,10 @@ const HomeLayout = ({ page }: { page: HomePage }) => {
                       ? 'active'
                       : ''
                   }
-                  onClick={() => router.push(`${projectBase}/tools`)}
+                  onClick={() => {
+                    setMobileMenuClicked(false);
+                    router.push(`${projectBase}/tools`);
+                  }}
                 >
                   {pathname ===
                   '/organization/[id]/project/[projectId]/tools' ? (
@@ -788,7 +797,29 @@ const HomeLayout = ({ page }: { page: HomePage }) => {
               </div>
               <div className="switcher-mobile">
                 {orgsLoading && organizations === null ? (
-                  <p className="switcher-empty">Loading...</p>
+                  <div className="switcher-mobile-list">
+                    {Array.from({ length: 3 }).map((_, i) => (
+                      <div key={i} className="switcher-accordion-skeleton">
+                        <div className="switcher-accordion-skeleton-texts">
+                          <UI.Skeleton
+                            variant="text"
+                            width="60%"
+                            height={16}
+                          />
+                          <UI.Skeleton
+                            variant="text"
+                            width="35%"
+                            height={12}
+                          />
+                        </div>
+                        <UI.Skeleton
+                          variant="rounded"
+                          width={24}
+                          height={18}
+                        />
+                      </div>
+                    ))}
+                  </div>
                 ) : organizations && organizations.length > 0 ? (
                   <div className="switcher-mobile-list">
                     {organizations.map(org => {
@@ -882,7 +913,29 @@ const HomeLayout = ({ page }: { page: HomePage }) => {
                   <p className="switcher-column-label">Organizations</p>
                   <div className="switcher-list">
                     {orgsLoading && organizations === null ? (
-                      <p className="switcher-empty">Loading...</p>
+                      <div className="switcher-list-skeleton">
+                        {Array.from({ length: 4 }).map((_, i) => (
+                          <div key={i} className="switcher-item-skeleton">
+                            <div className="switcher-item-skeleton-texts">
+                              <UI.Skeleton
+                                variant="text"
+                                width="70%"
+                                height={16}
+                              />
+                              <UI.Skeleton
+                                variant="text"
+                                width="45%"
+                                height={12}
+                              />
+                            </div>
+                            <UI.Skeleton
+                              variant="rounded"
+                              width={24}
+                              height={18}
+                            />
+                          </div>
+                        ))}
+                      </div>
                     ) : organizations && organizations.length > 0 ? (
                       organizations.map(org => {
                         const isSelected = selectedOrg?.id === org.id;

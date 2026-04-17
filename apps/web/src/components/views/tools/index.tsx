@@ -510,7 +510,33 @@ export const Tools = () => {
         {tab === 'installed' && (
           <div className="tools-installed">
             {status === 'pending' && installed.length === 0 && (
-              <p className="tools-empty">Loading...</p>
+              <div className="tools-installed-skeleton">
+                {Array.from({ length: 2 }).map((_, i) => (
+                  <div key={i} className="tools-accordion">
+                    <div className="tools-accordion-header">
+                      <div className="tools-accordion-header-info">
+                        <UI.Skeleton
+                          variant="rounded"
+                          width={44}
+                          height={44}
+                        />
+                        <div className="tools-accordion-header-texts">
+                          <UI.Skeleton
+                            variant="text"
+                            width={140}
+                            height={18}
+                          />
+                          <UI.Skeleton
+                            variant="text"
+                            width={80}
+                            height={12}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             )}
             {status === 'resolved' && installed.length === 0 && (
               <div className="tools-empty-state">
@@ -662,7 +688,18 @@ export const Tools = () => {
               </div>
             </div>
             {status === 'pending' && catalog.length === 0 && (
-              <p className="tools-empty">Loading...</p>
+              <div className="tools-catalog-groups">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <div key={i} className="tools-catalog-group-card-skeleton">
+                    <UI.Skeleton variant="rounded" width={44} height={44} />
+                    <div className="tools-catalog-group-card-skeleton-body">
+                      <UI.Skeleton variant="text" width="55%" height={18} />
+                      <UI.Skeleton variant="text" width="90%" height={14} />
+                      <UI.Skeleton variant="text" width="70%" height={14} />
+                    </div>
+                  </div>
+                ))}
+              </div>
             )}
             {filteredCatalog.length === 0 && status === 'resolved' && (
               <p className="tools-empty">No integrations match your search.</p>

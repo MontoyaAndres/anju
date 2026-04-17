@@ -526,6 +526,36 @@ export const Wrapper = styled.div`
       }
     }
 
+    .tools-installed-skeleton {
+      display: flex;
+      flex-direction: column;
+
+      .tools-accordion-header-texts {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        flex: 1;
+      }
+    }
+
+    .tools-catalog-group-card-skeleton {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 16px;
+      border: 1px solid ${theme.colors.alto};
+      border-radius: 10px;
+      background-color: ${theme.colors.white};
+
+      .tools-catalog-group-card-skeleton-body {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        min-width: 0;
+      }
+    }
+
     .tools-catalog-group-card {
       display: flex;
       align-items: flex-start;

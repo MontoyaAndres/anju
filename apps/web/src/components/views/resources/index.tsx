@@ -14,7 +14,8 @@ import {
   TextFields,
   ExpandMore,
   ExpandLess,
-  RemoveCircleOutline
+  RemoveCircleOutline,
+  FolderOpenOutlined
 } from '@mui/icons-material';
 import Checkbox from '@mui/material/Checkbox';
 import FormControlLabel from '@mui/material/FormControlLabel';
@@ -557,10 +558,40 @@ export const Resources = () => {
           </UI.Button>
         </div>
         {status === 'pending' && resources.length === 0 && (
-          <p className="resources-empty">Loading...</p>
+          <div className="resources-items">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="resource-item resource-item-skeleton">
+                <div className="resource-item-top">
+                  <UI.Skeleton variant="text" width="45%" height={18} />
+                  <UI.Skeleton
+                    variant="rounded"
+                    width={50}
+                    height={18}
+                  />
+                </div>
+                <div className="resource-item-meta">
+                  <UI.Skeleton variant="text" width={80} height={12} />
+                  <UI.Skeleton variant="text" width={60} height={12} />
+                  <UI.Skeleton variant="text" width={70} height={12} />
+                </div>
+              </div>
+            ))}
+          </div>
         )}
         {status !== 'pending' && resources.length === 0 && (
-          <p className="resources-empty">No resources yet.</p>
+          <div className="resources-empty-state">
+            <FolderOpenOutlined />
+            <h3>No resources yet</h3>
+            <p>Add files or templates for this MCP server to serve.</p>
+            <UI.Button
+              variant="contained"
+              size="small"
+              onClick={handleCreate}
+            >
+              <Add />
+              <span className="button-text">New resource</span>
+            </UI.Button>
+          </div>
         )}
         <div className="resources-items">
           {resources.map(resource => (
@@ -1066,7 +1097,15 @@ export const Resources = () => {
                         >
                           <OpenInNew />
                           <span className="button-text">
-                            {filePreviewUrl ? 'Open file' : 'Loading...'}
+                            {filePreviewUrl ? (
+                              'Open file'
+                            ) : (
+                              <UI.Skeleton
+                                variant="text"
+                                width={60}
+                                height={14}
+                              />
+                            )}
                           </span>
                         </UI.Button>
                       </>

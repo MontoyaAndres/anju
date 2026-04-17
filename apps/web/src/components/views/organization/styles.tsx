@@ -13,10 +13,16 @@ export const Wrapper = styled.div`
 
     .organization-header {
       display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
+      flex-direction: column;
+      align-items: stretch;
       gap: 16px;
       margin-bottom: 24px;
+
+      @media (min-width: ${theme.screens.md}) {
+        flex-direction: row;
+        align-items: flex-start;
+        justify-content: space-between;
+      }
 
       .organization-heading {
         .organization-title {
@@ -39,12 +45,19 @@ export const Wrapper = styled.div`
 
         .MuiButtonBase-root {
           text-transform: none;
-          font-size: ${theme.fonts.base};
+          font-size: ${theme.fonts.sm};
+          font-weight: 600;
+          padding: 6px 14px;
+          border-radius: 8px;
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+          width: auto;
 
           & > svg {
             width: 18px;
             height: 18px;
-            margin-right: 6px;
+            margin-right: 0;
           }
         }
       }
