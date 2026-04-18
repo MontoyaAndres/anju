@@ -23,6 +23,9 @@ export const Wrapper = styled.div`
       .login-content-texts {
         width: 100%;
         max-width: 520px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
 
         .login-content-subtitle {
           font-size: ${theme.fonts['4xl']};
