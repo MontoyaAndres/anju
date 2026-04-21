@@ -6,7 +6,9 @@ import { errorHandler } from './errorHandler';
 import {
   encryptString,
   decryptString,
-  getCredentialEncryptionKey
+  getCredentialEncryptionKey,
+  sha256Hex,
+  timingSafeEqual
 } from './crypto';
 import { validateMessageVariables } from './validateMessageVariables';
 import { JsonSchema, jsonSchemaToZodShape } from './jsonSchemaToZodShape';
@@ -20,6 +22,8 @@ export const utils = {
   encryptString,
   decryptString,
   getCredentialEncryptionKey,
+  sha256Hex,
+  timingSafeEqual,
   jsonSchemaToZodShape,
   validateMessageVariables
 };

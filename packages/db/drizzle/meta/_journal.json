@@ -162,6 +162,13 @@
       "when": 1775935694452,
       "tag": "0022_legal_paper_doll",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1776528318081,
+      "tag": "0023_heavy_tenebrous",
+      "breakpoints": true
     }
   ]
 }

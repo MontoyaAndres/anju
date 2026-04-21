@@ -12,8 +12,13 @@ command = "npm run build"
 
 [env.development]
 name = "anju-mcp-development"
+[env.development.observability]
+enabled = true
+[env.development.observability.logs]
+enabled = true
 [env.development.vars]
 NODE_ENV = "production"
+MCP_PORT = "8081"
 [[env.development.hyperdrive]]
 binding = "HYPERDRIVE"
 id = "20b38b96e12a4f45ac111fb7d8161edf"
@@ -23,8 +28,13 @@ bucket_name = "anju-storage-development"
 
 [env.production]
 name = "anju-mcp-production"
+[env.production.observability]
+enabled = true
+[env.production.observability.logs]
+enabled = true
 [env.production.vars]
 NODE_ENV = "production"
+MCP_PORT = "8081"
 [[env.production.hyperdrive]]
 binding = "HYPERDRIVE"
 id = "<YOUR_HYPERDRIVE_ID>"

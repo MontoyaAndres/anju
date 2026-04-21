@@ -273,6 +273,90 @@ const BUSINESS_QUERY = z.object({
   hash: z.string().length(8).min(8).max(8)
 });
 
+const ARTIFACT_UPSERT_LLM = z.object({
+  provider: z.enum(constants.LLM_PROVIDERS),
+  model: z.string().min(1).max(200),
+  baseUrl: z.url().optional().or(z.literal('')),
+  apiKey: z.string().min(1).max(500),
+  systemPrompt: z.string().max(10000).optional(),
+  config: z.record(z.string(), z.any()).optional(),
+  projectId: z.uuid(),
+  userId: z.uuid(),
+  organizationId: z.uuid()
+});
+
+const ARTIFACT_GET_LLM = z.object({
+  projectId: z.uuid(),
+  userId: z.uuid(),
+  organizationId: z.uuid()
+});
+
+const ARTIFACT_UPSERT_LLM_VIEW = ARTIFACT_UPSERT_LLM.omit({
+  projectId: true,
+  userId: true,
+  organizationId: true
+});
+
+const CHANNEL_CREATE = z.object({
+  platform: z.enum(constants.CHANNEL_PLATFORMS),
+  config: z.record(z.string(), z.any()).optional(),
+  credentials: z.record(z.string(), z.string()),
+  projectId: z.uuid(),
+  userId: z.uuid(),
+  organizationId: z.uuid()
+});
+
+const CHANNEL_UPDATE = z.object({
+  channelId: z.uuid(),
+  status: z.enum(constants.CHANNEL_STATUSES).optional(),
+  config: z.record(z.string(), z.any()).optional(),
+  credentials: z.record(z.string(), z.string()).optional(),
+  projectId: z.uuid(),
+  userId: z.uuid(),
+  organizationId: z.uuid()
+});
+
+const CHANNEL_GET = z.object({
+  projectId: z.uuid(),
+  userId: z.uuid(),
+  organizationId: z.uuid()
+});
+
+const CHANNEL_REMOVE = z.object({
+  channelId: z.uuid(),
+  projectId: z.uuid(),
+  userId: z.uuid(),
+  organizationId: z.uuid()
+});
+
+const CHANNEL_LIST_CONVERSATIONS = z.object({
+  channelId: z.uuid(),
+  projectId: z.uuid(),
+  userId: z.uuid(),
+  organizationId: z.uuid()
+});
+
+const CHANNEL_LIST_MESSAGES = z.object({
+  channelId: z.uuid(),
+  conversationId: z.uuid(),
+  projectId: z.uuid(),
+  userId: z.uuid(),
+  organizationId: z.uuid()
+});
+
+const CHANNEL_CREATE_VIEW = CHANNEL_CREATE.omit({
+  projectId: true,
+  userId: true,
+  organizationId: true
+});
+
+const CHANNEL_UPDATE_VIEW = CHANNEL_UPDATE.omit({
+  channelId: true,
+  projectId: true,
+  userId: true,
+  organizationId: true
+});
+
 const ARTIFACT_CREATE_PROMPT_VIEW = ARTIFACT_CREATE_PROMPT.omit({
   projectId: true,
   userId: true,
@@ -329,5 +413,16 @@ export const Schema = {
   ARTIFACT_REMOVE_TOOL,
   ARTIFACT_GET_CREDENTIAL,
   ARTIFACT_REMOVE_CREDENTIAL,
-  BUSINESS_QUERY
+  BUSINESS_QUERY,
+  ARTIFACT_UPSERT_LLM,
+  ARTIFACT_UPSERT_LLM_VIEW,
+  ARTIFACT_GET_LLM,
+  CHANNEL_CREATE,
+  CHANNEL_CREATE_VIEW,
+  CHANNEL_UPDATE,
+  CHANNEL_UPDATE_VIEW,
+  CHANNEL_GET,
+  CHANNEL_REMOVE,
+  CHANNEL_LIST_CONVERSATIONS,
+  CHANNEL_LIST_MESSAGES
 };

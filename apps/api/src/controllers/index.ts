@@ -4,6 +4,7 @@ import { ArtifactController } from './artifact';
 import { OrganizationController } from './organization';
 import { OAuthController } from './oauth';
 import { CatalogController } from './catalog';
+import { ChannelController } from './channel';
 
 export {
   UserController,
@@ -11,5 +12,6 @@ export {
   ArtifactController,
   OrganizationController,
   OAuthController,
-  CatalogController
+  CatalogController,
+  ChannelController
 };

@@ -59,3 +59,25 @@ export const decryptString = (value: string, rawKey: string) => {
   const plaintext = cipher.decrypt(ciphertext);
   return new TextDecoder().decode(plaintext);
 };
+
+export const sha256Hex = async (input: string) => {
+  const digest = await crypto.subtle.digest(
+    'SHA-256',
+    new TextEncoder().encode(input)
+  );
+  const bytes = new Uint8Array(digest);
+  let hex = '';
+  for (let i = 0; i < bytes.length; i++) {
+    hex += bytes[i].toString(16).padStart(2, '0');
+  }
+  return hex;
+};
+
+export const timingSafeEqual = (a: string, b: string) => {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) {
+    diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return diff === 0;
+};

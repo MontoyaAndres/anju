@@ -189,6 +189,7 @@ export const artifact = pgTable('artifact', {
   artifactCredentialCount: integer('artifact_credential_count')
     .notNull()
     .default(0),
+  channelCount: integer('channel_count').notNull().default(0),
   metadata: json('metadata'),
   projectId: text('project_id')
     .notNull()
@@ -199,6 +200,170 @@ export const artifact = pgTable('artifact', {
     .defaultNow()
     .$onUpdate(() => new Date())
 });
+
+export const artifactLlm = pgTable('artifact_llm', {
+  id: text('id')
+    .primaryKey()
+    .$defaultFn(() => uuid()),
+  provider: text('provider').notNull(),
+  model: text('model').notNull(),
+  baseUrl: text('base_url'),
+  apiKey: text('api_key').notNull(),
+  systemPrompt: text('system_prompt'),
+  config: json('config'),
+  artifactId: text('artifact_id')
+    .notNull()
+    .unique()
+    .references(() => artifact.id, { onDelete: 'cascade' }),
+  createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { mode: 'date' })
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date())
+});
+
+export const channel = pgTable(
+  'channel',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => uuid()),
+    platform: text('platform').notNull(),
+    status: text('status').notNull().default('active'),
+    config: json('config'),
+    credentials: text('credentials').notNull(),
+    webhookSecret: text('webhook_secret').notNull(),
+    conversationCount: integer('conversation_count').notNull().default(0),
+    messageCount: integer('message_count').notNull().default(0),
+    artifactId: text('artifact_id')
+      .notNull()
+      .references(() => artifact.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { mode: 'date' })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date())
+  },
+  table => [index('channel_artifactId_idx').on(table.artifactId)]
+);
+
+export const channelConversation = pgTable(
+  'channel_conversation',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => uuid()),
+    externalConversationId: text('external_conversation_id').notNull(),
+    title: text('title'),
+    metadata: json('metadata'),
+    messageCount: integer('message_count').notNull().default(0),
+    lastMessageAt: timestamp('last_message_at', { mode: 'date' }),
+    channelId: text('channel_id')
+      .notNull()
+      .references(() => channel.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { mode: 'date' })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date())
+  },
+  table => [
+    index('channel_conversation_channelId_idx').on(table.channelId),
+    index('channel_conversation_external_idx').on(
+      table.channelId,
+      table.externalConversationId
+    )
+  ]
+);
+
+export const channelParticipant = pgTable(
+  'channel_participant',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => uuid()),
+    externalUserId: text('external_user_id').notNull(),
+    displayName: text('display_name'),
+    metadata: json('metadata'),
+    linkedUserId: text('linked_user_id').references(() => user.id, {
+      onDelete: 'set null'
+    }),
+    channelId: text('channel_id')
+      .notNull()
+      .references(() => channel.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { mode: 'date' })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date())
+  },
+  table => [
+    index('channel_participant_channelId_idx').on(table.channelId),
+    index('channel_participant_external_idx').on(
+      table.channelId,
+      table.externalUserId
+    )
+  ]
+);
+
+export const channelMessage = pgTable(
+  'channel_message',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => uuid()),
+    role: text('role').notNull(),
+    content: text('content'),
+    externalMessageId: text('external_message_id'),
+    tokensIn: integer('tokens_in'),
+    tokensOut: integer('tokens_out'),
+    latencyMs: integer('latency_ms'),
+    metadata: json('metadata'),
+    conversationId: text('conversation_id')
+      .notNull()
+      .references(() => channelConversation.id, { onDelete: 'cascade' }),
+    participantId: text('participant_id').references(
+      () => channelParticipant.id,
+      { onDelete: 'set null' }
+    ),
+    createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow()
+  },
+  table => [
+    index('channel_message_conversationId_idx').on(table.conversationId),
+    index('channel_message_createdAt_idx').on(table.createdAt)
+  ]
+);
+
+export const channelMessageUsage = pgTable(
+  'channel_message_usage',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => uuid()),
+    kind: text('kind').notNull(),
+    input: json('input'),
+    output: json('output'),
+    latencyMs: integer('latency_ms'),
+    errorMessage: text('error_message'),
+    messageId: text('message_id')
+      .notNull()
+      .references(() => channelMessage.id, { onDelete: 'cascade' }),
+    artifactPromptId: text('artifact_prompt_id').references(
+      () => artifactPrompt.id,
+      { onDelete: 'set null' }
+    ),
+    artifactResourceId: text('artifact_resource_id').references(
+      () => artifactResource.id,
+      { onDelete: 'set null' }
+    ),
+    artifactToolId: text('artifact_tool_id').references(
+      () => artifactTool.id,
+      { onDelete: 'set null' }
+    ),
+    createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow()
+  },
+  table => [index('channel_message_usage_messageId_idx').on(table.messageId)]
+);
 
 export const artifactPrompt = pgTable('artifact_prompt', {
   id: text('id')
@@ -400,8 +565,92 @@ export const artifactRelations = relations(artifact, ({ one, many }) => ({
   artifactPrompts: many(artifactPrompt),
   artifactResources: many(artifactResource),
   artifactTools: many(artifactTool),
-  artifactCredentials: many(artifactCredential)
+  artifactCredentials: many(artifactCredential),
+  artifactLlm: one(artifactLlm, {
+    fields: [artifact.id],
+    references: [artifactLlm.artifactId]
+  }),
+  channels: many(channel)
 }));
+
+export const artifactLlmRelations = relations(artifactLlm, ({ one }) => ({
+  artifact: one(artifact, {
+    fields: [artifactLlm.artifactId],
+    references: [artifact.id]
+  })
+}));
+
+export const channelRelations = relations(channel, ({ one, many }) => ({
+  artifact: one(artifact, {
+    fields: [channel.artifactId],
+    references: [artifact.id]
+  }),
+  conversations: many(channelConversation),
+  participants: many(channelParticipant)
+}));
+
+export const channelConversationRelations = relations(
+  channelConversation,
+  ({ one, many }) => ({
+    channel: one(channel, {
+      fields: [channelConversation.channelId],
+      references: [channel.id]
+    }),
+    messages: many(channelMessage)
+  })
+);
+
+export const channelParticipantRelations = relations(
+  channelParticipant,
+  ({ one, many }) => ({
+    channel: one(channel, {
+      fields: [channelParticipant.channelId],
+      references: [channel.id]
+    }),
+    linkedUser: one(user, {
+      fields: [channelParticipant.linkedUserId],
+      references: [user.id]
+    }),
+    messages: many(channelMessage)
+  })
+);
+
+export const channelMessageRelations = relations(
+  channelMessage,
+  ({ one, many }) => ({
+    conversation: one(channelConversation, {
+      fields: [channelMessage.conversationId],
+      references: [channelConversation.id]
+    }),
+    participant: one(channelParticipant, {
+      fields: [channelMessage.participantId],
+      references: [channelParticipant.id]
+    }),
+    usages: many(channelMessageUsage)
+  })
+);
+
+export const channelMessageUsageRelations = relations(
+  channelMessageUsage,
+  ({ one }) => ({
+    message: one(channelMessage, {
+      fields: [channelMessageUsage.messageId],
+      references: [channelMessage.id]
+    }),
+    artifactPrompt: one(artifactPrompt, {
+      fields: [channelMessageUsage.artifactPromptId],
+      references: [artifactPrompt.id]
+    }),
+    artifactResource: one(artifactResource, {
+      fields: [channelMessageUsage.artifactResourceId],
+      references: [artifactResource.id]
+    }),
+    artifactTool: one(artifactTool, {
+      fields: [channelMessageUsage.artifactToolId],
+      references: [artifactTool.id]
+    })
+  })
+);
 
 export const artifactPromptRelations = relations(artifactPrompt, ({ one }) => ({
   artifact: one(artifact, {

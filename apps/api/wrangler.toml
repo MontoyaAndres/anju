@@ -12,10 +12,17 @@ command = "npm run build"
 
 [env.development]
 name = "anju-api-development"
+[env.development.observability]
+enabled = true
+[env.development.observability.logs]
+enabled = true
 [env.development.vars]
 NODE_ENV = "production"
-NEXT_PUBLIC_API_URL="https://anju-api-development.andresmontoyafcb.workers.dev"
-NEXT_PUBLIC_WEB_URL="https://anju-web-git-develop-andrs-montoyas-projects.vercel.app"
+SERVER_PORT = "8080"
+MCP_PORT = "8081"
+NEXT_PUBLIC_API_URL = "https://anju-api-development.andresmontoyafcb.workers.dev"
+NEXT_PUBLIC_MCP_URL = "https://anju-mcp-development.andresmontoyafcb.workers.dev"
+NEXT_PUBLIC_WEB_URL = "https://anju-web-git-develop-andrs-montoyas-projects.vercel.app"
 [[env.development.hyperdrive]]
 binding = "HYPERDRIVE"
 id = "20b38b96e12a4f45ac111fb7d8161edf"
@@ -25,10 +32,17 @@ bucket_name = "anju-storage-development"
 
 [env.production]
 name = "anju-api-production"
+[env.production.observability]
+enabled = true
+[env.production.observability.logs]
+enabled = true
 [env.production.vars]
 NODE_ENV = "production"
-NEXT_PUBLIC_API_URL="https://api.anju.ai"
-NEXT_PUBLIC_WEB_URL="https://app.anju.ai"
+SERVER_PORT = "8080"
+MCP_PORT = "8081"
+NEXT_PUBLIC_API_URL = "https://api.anju.ai"
+NEXT_PUBLIC_MCP_URL = "https://mcp.anju.ai"
+NEXT_PUBLIC_WEB_URL = "https://app.anju.ai"
 [[env.production.hyperdrive]]
 binding = "HYPERDRIVE"
 id = "<YOUR_HYPERDRIVE_ID>"

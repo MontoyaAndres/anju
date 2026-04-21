@@ -8,7 +8,8 @@ import {
   OrganizationController,
   ProjectController,
   OAuthController,
-  CatalogController
+  CatalogController,
+  ChannelController
 } from './controllers';
 import { UserMiddleware } from './middleware';
 import { createAuth } from './utils';
@@ -175,6 +176,53 @@ app
 
   // Tool catalog controller
   .get('/catalog/tools', UserMiddleware.verify, CatalogController.listGroups)
+
+  // Artifact LLM controller
+  .get(
+    '/organization/:organizationId/project/:projectId/artifact/llm',
+    UserMiddleware.verify,
+    ArtifactController.getLlm
+  )
+  .put(
+    '/organization/:organizationId/project/:projectId/artifact/llm',
+    UserMiddleware.verify,
+    ArtifactController.upsertLlm
+  )
+
+  // Channel controller
+  .get(
+    '/organization/:organizationId/project/:projectId/channel',
+    UserMiddleware.verify,
+    ChannelController.list
+  )
+  .post(
+    '/organization/:organizationId/project/:projectId/channel',
+    UserMiddleware.verify,
+    ChannelController.create
+  )
+  .put(
+    '/organization/:organizationId/project/:projectId/channel/:channelId',
+    UserMiddleware.verify,
+    ChannelController.update
+  )
+  .delete(
+    '/organization/:organizationId/project/:projectId/channel/:channelId',
+    UserMiddleware.verify,
+    ChannelController.remove
+  )
+  .get(
+    '/organization/:organizationId/project/:projectId/channel/:channelId/conversation',
+    UserMiddleware.verify,
+    ChannelController.listConversations
+  )
+  .get(
+    '/organization/:organizationId/project/:projectId/channel/:channelId/conversation/:conversationId/message',
+    UserMiddleware.verify,
+    ChannelController.listMessages
+  )
+
+  // Channel webhook (public, signed by platform secret)
+  .post('/channel/:channelId/webhook/:platform', ChannelController.webhook)
 
   // OAuth controller
   .get(

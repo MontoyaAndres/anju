@@ -945,6 +945,101 @@ const downloadResourceFile = async (c: Context<AppEnv>) => {
   });
 };
 
+const upsertLlm = async (c: Context<AppEnv>) => {
+  const body = await c.req.json();
+  const currentValues = await utils.Schema.ARTIFACT_UPSERT_LLM.parseAsync({
+    ...body,
+    projectId: c.req.param('projectId'),
+    userId: c.get('user').id,
+    organizationId: c.req.param('organizationId')
+  });
+
+  const dbInstance = db.create(c);
+  const encryptionKey = utils.getCredentialEncryptionKey(c);
+  const encryptedApiKey = utils.encryptString(
+    currentValues.apiKey,
+    encryptionKey
+  );
+
+  const result = await dbInstance.transaction(async tx => {
+    const [project] = await tx
+      .select()
+      .from(db.schema.project)
+      .where(
+        and(
+          eq(db.schema.project.id, currentValues.projectId),
+          eq(db.schema.project.organizationId, currentValues.organizationId)
+        )
+      )
+      .limit(1);
+
+    if (!project) throw new Error('Project not found');
+
+    const [artifactRow] = await tx
+      .select()
+      .from(db.schema.artifact)
+      .where(eq(db.schema.artifact.projectId, currentValues.projectId))
+      .limit(1);
+
+    if (!artifactRow) throw new Error('Artifact not found for the project');
+
+    const [existing] = await tx
+      .select()
+      .from(db.schema.artifactLlm)
+      .where(eq(db.schema.artifactLlm.artifactId, artifactRow.id))
+      .limit(1);
+
+    const values = {
+      provider: currentValues.provider,
+      model: currentValues.model,
+      baseUrl: currentValues.baseUrl || null,
+      apiKey: encryptedApiKey,
+      systemPrompt: currentValues.systemPrompt || null,
+      config: currentValues.config || null,
+      artifactId: artifactRow.id
+    };
+
+    if (existing) {
+      const [updated] = await tx
+        .update(db.schema.artifactLlm)
+        .set(values)
+        .where(eq(db.schema.artifactLlm.id, existing.id))
+        .returning();
+      return updated;
+    }
+
+    const [created] = await tx
+      .insert(db.schema.artifactLlm)
+      .values(values)
+      .returning();
+    return created;
+  });
+
+  const { apiKey: _k, ...safe } = result;
+  return c.json({ ...safe, hasApiKey: true });
+};
+
+const getLlm = async (c: Context<AppEnv>) => {
+  const currentValues = await utils.Schema.ARTIFACT_GET_LLM.parseAsync({
+    projectId: c.req.param('projectId'),
+    userId: c.get('user').id,
+    organizationId: c.req.param('organizationId')
+  });
+
+  const dbInstance = db.create(c);
+
+  const artifact = await dbInstance.query.artifact.findFirst({
+    where: eq(db.schema.artifact.projectId, currentValues.projectId),
+    with: { artifactLlm: true }
+  });
+
+  if (!artifact) throw new Error('Artifact not found for the project');
+  if (!artifact.artifactLlm) return c.json(null);
+
+  const { apiKey: _k, ...safe } = artifact.artifactLlm;
+  return c.json({ ...safe, hasApiKey: true });
+};
+
 export const ArtifactController = {
   createPrompt,
   updatePrompt,
@@ -961,5 +1056,7 @@ export const ArtifactController = {
   removeTool,
   listTools,
   removeCredential,
-  listCredentials
+  listCredentials,
+  upsertLlm,
+  getLlm
 };
