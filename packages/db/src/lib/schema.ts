@@ -334,6 +334,35 @@ export const channelMessage = pgTable(
   ]
 );
 
+export const errorLog = pgTable(
+  'error_log',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => uuid()),
+    service: text('service').notNull(),
+    referenceId: text('reference_id'),
+    name: text('name'),
+    message: text('message'),
+    stack: text('stack'),
+    status: integer('status'),
+    method: text('method'),
+    path: text('path'),
+    query: text('query'),
+    userAgent: text('user_agent'),
+    ipAddress: text('ip_address'),
+    userId: text('user_id'),
+    organizationId: text('organization_id'),
+    projectId: text('project_id'),
+    metadata: json('metadata'),
+    createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow()
+  },
+  table => [
+    index('error_log_service_idx').on(table.service),
+    index('error_log_createdAt_idx').on(table.createdAt)
+  ]
+);
+
 export const channelMessageUsage = pgTable(
   'channel_message_usage',
   {

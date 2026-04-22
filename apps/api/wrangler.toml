@@ -12,6 +12,9 @@ command = "npm run build"
 
 [env.development]
 name = "anju-api-development"
+routes = [
+  { pattern = "development-api.vocesqueabrazan.com", custom_domain = true }
+]
 [env.development.observability]
 enabled = true
 [env.development.observability.logs]
@@ -20,9 +23,9 @@ enabled = true
 NODE_ENV = "production"
 SERVER_PORT = "8080"
 MCP_PORT = "8081"
-NEXT_PUBLIC_API_URL = "https://anju-api-development.andresmontoyafcb.workers.dev"
-NEXT_PUBLIC_MCP_URL = "https://anju-mcp-development.andresmontoyafcb.workers.dev"
-NEXT_PUBLIC_WEB_URL = "https://anju-web-git-develop-andrs-montoyas-projects.vercel.app"
+NEXT_PUBLIC_API_URL = "https://development-api.vocesqueabrazan.com"
+NEXT_PUBLIC_MCP_URL = "https://development-mcp.vocesqueabrazan.com"
+NEXT_PUBLIC_WEB_URL = "https://development-app.vocesqueabrazan.com"
 [[env.development.hyperdrive]]
 binding = "HYPERDRIVE"
 id = "20b38b96e12a4f45ac111fb7d8161edf"

@@ -169,6 +169,13 @@
       "when": 1776528318081,
       "tag": "0023_heavy_tenebrous",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1776898316395,
+      "tag": "0024_fine_mongoose",
+      "breakpoints": true
     }
   ]
 }

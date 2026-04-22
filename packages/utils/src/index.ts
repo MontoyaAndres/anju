@@ -2,7 +2,7 @@ import { Schema } from './schema';
 import { fetcher } from './fetcher';
 import { constants } from './constants';
 import { hashObject } from './hashObject';
-import { errorHandler } from './errorHandler';
+import { createErrorHandler } from './errorHandler';
 import {
   encryptString,
   decryptString,
@@ -18,7 +18,7 @@ export const utils = {
   fetcher,
   constants,
   hashObject,
-  errorHandler,
+  createErrorHandler,
   encryptString,
   decryptString,
   getCredentialEncryptionKey,
@@ -29,3 +29,7 @@ export const utils = {
 };
 
 export type { JsonSchema };
+export type {
+  ErrorLogPayload,
+  CreateErrorHandlerOptions
+} from './errorHandler';

@@ -12,6 +12,9 @@ command = "npm run build"
 
 [env.development]
 name = "anju-mcp-development"
+routes = [
+  { pattern = "development-mcp.vocesqueabrazan.com", custom_domain = true }
+]
 [env.development.observability]
 enabled = true
 [env.development.observability.logs]
@@ -19,6 +22,9 @@ enabled = true
 [env.development.vars]
 NODE_ENV = "production"
 MCP_PORT = "8081"
+NEXT_PUBLIC_API_URL = "https://development-api.vocesqueabrazan.com"
+NEXT_PUBLIC_MCP_URL = "https://development-mcp.vocesqueabrazan.com"
+NEXT_PUBLIC_WEB_URL = "https://development-app.vocesqueabrazan.com"
 [[env.development.hyperdrive]]
 binding = "HYPERDRIVE"
 id = "20b38b96e12a4f45ac111fb7d8161edf"
@@ -35,6 +41,9 @@ enabled = true
 [env.production.vars]
 NODE_ENV = "production"
 MCP_PORT = "8081"
+NEXT_PUBLIC_API_URL = "https://api.anju.ai"
+NEXT_PUBLIC_MCP_URL = "https://mcp.anju.ai"
+NEXT_PUBLIC_WEB_URL = "https://app.anju.ai"
 [[env.production.hyperdrive]]
 binding = "HYPERDRIVE"
 id = "<YOUR_HYPERDRIVE_ID>"
