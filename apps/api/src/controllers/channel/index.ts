@@ -4,7 +4,12 @@ import { v7 as uuid } from 'uuid';
 import { db } from '@anju/db';
 import { utils } from '@anju/utils';
 
-import { handleTelegramWebhook, registerTelegramWebhook } from './telegram';
+import {
+  handleTelegramWebhook,
+  registerTelegramWebhook,
+  registerTelegramBotCommands,
+  getTelegramBotInfo
+} from './telegram';
 
 import type { AppEnv } from '../../types';
 
@@ -56,6 +61,12 @@ const create = async (c: Context<AppEnv>) => {
 
   if (!apiUrl) throw new Error('Missing env: NEXT_PUBLIC_API_URL');
 
+  let platformMetadata: Record<string, unknown> | null = null;
+  if (currentValues.platform === utils.constants.CHANNEL_PLATFORM_TELEGRAM) {
+    const botInfo = await getTelegramBotInfo(currentValues.credentials.botToken);
+    platformMetadata = { telegram: { bot: botInfo } };
+  }
+
   const result = await dbInstance.transaction(async tx => {
     const [project] = await tx
       .select()
@@ -84,6 +95,7 @@ const create = async (c: Context<AppEnv>) => {
         platform: currentValues.platform,
         status: utils.constants.CHANNEL_STATUS_ACTIVE,
         config: currentValues.config || null,
+        metadata: platformMetadata,
         credentials: encryptedCredentials,
         webhookSecret: hashedSecret,
         artifactId: artifactRow.id
@@ -103,6 +115,19 @@ const create = async (c: Context<AppEnv>) => {
         currentValues.credentials.botToken,
         webhookUrl,
         rawSecret
+      );
+
+      const prompts = await tx
+        .select({
+          title: db.schema.artifactPrompt.title,
+          description: db.schema.artifactPrompt.description
+        })
+        .from(db.schema.artifactPrompt)
+        .where(eq(db.schema.artifactPrompt.artifactId, artifactRow.id));
+
+      await registerTelegramBotCommands(
+        currentValues.credentials.botToken,
+        prompts
       );
     }
 

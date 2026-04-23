@@ -178,7 +178,9 @@ const business = async (c: Context<AppEnv>) => {
       async (args: any) =>
         handler.handler(args, {
           config: toolConfig,
-          credentials: toolCredentials
+          credentials: toolCredentials,
+          resources: artifact.artifactResources,
+          bucket
         })
     );
   }

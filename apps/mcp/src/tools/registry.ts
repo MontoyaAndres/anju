@@ -9,12 +9,16 @@ import {
   deleteEmail as gmailDeleteEmail,
   createDraft as gmailCreateDraft
 } from './gmail';
+import { listResources, readResource, sendResource } from './resources';
 
 // types
 import { ToolDefinition } from './types';
 
 export const toolRegistry = new Map<string, ToolDefinition>([
   ['greeting', greeting],
+  ['list-resources', listResources],
+  ['read-resource', readResource],
+  ['send-resource', sendResource],
   ['gmail-send-email', gmailSendEmail],
   ['gmail-list-emails', gmailListEmails],
   ['gmail-read-email', gmailReadEmail],

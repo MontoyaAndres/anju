@@ -4,9 +4,6 @@ compatibility_date = "2025-11-17"
 
 compatibility_flags = ["nodejs_compat", "nodejs_compat_populate_process_env"]
 
-[observability]
-enabled = true
-
 [build]
 command = "npm run build"
 
@@ -19,6 +16,9 @@ routes = [
 enabled = true
 [env.development.observability.logs]
 enabled = true
+invocation_logs = true
+[env.development.observability.traces]
+enabled = false
 [env.development.vars]
 NODE_ENV = "production"
 SERVER_PORT = "8080"
@@ -39,6 +39,9 @@ name = "anju-api-production"
 enabled = true
 [env.production.observability.logs]
 enabled = true
+invocation_logs = true
+[env.production.observability.traces]
+enabled = false
 [env.production.vars]
 NODE_ENV = "production"
 SERVER_PORT = "8080"

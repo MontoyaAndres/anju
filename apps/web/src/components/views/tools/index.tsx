@@ -172,7 +172,8 @@ export const Tools = () => {
     if (installed.length === 0) return;
     setExpandedInstalled(prev => {
       if (prev.size > 0) return prev;
-      const first = installed[0]?.toolDefinition?.group?.provider || 'none';
+      const group = installed[0]?.toolDefinition?.group;
+      const first = group?.provider || group?.id || 'none';
       return new Set([first]);
     });
   }, [installed]);
@@ -192,12 +193,13 @@ export const Tools = () => {
     return map;
   }, [installed]);
 
-  const installedByProvider = useMemo(() => {
+  const installedByBucket = useMemo(() => {
     const map = new Map<string, ArtifactTool[]>();
     for (const t of installed) {
-      const provider = t.toolDefinition?.group?.provider || 'none';
-      if (!map.has(provider)) map.set(provider, []);
-      map.get(provider)!.push(t);
+      const group = t.toolDefinition?.group;
+      const key = group?.provider || group?.id || 'none';
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(t);
     }
     return map;
   }, [installed]);
@@ -552,30 +554,32 @@ export const Tools = () => {
                 </UI.Button>
               </div>
             )}
-            {Array.from(installedByProvider.entries()).map(
-              ([provider, tools]) => {
-                const creds = credentialByProvider.get(provider) || [];
-                const groupTitle =
-                  tools[0]?.toolDefinition?.group?.title ||
-                  (provider === 'none' ? 'Other' : provider);
+            {Array.from(installedByBucket.entries()).map(
+              ([bucketKey, tools]) => {
+                const group = tools[0]?.toolDefinition?.group;
+                const provider = group?.provider || null;
+                const creds = provider
+                  ? credentialByProvider.get(provider) || []
+                  : [];
+                const groupTitle = group?.title || 'Other';
                 const expired = isProviderExpired(provider);
-                const isExpanded = expandedInstalled.has(provider);
+                const isExpanded = expandedInstalled.has(bucketKey);
 
                 return (
                   <div
-                    key={provider}
+                    key={bucketKey}
                     className={`tools-accordion ${isExpanded ? 'expanded' : ''}`}
                   >
                     <button
                       type="button"
                       className="tools-accordion-header"
-                      onClick={() => toggleInstalledProvider(provider)}
+                      onClick={() => toggleInstalledProvider(bucketKey)}
                       aria-expanded={isExpanded}
                     >
                       <div className="tools-accordion-header-info">
                         <div className="tools-group-icon">
-                          {tools[0]?.toolDefinition?.group
-                            ? renderGroupIcon(tools[0].toolDefinition.group)
+                          {group
+                            ? renderGroupIcon(group)
                             : groupTitle.charAt(0)}
                         </div>
                         <div className="tools-accordion-header-texts">
@@ -590,7 +594,7 @@ export const Tools = () => {
                           <ExpandMore className="tools-accordion-chevron" />
                         </span>
                       </div>
-                      {provider !== 'none' && (
+                      {provider && (
                         <div className="tools-accordion-header-actions">
                           {creds.length > 0 && (
                             <UI.Button

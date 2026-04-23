@@ -1,5 +1,5 @@
 import { Context } from 'hono';
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 import { utils } from '@anju/utils';
 import { db } from '@anju/db';
 import { v7 as uuid } from 'uuid';
@@ -54,6 +54,32 @@ const create = async (c: Context<AppEnv>) => {
       artifactResourceCount: 0,
       projectId: project.id,
     });
+
+    const defaultTools = await tx
+      .select({ id: db.schema.toolDefinition.id })
+      .from(db.schema.toolDefinition)
+      .where(
+        inArray(db.schema.toolDefinition.key, [
+          'list-resources',
+          'read-resource',
+          'send-resource'
+        ])
+      );
+
+    if (defaultTools.length > 0) {
+      await tx.insert(db.schema.artifactTool).values(
+        defaultTools.map(t => ({
+          toolDefinitionId: t.id,
+          artifactId
+        }))
+      );
+      await tx
+        .update(db.schema.artifact)
+        .set({
+          artifactToolCount: sql`(${db.schema.artifact.artifactToolCount}::int + ${defaultTools.length})::int`,
+        })
+        .where(eq(db.schema.artifact.id, artifactId));
+    }
 
     return project;
   });

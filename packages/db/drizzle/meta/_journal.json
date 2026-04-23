@@ -176,6 +176,20 @@
       "when": 1776898316395,
       "tag": "0024_fine_mongoose",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1776950096021,
+      "tag": "0025_lean_harrier",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1776961398113,
+      "tag": "0026_cold_meltdown",
+      "breakpoints": true
     }
   ]
 }

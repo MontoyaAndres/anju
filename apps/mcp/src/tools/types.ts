@@ -1,4 +1,9 @@
 import { JsonSchema } from '@anju/utils';
+import { db } from '@anju/db';
+import { InferSelectModel } from 'drizzle-orm';
+import { R2Bucket } from '@cloudflare/workers-types';
+
+type ArtifactResource = InferSelectModel<typeof db.schema.artifactResource>;
 
 export interface ToolCredential {
   provider: string;
@@ -11,6 +16,8 @@ export interface ToolCredential {
 export interface ToolContext {
   config: Record<string, unknown>;
   credentials: ToolCredential[];
+  resources: ArtifactResource[];
+  bucket: R2Bucket;
 }
 
 export interface ToolDefinition {

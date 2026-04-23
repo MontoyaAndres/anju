@@ -1,0 +1,1 @@
+ALTER TABLE "channel_conversation" ADD COLUMN "scope" text DEFAULT 'private' NOT NULL;

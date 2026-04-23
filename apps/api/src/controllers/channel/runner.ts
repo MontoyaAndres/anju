@@ -1,25 +1,33 @@
 import { Context } from 'hono';
-import { eq, sql, and } from 'drizzle-orm';
+import { eq, sql, and, InferSelectModel } from 'drizzle-orm';
 import { db } from '@anju/db';
 import { utils } from '@anju/utils';
+
+type ArtifactResourceRow = InferSelectModel<typeof db.schema.artifactResource>;
+
+export interface ChannelAttachment {
+  resource: ArtifactResourceRow;
+  caption?: string;
+}
 
 import { createMcpClient, getLlmAdapter } from '../../utils';
 
 import type { LlmMessage, LlmToolCall, LlmToolDefinition } from '../../utils';
 import type { AppEnv } from '../../types';
 
-const MAX_TOOL_LOOPS = 8;
-
 interface RunOptions {
   channelId: string;
   externalConversationId: string;
   conversationTitle?: string | null;
+  conversationScope: string;
   externalParticipantId: string;
   participantDisplayName?: string | null;
   participantMetadata?: Record<string, unknown>;
   externalMessageId?: string | null;
   userText: string;
   messageMetadata?: Record<string, unknown>;
+  promptId?: string | null;
+  promptArgs?: Record<string, string>;
 }
 
 interface RunResult {
@@ -27,6 +35,7 @@ interface RunResult {
   conversationId: string;
   userMessageId: string;
   assistantMessageId: string;
+  attachments: ChannelAttachment[];
 }
 
 export const runChannelTurn = async (
@@ -67,7 +76,8 @@ export const runChannelTurn = async (
       dbInstance,
       channelRow.id,
       options.externalConversationId,
-      options.conversationTitle || null
+      options.conversationTitle || null,
+      options.conversationScope
     ),
     upsertParticipant(
       dbInstance,
@@ -92,15 +102,45 @@ export const runChannelTurn = async (
 
   const history = await loadRecentHistory(dbInstance, conversation.id, 20);
 
+  const artifactTools = await dbInstance
+    .select({
+      id: db.schema.artifactTool.id,
+      key: db.schema.toolDefinition.key
+    })
+    .from(db.schema.artifactTool)
+    .innerJoin(
+      db.schema.toolDefinition,
+      eq(db.schema.artifactTool.toolDefinitionId, db.schema.toolDefinition.id)
+    )
+    .where(eq(db.schema.artifactTool.artifactId, artifactRow.id));
+  const artifactToolIdByKey = new Map<string, string>(
+    artifactTools.map(t => [t.key, t.id])
+  );
+
+  const artifactResources = await dbInstance
+    .select()
+    .from(db.schema.artifactResource)
+    .where(eq(db.schema.artifactResource.artifactId, artifactRow.id));
+  const artifactResourceByUri = new Map(
+    artifactResources.map(r => [r.uri, r])
+  );
+  const artifactResourceIdByUri = new Map<string, string>(
+    artifactResources.map(r => [r.uri, r.id])
+  );
+
   const mcp = await createMcpClient(artifactRow.hash);
   let assistantText = '';
   let assistantMessageId = '';
   let totalLatency = 0;
   let totalTokensIn = 0;
   let totalTokensOut = 0;
+  const attachments: ChannelAttachment[] = [];
   const usageEvents: Array<{
     kind: string;
     toolName: string;
+    artifactToolId: string | null;
+    artifactResourceId?: string | null;
+    artifactPromptId?: string | null;
     input: Record<string, unknown>;
     output: unknown;
     latencyMs: number;
@@ -117,14 +157,63 @@ export const runChannelTurn = async (
       })
     );
 
-    const messages: LlmMessage[] = [
-      ...history,
+    let userTurn: LlmMessage[] = [
       { role: 'user', content: options.userText }
     ];
 
+    if (options.promptId) {
+      const start = Date.now();
+      try {
+        const promptResult = await mcp.client.getPrompt({
+          name: options.promptId,
+          arguments: options.promptArgs || {}
+        });
+        userTurn = (promptResult.messages || [])
+          .map((m: any) => {
+            const content = m.content;
+            const text =
+              typeof content === 'string'
+                ? content
+                : content?.type === 'text' && typeof content.text === 'string'
+                  ? content.text
+                  : '';
+            return {
+              role: m.role === 'assistant' ? 'assistant' : 'user',
+              content: text
+            } as LlmMessage;
+          })
+          .filter(m => m.content);
+        if (userTurn.length === 0) {
+          userTurn = [{ role: 'user', content: options.userText }];
+        }
+        usageEvents.push({
+          kind: utils.constants.CHANNEL_USAGE_KIND_PROMPT,
+          toolName: options.promptId,
+          artifactToolId: null,
+          artifactPromptId: options.promptId,
+          input: options.promptArgs || {},
+          output: promptResult,
+          latencyMs: Date.now() - start
+        });
+      } catch (err: any) {
+        usageEvents.push({
+          kind: utils.constants.CHANNEL_USAGE_KIND_PROMPT,
+          toolName: options.promptId,
+          artifactToolId: null,
+          artifactPromptId: options.promptId,
+          input: options.promptArgs || {},
+          output: null,
+          latencyMs: Date.now() - start,
+          errorMessage: err?.message || String(err)
+        });
+      }
+    }
+
+    const messages: LlmMessage[] = [...history, ...userTurn];
+
     const adapter = getLlmAdapter(llmRow.provider);
 
-    for (let loop = 0; loop < MAX_TOOL_LOOPS; loop++) {
+    for (let loop = 0; loop < utils.constants.MAX_TOOL_LOOPS; loop++) {
       const start = Date.now();
       const completion = await adapter.complete({
         model: llmRow.model,
@@ -143,7 +232,10 @@ export const runChannelTurn = async (
         assistantText += completion.assistant.content;
       }
 
-      if (completion.stopReason !== 'tool_use' || completion.assistant.toolCalls.length === 0) {
+      if (
+        completion.stopReason !== 'tool_use' ||
+        completion.assistant.toolCalls.length === 0
+      ) {
         messages.push({
           role: 'assistant',
           content: completion.assistant.content,
@@ -159,7 +251,15 @@ export const runChannelTurn = async (
       });
 
       for (const call of completion.assistant.toolCalls) {
-        const toolResult = await executeToolCall(mcp.client, call, usageEvents);
+        const toolResult = await executeToolCall(
+          mcp.client,
+          call,
+          usageEvents,
+          artifactToolIdByKey,
+          artifactResourceIdByUri,
+          artifactResourceByUri,
+          attachments
+        );
         messages.push({
           role: 'tool',
           content: toolResult,
@@ -177,6 +277,7 @@ export const runChannelTurn = async (
       role: utils.constants.CHANNEL_MESSAGE_ROLE_ASSISTANT,
       content: assistantText,
       conversationId: conversation.id,
+      participantId: participant.id,
       tokensIn: totalTokensIn,
       tokensOut: totalTokensOut,
       latencyMs: totalLatency
@@ -188,6 +289,9 @@ export const runChannelTurn = async (
     await dbInstance.insert(db.schema.channelMessageUsage).values(
       usageEvents.map(event => ({
         kind: event.kind,
+        artifactToolId: event.artifactToolId,
+        artifactResourceId: event.artifactResourceId || null,
+        artifactPromptId: event.artifactPromptId || null,
         input: event.input,
         output: event.output as any,
         latencyMs: event.latencyMs,
@@ -216,7 +320,8 @@ export const runChannelTurn = async (
     assistantText: assistantText || '...',
     conversationId: conversation.id,
     userMessageId: userMessage.id,
-    assistantMessageId
+    assistantMessageId,
+    attachments
   };
 };
 
@@ -224,7 +329,8 @@ const upsertConversation = async (
   dbInstance: ReturnType<typeof db.create>,
   channelId: string,
   externalConversationId: string,
-  title: string | null
+  title: string | null,
+  scope: string
 ) => {
   const [existing] = await dbInstance
     .select()
@@ -240,14 +346,28 @@ const upsertConversation = async (
     )
     .limit(1);
 
-  if (existing) return existing;
+  if (existing) {
+    const patch: Record<string, unknown> = {};
+    if (title && existing.title !== title) patch.title = title;
+    if (existing.scope !== scope) patch.scope = scope;
+    if (Object.keys(patch).length > 0) {
+      const [updated] = await dbInstance
+        .update(db.schema.channelConversation)
+        .set(patch)
+        .where(eq(db.schema.channelConversation.id, existing.id))
+        .returning();
+      return updated;
+    }
+    return existing;
+  }
 
   const [created] = await dbInstance
     .insert(db.schema.channelConversation)
     .values({
       channelId,
       externalConversationId,
-      title
+      title,
+      scope
     })
     .returning();
 
@@ -309,18 +429,48 @@ const loadRecentHistory = async (
     }));
 };
 
+const RESOURCE_TOOL_KEYS = new Set([
+  'list-resources',
+  'read-resource',
+  'send-resource'
+]);
+const URI_BEARING_RESOURCE_TOOL_KEYS = new Set([
+  'read-resource',
+  'send-resource'
+]);
+
 const executeToolCall = async (
   client: any,
   call: LlmToolCall,
   usageEvents: Array<{
     kind: string;
     toolName: string;
+    artifactToolId: string | null;
+    artifactResourceId?: string | null;
+    artifactPromptId?: string | null;
     input: Record<string, unknown>;
     output: unknown;
     latencyMs: number;
     errorMessage?: string;
-  }>
+  }>,
+  artifactToolIdByKey: Map<string, string>,
+  artifactResourceIdByUri: Map<string, string>,
+  artifactResourceByUri: Map<string, ArtifactResourceRow>,
+  attachments: ChannelAttachment[]
 ): Promise<string> => {
+  const artifactToolId = artifactToolIdByKey.get(call.name) || null;
+  const isResourceTool = RESOURCE_TOOL_KEYS.has(call.name);
+  const kind = isResourceTool
+    ? utils.constants.CHANNEL_USAGE_KIND_RESOURCE
+    : utils.constants.CHANNEL_USAGE_KIND_TOOL;
+  const uri =
+    URI_BEARING_RESOURCE_TOOL_KEYS.has(call.name) &&
+    typeof call.arguments?.uri === 'string'
+      ? (call.arguments.uri as string)
+      : null;
+  const artifactResourceId = uri
+    ? artifactResourceIdByUri.get(uri) || null
+    : null;
   const start = Date.now();
   try {
     const result = await client.callTool({
@@ -329,9 +479,24 @@ const executeToolCall = async (
     });
     const latencyMs = Date.now() - start;
     const text = extractToolText(result);
+    if (call.name === 'send-resource' && uri) {
+      const resource = artifactResourceByUri.get(uri);
+      if (resource) {
+        const rawCaption = call.arguments?.caption;
+        attachments.push({
+          resource,
+          caption:
+            typeof rawCaption === 'string' && rawCaption.trim()
+              ? rawCaption.trim()
+              : undefined
+        });
+      }
+    }
     usageEvents.push({
-      kind: utils.constants.CHANNEL_USAGE_KIND_TOOL,
+      kind,
       toolName: call.name,
+      artifactToolId,
+      artifactResourceId,
       input: call.arguments,
       output: result,
       latencyMs
@@ -340,8 +505,10 @@ const executeToolCall = async (
   } catch (err: any) {
     const latencyMs = Date.now() - start;
     usageEvents.push({
-      kind: utils.constants.CHANNEL_USAGE_KIND_TOOL,
+      kind,
       toolName: call.name,
+      artifactToolId,
+      artifactResourceId,
       input: call.arguments,
       output: null,
       latencyMs,
