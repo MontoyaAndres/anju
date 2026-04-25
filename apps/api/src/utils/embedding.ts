@@ -179,9 +179,13 @@ export const reindexResourceChunks = async (
       );
     });
   } catch (error) {
-    console.error('Failed to reindex resource chunks', {
-      resourceId: resource.id,
-      error: error instanceof Error ? error.message : error
+    await utils.handleError(c, error, {
+      service: utils.constants.SERVICE_NAME_API,
+      metadata: {
+        source: 'reindexResourceChunks',
+        resourceId: resource.id,
+        artifactId: resource.artifactId
+      }
     });
   }
 };

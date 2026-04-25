@@ -63,7 +63,9 @@ const create = async (c: Context<AppEnv>) => {
 
   let platformMetadata: Record<string, unknown> | null = null;
   if (currentValues.platform === utils.constants.CHANNEL_PLATFORM_TELEGRAM) {
-    const botInfo = await getTelegramBotInfo(currentValues.credentials.botToken);
+    const botInfo = await getTelegramBotInfo(
+      currentValues.credentials.botToken
+    );
     platformMetadata = { telegram: { bot: botInfo } };
   }
 
@@ -93,7 +95,7 @@ const create = async (c: Context<AppEnv>) => {
       .insert(db.schema.channel)
       .values({
         platform: currentValues.platform,
-        status: utils.constants.CHANNEL_STATUS_ACTIVE,
+        status: utils.constants.STATUS_ACTIVE,
         config: currentValues.config || null,
         metadata: platformMetadata,
         credentials: encryptedCredentials,

@@ -3,7 +3,7 @@ import { getEnv } from './getEnv';
 import { fetcher } from './fetcher';
 import { constants } from './constants';
 import { hashObject } from './hashObject';
-import { createErrorHandler } from './errorHandler';
+import { handleError } from './errorHandler';
 import {
   encryptString,
   decryptString,
@@ -20,7 +20,7 @@ export const utils = {
   fetcher,
   constants,
   hashObject,
-  createErrorHandler,
+  handleError,
   encryptString,
   decryptString,
   getCredentialEncryptionKey,
@@ -31,7 +31,4 @@ export const utils = {
 };
 
 export type { JsonSchema };
-export type {
-  ErrorLogPayload,
-  CreateErrorHandlerOptions
-} from './errorHandler';
+export type { HandleErrorOptions, HandleErrorResult } from './errorHandler';

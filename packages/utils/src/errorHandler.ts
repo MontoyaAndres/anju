@@ -1,6 +1,21 @@
-import { ZodError } from 'better-auth';
-import type { Context, ErrorHandler } from 'hono';
 import { v7 as uuid } from 'uuid';
+import { db } from '@anju/db';
+
+// types
+import type { ZodError } from 'better-auth';
+import type { Context } from 'hono';
+
+export interface HandleErrorOptions {
+  service: string;
+  metadata?: Record<string, unknown>;
+  status?: number;
+}
+
+export interface HandleErrorResult {
+  refId: string;
+  status: 400 | 401 | 403 | 404 | 409 | 500;
+  body: Record<string, unknown>;
+}
 
 const matchStatus = (message: string): 400 | 401 | 403 | 404 | 409 | null => {
   const lower = message.toLowerCase();
@@ -14,28 +29,6 @@ const matchStatus = (message: string): 400 | 401 | 403 | 404 | 409 | null => {
 
   return null;
 };
-
-export interface ErrorLogPayload {
-  referenceId: string;
-  name: string;
-  message: string;
-  stack?: string | null;
-  status: number;
-  method?: string | null;
-  path?: string | null;
-  query?: string | null;
-  userAgent?: string | null;
-  ipAddress?: string | null;
-  userId?: string | null;
-  organizationId?: string | null;
-  projectId?: string | null;
-  metadata?: Record<string, unknown> | null;
-}
-
-export interface CreateErrorHandlerOptions {
-  service: string;
-  persist?: (payload: ErrorLogPayload, c: Context) => Promise<void>;
-}
 
 const extractContext = (c: Context) => {
   const user = (c.get('user') as { id?: string } | undefined) || undefined;
@@ -54,59 +47,55 @@ const extractContext = (c: Context) => {
   };
 };
 
-export const createErrorHandler = (
-  options: CreateErrorHandlerOptions
-): ErrorHandler => {
-  return (error, c) => {
-    console.error(error);
+export const handleError = async (
+  c: Context,
+  error: unknown,
+  options: HandleErrorOptions
+): Promise<HandleErrorResult> => {
+  const refId = uuid();
+  const err = error as { name?: string; message?: string; stack?: string };
+  console.error(`[${options.service} ref ${refId}]`, err);
 
-    let responseBody: Record<string, unknown>;
-    let status: 400 | 401 | 403 | 404 | 409 | 500;
-    const referenceId = uuid();
+  let status: 400 | 401 | 403 | 404 | 409 | 500;
+  let body: Record<string, unknown>;
 
-    if (error.name === 'ZodError') {
-      status = 400;
-      responseBody = {
-        errors: (error as ZodError).issues.map(issue => ({
-          path: issue.path?.join('.') || '',
-          message: issue.message
-        }))
-      };
+  if (err?.name === 'ZodError') {
+    status = 400;
+    body = {
+      errors: (error as ZodError).issues.map(issue => ({
+        path: issue.path?.join('.') || '',
+        message: issue.message
+      }))
+    };
+  } else if (options.status) {
+    status = options.status as HandleErrorResult['status'];
+    body = { id: refId, error: err?.message || String(error) };
+  } else {
+    const matched = matchStatus(err?.message || '');
+    if (matched) {
+      status = matched;
+      body = { error: err?.message || '' };
     } else {
-      const message = error.message || '';
-      const matched = matchStatus(message);
-      if (matched) {
-        status = matched;
-        responseBody = { error: message };
-      } else {
-        status = 500;
-        responseBody = { id: referenceId, error: 'Internal Server Error' };
-      }
+      status = 500;
+      body = { id: refId, error: 'Internal Server Error' };
     }
+  }
 
-    if (options.persist) {
-      const ctx = extractContext(c);
-      const payload: ErrorLogPayload = {
-        referenceId,
-        name: error.name || 'Error',
-        message: error.message || '',
-        stack: error.stack || null,
-        status,
-        ...ctx
-      };
+  const ctx = extractContext(c);
+  const dbInstance = db.create(c);
+  await dbInstance
+    .insert(db.schema.errorLog)
+    .values({
+      service: options.service,
+      referenceId: refId,
+      name: err?.name || 'Error',
+      message: err?.message || String(error),
+      stack: err?.stack || null,
+      status,
+      ...ctx,
+      metadata: options.metadata ?? null
+    })
+    .catch(e => console.error('Failed to persist error log', e));
 
-      const promise = options
-        .persist(payload, c)
-        .catch(err => console.error('Failed to persist error log', err));
-
-      const execCtx = (
-        c as { executionCtx?: { waitUntil?: (p: Promise<unknown>) => void } }
-      ).executionCtx;
-      if (execCtx?.waitUntil) {
-        execCtx.waitUntil(promise);
-      }
-    }
-
-    return c.json(responseBody, status);
-  };
+  return { refId, status, body };
 };

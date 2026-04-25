@@ -807,7 +807,7 @@ const uploadResourceFile = async (c: Context<AppEnv>) => {
     return artifactResource[0];
   });
 
-  const extractedText = await extractTextFromFile(file);
+  const extractedText = await extractTextFromFile(c, file);
 
   await reindexResourceChunks(c, {
     id: result.id,

@@ -1,7 +1,6 @@
 import { Context } from 'hono';
 import { eq } from 'drizzle-orm';
 import { db } from '@anju/db';
-import { v7 as uuid } from 'uuid';
 import { utils } from '@anju/utils';
 
 import { runChannelTurn } from './runner';
@@ -62,7 +61,7 @@ export const handleTelegramWebhook = async (c: Context<AppEnv>) => {
   if (channelRow.platform !== utils.constants.CHANNEL_PLATFORM_TELEGRAM) {
     return c.json({ ok: false, error: 'Wrong platform' }, 400);
   }
-  if (channelRow.status !== utils.constants.CHANNEL_STATUS_ACTIVE) {
+  if (channelRow.status !== utils.constants.STATUS_ACTIVE) {
     return c.json({ ok: true, skipped: 'disabled' });
   }
 
@@ -143,11 +142,16 @@ export const handleTelegramWebhook = async (c: Context<AppEnv>) => {
     replyText = result.assistantText;
     attachments = result.attachments;
   } catch (err: any) {
-    const refId = await persistChannelError(c, err, {
-      channelId: channelRow.id,
-      chatId: message.chat.id,
-      chatType: message.chat.type,
-      messageId: message.message_id
+    const { refId } = await utils.handleError(c, err, {
+      service: utils.constants.SERVICE_NAME_API,
+      metadata: {
+        source: 'channel-runner',
+        platform: utils.constants.CHANNEL_PLATFORM_TELEGRAM,
+        channelId: channelRow.id,
+        chatId: message.chat.id,
+        chatType: message.chat.type,
+        messageId: message.message_id
+      }
     });
     replyText = `Sorry, something went wrong while processing your message (ref: ${refId}). The team has been notified.`;
   }
@@ -174,9 +178,18 @@ export const handleTelegramWebhook = async (c: Context<AppEnv>) => {
       message.message_id,
       attachment,
       c.env.STORAGE_BUCKET
-    ).catch(err => {
-      console.error('Failed to send Telegram attachment', err);
-    });
+    ).catch(err =>
+      utils.handleError(c, err, {
+        service: utils.constants.SERVICE_NAME_API,
+        metadata: {
+          source: 'sendTelegramAttachment',
+          channelId: channelRow.id,
+          chatId: message.chat.id,
+          messageId: message.message_id,
+          resourceId: attachment.resource.id
+        }
+      })
+    );
   }
 
   return c.json({ ok: true });
@@ -187,7 +200,11 @@ const sendTelegramAttachment = async (
   chatId: number,
   replyToMessageId: number,
   attachment: ChannelAttachment,
-  bucket: { get: (key: string) => Promise<{ arrayBuffer: () => Promise<ArrayBuffer> } | null> }
+  bucket: {
+    get: (
+      key: string
+    ) => Promise<{ arrayBuffer: () => Promise<ArrayBuffer> } | null>;
+  }
 ) => {
   const { resource, caption } = attachment;
   const mime = resource.mimeType || 'application/octet-stream';
@@ -213,7 +230,9 @@ const sendTelegramAttachment = async (
   if (resource.fileKey) {
     const object = await bucket.get(resource.fileKey);
     if (!object) {
-      throw new Error(`Resource file not found in storage: ${resource.fileKey}`);
+      throw new Error(
+        `Resource file not found in storage: ${resource.fileKey}`
+      );
     }
     bytes = await object.arrayBuffer();
     filename = resource.fileName || resource.title || 'file';
@@ -314,7 +333,9 @@ const resolveSlashPrompt = async (
     properties?: Record<string, { type: string }>;
   } | null;
   const args: Record<string, string> = {};
-  const firstProp = schema?.properties ? Object.keys(schema.properties)[0] : null;
+  const firstProp = schema?.properties
+    ? Object.keys(schema.properties)[0]
+    : null;
   if (firstProp && command.trailingText) {
     args[firstProp] = command.trailingText;
   }
@@ -412,55 +433,6 @@ const chunkMessage = (text: string): string[] => {
 
   if (remaining.length) chunks.push(remaining);
   return chunks;
-};
-
-const persistChannelError = async (
-  c: Context<AppEnv>,
-  err: unknown,
-  context: {
-    channelId: string;
-    chatId: number;
-    chatType: string;
-    messageId: number;
-  }
-): Promise<string> => {
-  const refId = uuid();
-  const error = err as { name?: string; message?: string; stack?: string };
-  console.error(`Channel turn failed [ref ${refId}]`, err);
-
-  const dbInstance = db.create(c);
-  const insert = dbInstance
-    .insert(db.schema.errorLog)
-    .values({
-      service: 'api',
-      referenceId: refId,
-      name: error?.name || 'Error',
-      message: error?.message || String(err),
-      stack: error?.stack || null,
-      status: 500,
-      method: c.req.method,
-      path: c.req.path,
-      metadata: {
-        source: 'channel-runner',
-        platform: 'telegram',
-        channelId: context.channelId,
-        chatId: context.chatId,
-        chatType: context.chatType,
-        messageId: context.messageId
-      }
-    })
-    .catch(e => console.error('Failed to persist channel error', e));
-
-  const execCtx = (
-    c as { executionCtx?: { waitUntil?: (p: Promise<unknown>) => void } }
-  ).executionCtx;
-  if (execCtx?.waitUntil) {
-    execCtx.waitUntil(insert);
-  } else {
-    await insert;
-  }
-
-  return refId;
 };
 
 export const registerTelegramBotCommands = async (

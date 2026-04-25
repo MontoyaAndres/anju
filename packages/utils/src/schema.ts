@@ -308,7 +308,7 @@ const CHANNEL_CREATE = z.object({
 
 const CHANNEL_UPDATE = z.object({
   channelId: z.uuid(),
-  status: z.enum(constants.CHANNEL_STATUSES).optional(),
+  status: z.enum(constants.CHANNEL_STATUS).optional(),
   config: z.record(z.string(), z.any()).optional(),
   credentials: z.record(z.string(), z.string()).optional(),
   projectId: z.uuid(),

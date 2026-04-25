@@ -1,7 +1,6 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { utils } from '@anju/utils';
-import { db } from '@anju/db';
 
 import {
   UserController,
@@ -18,8 +17,6 @@ import { createAuth } from './utils';
 // types
 import type { AppEnv } from './types';
 
-const SERVICE_NAME = 'api';
-
 const app = new Hono<AppEnv>();
 
 app
@@ -32,31 +29,12 @@ app
       allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
     })
   )
-  .onError(
-    utils.createErrorHandler({
-      service: SERVICE_NAME,
-      persist: async (payload, c) => {
-        const dbInstance = db.create(c);
-        await dbInstance.insert(db.schema.errorLog).values({
-          service: SERVICE_NAME,
-          referenceId: payload.referenceId,
-          name: payload.name,
-          message: payload.message,
-          stack: payload.stack,
-          status: payload.status,
-          method: payload.method,
-          path: payload.path,
-          query: payload.query,
-          userAgent: payload.userAgent,
-          ipAddress: payload.ipAddress,
-          userId: payload.userId,
-          organizationId: payload.organizationId,
-          projectId: payload.projectId,
-          metadata: payload.metadata
-        });
-      }
-    })
-  )
+  .onError(async (error, c) => {
+    const { status, body } = await utils.handleError(c, error, {
+      service: utils.constants.SERVICE_NAME_API
+    });
+    return c.json(body, status);
+  })
 
   // Auth controller
   .on(['GET', 'POST'], '/auth/*', c => {
