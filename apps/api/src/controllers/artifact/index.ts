@@ -263,7 +263,10 @@ const createResource = async (c: Context<AppEnv>) => {
       .from(db.schema.artifactResource)
       .where(
         and(
-          eq(db.schema.artifactResource.artifactId, currentArtifactByProject.id),
+          eq(
+            db.schema.artifactResource.artifactId,
+            currentArtifactByProject.id
+          ),
           eq(db.schema.artifactResource.uri, currentValues.uri)
         )
       )
@@ -310,6 +313,7 @@ const createResource = async (c: Context<AppEnv>) => {
     description: result.description,
     uri: result.uri,
     mimeType: result.mimeType,
+    fileName: result?.fileName,
     content: result.content
   });
 
@@ -359,7 +363,10 @@ const updateResource = async (c: Context<AppEnv>) => {
       .from(db.schema.artifactResource)
       .where(
         and(
-          eq(db.schema.artifactResource.artifactId, currentArtifactByProject.id),
+          eq(
+            db.schema.artifactResource.artifactId,
+            currentArtifactByProject.id
+          ),
           eq(db.schema.artifactResource.uri, currentValues.uri),
           sql`${db.schema.artifactResource.id} <> ${currentValues.resourceId}`
         )
@@ -409,6 +416,7 @@ const updateResource = async (c: Context<AppEnv>) => {
     description: result.description,
     uri: result.uri,
     mimeType: result.mimeType,
+    fileName: result?.fileName,
     content: result.content
   });
 
@@ -816,6 +824,7 @@ const uploadResourceFile = async (c: Context<AppEnv>) => {
     description: result.description,
     uri: result.uri,
     mimeType: result.mimeType,
+    fileName: result?.fileName,
     content: extractedText ?? result.content
   });
 

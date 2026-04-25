@@ -138,6 +138,7 @@ export const reindexResourceChunks = async (
     description?: string | null;
     uri?: string | null;
     mimeType?: string | null;
+    fileName?: string | null;
     content?: string | null;
   }
 ): Promise<void> => {
