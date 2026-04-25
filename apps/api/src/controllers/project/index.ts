@@ -12,7 +12,7 @@ const create = async (c: Context<AppEnv>) => {
   const currentValues = await utils.Schema.PROJECT_CREATE.parseAsync({
     ...body,
     userId: c.get('user').id,
-    organizationId: c.req.param('organizationId'),
+    organizationId: c.req.param('organizationId')
   });
 
   const dbInstance = db.create(c);
@@ -25,7 +25,7 @@ const create = async (c: Context<AppEnv>) => {
         description: currentValues.description || null,
         createdById: currentValues.userId,
         projectUserCount: 1,
-        organizationId: currentValues.organizationId,
+        organizationId: currentValues.organizationId
       })
       .returning();
 
@@ -36,7 +36,7 @@ const create = async (c: Context<AppEnv>) => {
     await tx
       .update(db.schema.organization)
       .set({
-        projectCount: sql`(${db.schema.organization.projectCount}::int + 1)::int`,
+        projectCount: sql`(${db.schema.organization.projectCount}::int + 1)::int`
       })
       .where(eq(db.schema.organization.id, currentValues.organizationId));
 
@@ -44,7 +44,7 @@ const create = async (c: Context<AppEnv>) => {
     const artifactHash = utils.hashObject({
       organizationId: currentValues.organizationId,
       projectId: project.id,
-      artifactId,
+      artifactId
     });
 
     await tx.insert(db.schema.artifact).values({
@@ -52,18 +52,17 @@ const create = async (c: Context<AppEnv>) => {
       hash: artifactHash,
       artifactPromptCount: 0,
       artifactResourceCount: 0,
-      projectId: project.id,
+      projectId: project.id
     });
 
     const defaultTools = await tx
       .select({ id: db.schema.toolDefinition.id })
       .from(db.schema.toolDefinition)
       .where(
-        inArray(db.schema.toolDefinition.key, [
-          'list-resources',
-          'read-resource',
-          'send-resource'
-        ])
+        inArray(
+          db.schema.toolDefinition.key,
+          utils.constants.RESOURCE_TOOL_KEYS
+        )
       );
 
     if (defaultTools.length > 0) {
@@ -76,7 +75,7 @@ const create = async (c: Context<AppEnv>) => {
       await tx
         .update(db.schema.artifact)
         .set({
-          artifactToolCount: sql`(${db.schema.artifact.artifactToolCount}::int + ${defaultTools.length})::int`,
+          artifactToolCount: sql`(${db.schema.artifact.artifactToolCount}::int + ${defaultTools.length})::int`
         })
         .where(eq(db.schema.artifact.id, artifactId));
     }
@@ -93,7 +92,7 @@ const update = async (c: Context<AppEnv>) => {
     ...body,
     id: c.req.param('projectId'),
     userId: c.get('user').id,
-    organizationId: c.req.param('organizationId'),
+    organizationId: c.req.param('organizationId')
   });
 
   const dbInstance = db.create(c);
@@ -102,7 +101,7 @@ const update = async (c: Context<AppEnv>) => {
     .update(db.schema.project)
     .set({
       name: currentValues.name,
-      description: currentValues.description || null,
+      description: currentValues.description || null
     })
     .where(
       and(
@@ -119,7 +118,7 @@ const get = async (c: Context<AppEnv>) => {
   const currentValues = await utils.Schema.PROJECT_GET.parseAsync({
     id: c.req.param('projectId'),
     organizationId: c.req.param('organizationId'),
-    userId: c.get('user').id,
+    userId: c.get('user').id
   });
 
   const dbInstance = db.create(c);
@@ -141,7 +140,7 @@ const remove = async (c: Context<AppEnv>) => {
   const currentValues = await utils.Schema.PROJECT_GET.parseAsync({
     id: c.req.param('projectId'),
     organizationId: c.req.param('organizationId'),
-    userId: c.get('user').id,
+    userId: c.get('user').id
   });
 
   const dbInstance = db.create(c);
@@ -159,7 +158,7 @@ const remove = async (c: Context<AppEnv>) => {
     await tx
       .update(db.schema.organization)
       .set({
-        projectCount: sql`(${db.schema.organization.projectCount}::int - 1)::int`,
+        projectCount: sql`(${db.schema.organization.projectCount}::int - 1)::int`
       })
       .where(eq(db.schema.organization.id, currentValues.organizationId));
   });
@@ -171,5 +170,5 @@ export const ProjectController = {
   create,
   update,
   get,
-  remove,
+  remove
 };

@@ -450,15 +450,10 @@ const loadRecentHistory = async (
     }));
 };
 
-const RESOURCE_TOOL_KEYS = new Set([
-  'list-resources',
-  'read-resource',
-  'send-resource'
-]);
-const URI_BEARING_RESOURCE_TOOL_KEYS = new Set([
-  'read-resource',
-  'send-resource'
-]);
+const RESOURCE_TOOL_KEYS = new Set(utils.constants.RESOURCE_TOOL_KEYS);
+const URI_BEARING_RESOURCE_TOOL_KEYS = new Set(
+  utils.constants.URI_BEARING_RESOURCE_TOOL_KEYS
+);
 
 const executeToolCall = async (
   client: any,

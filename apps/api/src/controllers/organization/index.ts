@@ -11,7 +11,7 @@ const create = async (c: Context<AppEnv>) => {
   const body = await c.req.json();
   const currentValues = await utils.Schema.ORGANIZATION_CREATE.parseAsync({
     ...body,
-    userId: c.get('user').id,
+    userId: c.get('user').id
   });
 
   const dbInstance = db.create(c);
@@ -23,7 +23,7 @@ const create = async (c: Context<AppEnv>) => {
         name: currentValues.name,
         ownerId: currentValues.userId,
         organizationUserCount: 1,
-        projectCount: 1,
+        projectCount: 1
       })
       .returning();
 
@@ -38,7 +38,7 @@ const create = async (c: Context<AppEnv>) => {
         description: currentValues.projectDescription || null,
         createdById: currentValues.userId,
         projectUserCount: 1,
-        organizationId: org.id,
+        organizationId: org.id
       })
       .returning();
 
@@ -50,7 +50,7 @@ const create = async (c: Context<AppEnv>) => {
     const artifactHash = utils.hashObject({
       organizationId: org.id,
       projectId: project.id,
-      artifactId,
+      artifactId
     });
 
     await tx.insert(db.schema.artifact).values({
@@ -58,18 +58,17 @@ const create = async (c: Context<AppEnv>) => {
       hash: artifactHash,
       artifactPromptCount: 0,
       artifactResourceCount: 0,
-      projectId: project.id,
+      projectId: project.id
     });
 
     const defaultTools = await tx
       .select({ id: db.schema.toolDefinition.id })
       .from(db.schema.toolDefinition)
       .where(
-        inArray(db.schema.toolDefinition.key, [
-          'list-resources',
-          'read-resource',
-          'send-resource'
-        ])
+        inArray(
+          db.schema.toolDefinition.key,
+          utils.constants.RESOURCE_TOOL_KEYS
+        )
       );
 
     if (defaultTools.length > 0) {
@@ -82,7 +81,7 @@ const create = async (c: Context<AppEnv>) => {
       await tx
         .update(db.schema.artifact)
         .set({
-          artifactToolCount: sql`(${db.schema.artifact.artifactToolCount}::int + ${defaultTools.length})::int`,
+          artifactToolCount: sql`(${db.schema.artifact.artifactToolCount}::int + ${defaultTools.length})::int`
         })
         .where(eq(db.schema.artifact.id, artifactId));
     }
@@ -98,7 +97,7 @@ const update = async (c: Context<AppEnv>) => {
   const currentValues = await utils.Schema.ORGANIZATION_UPDATE.parseAsync({
     ...body,
     id: c.req.param('organizationId'),
-    userId: c.get('user').id,
+    userId: c.get('user').id
   });
 
   const dbInstance = db.create(c);
@@ -120,7 +119,7 @@ const update = async (c: Context<AppEnv>) => {
 const get = async (c: Context<AppEnv>) => {
   const currentValues = await utils.Schema.ORGANIZATION_GET.parseAsync({
     id: c.req.param('organizationId'),
-    userId: c.get('user').id,
+    userId: c.get('user').id
   });
 
   const dbInstance = db.create(c);
@@ -134,10 +133,10 @@ const get = async (c: Context<AppEnv>) => {
       projects: {
         columns: {
           id: true,
-          name: true,
-        },
-      },
-    },
+          name: true
+        }
+      }
+    }
   });
 
   return c.json(organization);
@@ -145,7 +144,7 @@ const get = async (c: Context<AppEnv>) => {
 
 const list = async (c: Context<AppEnv>) => {
   const currentValues = await utils.Schema.AUTH_USER_GET.parseAsync({
-    userId: c.get('user').id,
+    userId: c.get('user').id
   });
 
   const dbInstance = db.create(c);
@@ -157,10 +156,10 @@ const list = async (c: Context<AppEnv>) => {
       projects: {
         columns: {
           id: true,
-          name: true,
-        },
-      },
-    },
+          name: true
+        }
+      }
+    }
   });
 
   return c.json(organizations);
@@ -169,7 +168,7 @@ const list = async (c: Context<AppEnv>) => {
 const remove = async (c: Context<AppEnv>) => {
   const currentValues = await utils.Schema.ORGANIZATION_GET.parseAsync({
     id: c.req.param('organizationId'),
-    userId: c.get('user').id,
+    userId: c.get('user').id
   });
 
   const dbInstance = db.create(c);
@@ -191,5 +190,5 @@ export const OrganizationController = {
   update,
   get,
   list,
-  remove,
+  remove
 };

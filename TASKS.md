@@ -1,6 +1,6 @@
-- When creating/uploading a resource create the vector data (Use postgres vector or cloudflare vector)
-- Create tool for getting that vector data
-- Support resources and prompts for bots
+- openai and use sdk instead of endpoint
+- in preview resources something we see and dont see the image - and when i edit cant see mimetype... should not show it?
+- Support resources and prompts for bots - be able to send/show images, pdfs, etc etc
 - Create outlook, slack tool and search for the best ones out there
 - Create landing
 - Create docs
