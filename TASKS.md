@@ -1,4 +1,4 @@
-- Support resources and prompts for bots - be able to send/show images, pdfs, etc etc
+- Create UI for configuring channels
 - Create outlook, slack tool and search for the best ones out there
 - Create landing
 - Create docs

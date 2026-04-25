@@ -9,6 +9,7 @@ import {
   reindexResourceChunks
 } from './embedding';
 import { extractTextFromFile } from './extractText';
+import { markdownToTelegramHtml } from './telegramFormat';
 
 export {
   createAuth,
@@ -19,7 +20,8 @@ export {
   generateEmbedding,
   generateEmbeddings,
   reindexResourceChunks,
-  extractTextFromFile
+  extractTextFromFile,
+  markdownToTelegramHtml
 };
 
 export type { McpClientHandle } from './mcpClient';

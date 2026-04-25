@@ -4,6 +4,7 @@ import { db, utils as dbUtils } from '@anju/db';
 import { utils } from '@anju/utils';
 
 import { runChannelTurn } from './runner';
+import { markdownToTelegramHtml } from '../../utils';
 
 import type { ChannelAttachment } from './runner';
 import type { AppEnv } from '../../types';
@@ -156,17 +157,11 @@ export const handleTelegramWebhook = async (c: Context<AppEnv>) => {
   }
 
   for (const chunk of chunkMessage(replyText)) {
-    await fetch(
-      `${utils.constants.TELEGRAM_API_BASE}/bot${credentials.botToken}/sendMessage`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          chat_id: message.chat.id,
-          text: chunk,
-          reply_to_message_id: message.message_id
-        })
-      }
+    await sendTelegramMessage(
+      credentials.botToken,
+      message.chat.id,
+      message.message_id,
+      chunk
     );
   }
 
@@ -192,6 +187,37 @@ export const handleTelegramWebhook = async (c: Context<AppEnv>) => {
   }
 
   return c.json({ ok: true });
+};
+
+const sendTelegramMessage = async (
+  botToken: string,
+  chatId: number,
+  replyToMessageId: number,
+  markdown: string
+) => {
+  const html = markdownToTelegramHtml(markdown);
+  const send = async (body: Record<string, unknown>) =>
+    fetch(`${utils.constants.TELEGRAM_API_BASE}/bot${botToken}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+
+  const response = await send({
+    chat_id: chatId,
+    text: html,
+    parse_mode: 'HTML',
+    link_preview_options: { is_disabled: true },
+    reply_to_message_id: replyToMessageId
+  });
+
+  if (!response.ok) {
+    await send({
+      chat_id: chatId,
+      text: markdown,
+      reply_to_message_id: replyToMessageId
+    });
+  }
 };
 
 const sendTelegramAttachment = async (
@@ -246,7 +272,10 @@ const sendTelegramAttachment = async (
   const form = new FormData();
   form.append('chat_id', String(chatId));
   form.append('reply_to_message_id', String(replyToMessageId));
-  if (caption) form.append('caption', caption.slice(0, 1024));
+  if (caption) {
+    form.append('caption', markdownToTelegramHtml(caption).slice(0, 1024));
+    form.append('parse_mode', 'HTML');
+  }
   form.append(field, new Blob([bytes], { type: mime }), filename);
 
   const response = await fetch(

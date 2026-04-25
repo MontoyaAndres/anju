@@ -9,8 +9,6 @@ import type {
   LlmToolCall
 } from './types';
 
-const DEFAULT_MAX_TOKENS = 4096;
-
 const toAnthropicMessages = (
   messages: LlmMessage[]
 ): Anthropic.MessageParam[] => {
@@ -84,7 +82,7 @@ export const anthropicAdapter: LlmAdapter = {
     const maxTokens =
       typeof config.max_tokens === 'number'
         ? config.max_tokens
-        : DEFAULT_MAX_TOKENS;
+        : utils.constants.DEFAULT_MAX_TOKENS;
     const { max_tokens: _max, ...restConfig } = config;
 
     const tools: Anthropic.ToolUnion[] | undefined =
