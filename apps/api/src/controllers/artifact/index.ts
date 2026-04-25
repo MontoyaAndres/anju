@@ -388,11 +388,17 @@ const updateResource = async (c: Context<AppEnv>) => {
         content: currentValues.content || null,
         size: currentValues.size,
         encoding: currentValues.encoding || null,
-        fileKey: currentValues.fileKey || null,
-        fileName: currentValues.fileName || null,
         annotations: currentValues.annotations || null,
         icons: currentValues.icons || null,
-        metadata: currentValues.metadata || null
+        ...(currentValues.fileKey !== undefined && {
+          fileKey: currentValues.fileKey
+        }),
+        ...(currentValues.fileName !== undefined && {
+          fileName: currentValues.fileName
+        }),
+        ...(currentValues.metadata !== undefined && {
+          metadata: currentValues.metadata
+        })
       })
       .where(
         and(

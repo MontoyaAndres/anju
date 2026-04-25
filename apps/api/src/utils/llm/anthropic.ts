@@ -1,3 +1,4 @@
+import Anthropic from '@anthropic-ai/sdk';
 import { utils } from '@anju/utils';
 import type {
   LlmAdapter,
@@ -8,37 +9,18 @@ import type {
   LlmToolCall
 } from './types';
 
-const DEFAULT_BASE_URL = 'https://api.anthropic.com/v1';
 const DEFAULT_MAX_TOKENS = 4096;
 
-type AnthropicContentBlock =
-  | { type: 'text'; text: string }
-  | {
-      type: 'tool_use';
-      id: string;
-      name: string;
-      input: Record<string, unknown>;
-    }
-  | {
-      type: 'tool_result';
-      tool_use_id: string;
-      content: string;
-      is_error?: boolean;
-    };
-
-interface AnthropicMessage {
-  role: 'user' | 'assistant';
-  content: AnthropicContentBlock[];
-}
-
-const toAnthropicMessages = (messages: LlmMessage[]): AnthropicMessage[] => {
-  const result: AnthropicMessage[] = [];
+const toAnthropicMessages = (
+  messages: LlmMessage[]
+): Anthropic.MessageParam[] => {
+  const result: Anthropic.MessageParam[] = [];
 
   for (const msg of messages) {
     if (msg.role === utils.constants.ROLE_MESSAGE_SYSTEM) continue;
 
     if (msg.role === utils.constants.ROLE_MESSAGE_ASSISTANT) {
-      const content: AnthropicContentBlock[] = [];
+      const content: Anthropic.ContentBlockParam[] = [];
       if (msg.content) content.push({ type: 'text', text: msg.content });
       if (msg.toolCalls?.length) {
         for (const tc of msg.toolCalls) {
@@ -50,21 +32,22 @@ const toAnthropicMessages = (messages: LlmMessage[]): AnthropicMessage[] => {
           });
         }
       }
-      result.push({
-        role: utils.constants.ROLE_MESSAGE_ASSISTANT,
-        content
-      });
+      result.push({ role: utils.constants.ROLE_MESSAGE_ASSISTANT, content });
       continue;
     }
 
     if (msg.role === utils.constants.ROLE_MESSAGE_TOOL) {
-      const last = result[result.length - 1];
-      const block: AnthropicContentBlock = {
+      const block: Anthropic.ToolResultBlockParam = {
         type: 'tool_result',
         tool_use_id: msg.toolCallId || '',
         content: msg.content
       };
-      if (last && last.role === utils.constants.ROLE_MESSAGE_USER) {
+      const last = result[result.length - 1];
+      if (
+        last &&
+        last.role === utils.constants.ROLE_MESSAGE_USER &&
+        Array.isArray(last.content)
+      ) {
         last.content.push(block);
       } else {
         result.push({
@@ -84,64 +67,55 @@ const toAnthropicMessages = (messages: LlmMessage[]): AnthropicMessage[] => {
   return result;
 };
 
-const mapStopReason = (reason: string | undefined): LlmStopReason => {
+const mapStopReason = (reason: string | null | undefined): LlmStopReason => {
   if (reason === 'tool_use') return 'tool_use';
   if (reason === 'max_tokens') return 'max_tokens';
-  if (reason === 'end_turn' || reason === 'stop_sequence') return 'end_turn';
   return 'end_turn';
 };
 
 export const anthropicAdapter: LlmAdapter = {
   complete: async (input: LlmAdapterInput): Promise<LlmCompletion> => {
-    const baseUrl = (input.baseUrl || DEFAULT_BASE_URL).replace(/\/$/, '');
-    const url = `${baseUrl}/messages`;
-
-    const body: Record<string, unknown> = {
-      model: input.model,
-      max_tokens: (input.config as any)?.max_tokens || DEFAULT_MAX_TOKENS,
-      messages: toAnthropicMessages(input.messages),
-      ...(input.config || {})
-    };
-
-    if (input.systemPrompt) body.system = input.systemPrompt;
-
-    if (input.tools.length > 0) {
-      body.tools = input.tools.map(tool => ({
-        name: tool.name,
-        description: tool.description,
-        input_schema: tool.inputSchema
-      }));
-    }
-
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': input.apiKey,
-        'anthropic-version': '2023-06-01'
-      },
-      body: JSON.stringify(body)
+    const client = new Anthropic({
+      apiKey: input.apiKey,
+      baseURL: input.baseUrl || undefined
     });
 
-    if (!response.ok) {
-      const error = await response.text();
-      throw new Error(`LLM request failed: ${response.status} ${error}`);
-    }
+    const config = (input.config || {}) as Record<string, unknown>;
+    const maxTokens =
+      typeof config.max_tokens === 'number'
+        ? config.max_tokens
+        : DEFAULT_MAX_TOKENS;
+    const { max_tokens: _max, ...restConfig } = config;
 
-    const data: any = await response.json();
-    const blocks: AnthropicContentBlock[] = data.content || [];
+    const tools: Anthropic.ToolUnion[] | undefined =
+      input.tools.length > 0
+        ? input.tools.map(tool => ({
+            name: tool.name,
+            description: tool.description,
+            input_schema: tool.inputSchema as Anthropic.Tool.InputSchema
+          }))
+        : undefined;
+
+    const response = await client.messages.create({
+      model: input.model,
+      max_tokens: maxTokens,
+      messages: toAnthropicMessages(input.messages),
+      ...(input.systemPrompt ? { system: input.systemPrompt } : {}),
+      ...(tools ? { tools } : {}),
+      ...restConfig
+    });
 
     let text = '';
     const toolCalls: LlmToolCall[] = [];
 
-    for (const block of blocks) {
+    for (const block of response.content) {
       if (block.type === 'text') {
         text += block.text;
       } else if (block.type === 'tool_use') {
         toolCalls.push({
           id: block.id,
           name: block.name,
-          arguments: block.input || {}
+          arguments: (block.input as Record<string, unknown>) || {}
         });
       }
     }
@@ -149,10 +123,10 @@ export const anthropicAdapter: LlmAdapter = {
     return {
       assistant: { content: text, toolCalls },
       usage: {
-        tokensIn: data.usage?.input_tokens,
-        tokensOut: data.usage?.output_tokens
+        tokensIn: response.usage.input_tokens,
+        tokensOut: response.usage.output_tokens
       },
-      stopReason: mapStopReason(data.stop_reason)
+      stopReason: mapStopReason(response.stop_reason)
     };
   }
 };

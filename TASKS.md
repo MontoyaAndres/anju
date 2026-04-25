@@ -1,5 +1,3 @@
-- openai and use sdk instead of endpoint
-- in preview resources something we see and dont see the image - and when i edit cant see mimetype... should not show it?
 - Support resources and prompts for bots - be able to send/show images, pdfs, etc etc
 - Create outlook, slack tool and search for the best ones out there
 - Create landing
