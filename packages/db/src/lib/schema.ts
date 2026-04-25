@@ -230,7 +230,7 @@ export const channel = pgTable(
       .primaryKey()
       .$defaultFn(() => uuid()),
     platform: text('platform').notNull(),
-    status: text('status').notNull().default('active'),
+    status: text('status').notNull().default(utils.constants.STATUS_ACTIVE),
     config: json('config'),
     metadata: json('metadata'),
     credentials: text('credentials').notNull(),
@@ -257,7 +257,9 @@ export const channelConversation = pgTable(
       .$defaultFn(() => uuid()),
     externalConversationId: text('external_conversation_id').notNull(),
     title: text('title'),
-    scope: text('scope').notNull().default('private'),
+    scope: text('scope')
+      .notNull()
+      .default(utils.constants.CHANNEL_CONVERSATION_SCOPE_PRIVATE),
     metadata: json('metadata'),
     messageCount: integer('message_count').notNull().default(0),
     lastMessageAt: timestamp('last_message_at', { mode: 'date' }),
@@ -388,10 +390,9 @@ export const channelMessageUsage = pgTable(
       () => artifactResource.id,
       { onDelete: 'set null' }
     ),
-    artifactToolId: text('artifact_tool_id').references(
-      () => artifactTool.id,
-      { onDelete: 'set null' }
-    ),
+    artifactToolId: text('artifact_tool_id').references(() => artifactTool.id, {
+      onDelete: 'set null'
+    }),
     createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow()
   },
   table => [index('channel_message_usage_messageId_idx').on(table.messageId)]
@@ -495,7 +496,7 @@ export const artifactResource = pgTable('artifact_resource', {
     .$defaultFn(() => uuid()),
   title: text('title').notNull(),
   uri: text('uri').notNull(),
-  type: text('type').notNull().default('static'),
+  type: text('type').notNull().default(utils.constants.RESOURCE_TYPE_STATIC),
   description: text('description'),
   mimeType: text('mime_type').notNull(),
   content: text('content'),

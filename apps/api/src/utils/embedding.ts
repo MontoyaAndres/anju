@@ -1,6 +1,6 @@
 import { Context } from 'hono';
 import { GoogleGenAI } from '@google/genai';
-import { db } from '@anju/db';
+import { db, utils as dbUtils } from '@anju/db';
 import { utils } from '@anju/utils';
 import { eq } from 'drizzle-orm';
 
@@ -179,7 +179,7 @@ export const reindexResourceChunks = async (
       );
     });
   } catch (error) {
-    await utils.handleError(c, error, {
+    await dbUtils.handleError(c, error, {
       service: utils.constants.SERVICE_NAME_API,
       metadata: {
         source: 'reindexResourceChunks',

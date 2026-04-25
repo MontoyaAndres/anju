@@ -1,4 +1,5 @@
 import { Context } from 'hono';
+import { utils as dbUtils } from '@anju/db';
 import { utils } from '@anju/utils';
 
 import type { AppEnv } from '../types';
@@ -101,7 +102,7 @@ export const extractTextFromFile = async (
         return null;
     }
   } catch (error) {
-    await utils.handleError(c, error, {
+    await dbUtils.handleError(c, error, {
       service: utils.constants.SERVICE_NAME_API,
       metadata: { source: 'extractTextFromFile', mimeType }
     });

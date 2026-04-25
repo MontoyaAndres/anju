@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { utils } from '@anju/utils';
+import { utils as dbUtils } from '@anju/db';
 
 import {
   UserController,
@@ -30,7 +31,7 @@ app
     })
   )
   .onError(async (error, c) => {
-    const { status, body } = await utils.handleError(c, error, {
+    const { status, body } = await dbUtils.handleError(c, error, {
       service: utils.constants.SERVICE_NAME_API
     });
     return c.json(body, status);

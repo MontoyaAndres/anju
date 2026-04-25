@@ -15,7 +15,6 @@
     "clean": "rm -rf dist && rm -rf node_modules"
   },
   "dependencies": {
-    "@anju/db": "*",
     "@noble/ciphers": "^2.2.0",
     "zod": "^4.3.6"
   },

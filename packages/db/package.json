@@ -19,6 +19,7 @@
     "migrate-prod": "dotenv -e ../../.env.prod drizzle-kit migrate"
   },
   "dependencies": {
+    "@anju/utils": "*",
     "drizzle-orm": "^0.45.1",
     "postgres": "^3.4.8",
     "uuid": "^13.0.0"

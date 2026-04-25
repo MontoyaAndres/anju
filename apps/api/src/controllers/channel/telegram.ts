@@ -1,6 +1,6 @@
 import { Context } from 'hono';
 import { eq } from 'drizzle-orm';
-import { db } from '@anju/db';
+import { db, utils as dbUtils } from '@anju/db';
 import { utils } from '@anju/utils';
 
 import { runChannelTurn } from './runner';
@@ -142,7 +142,7 @@ export const handleTelegramWebhook = async (c: Context<AppEnv>) => {
     replyText = result.assistantText;
     attachments = result.attachments;
   } catch (err: any) {
-    const { refId } = await utils.handleError(c, err, {
+    const { refId } = await dbUtils.handleError(c, err, {
       service: utils.constants.SERVICE_NAME_API,
       metadata: {
         source: 'channel-runner',
@@ -179,7 +179,7 @@ export const handleTelegramWebhook = async (c: Context<AppEnv>) => {
       attachment,
       c.env.STORAGE_BUCKET
     ).catch(err =>
-      utils.handleError(c, err, {
+      dbUtils.handleError(c, err, {
         service: utils.constants.SERVICE_NAME_API,
         metadata: {
           source: 'sendTelegramAttachment',
