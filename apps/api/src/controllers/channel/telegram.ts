@@ -210,7 +210,7 @@ const sendTelegramAttachment = async (
 
   let method: 'sendPhoto' | 'sendVideo' | 'sendAudio' | 'sendDocument';
   let field: 'photo' | 'video' | 'audio' | 'document';
-  if (mime.startsWith('image/') && mime !== 'image/gif') {
+  if (mime.startsWith('image/')) {
     method = 'sendPhoto';
     field = 'photo';
   } else if (mime.startsWith('video/')) {

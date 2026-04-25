@@ -1,17 +1,21 @@
-name = "anju-api"
-main = "dist/index.js"
+name = "anju-web"
+main = ".open-next/worker.js"
 compatibility_date = "2025-11-17"
 
 compatibility_flags = ["nodejs_compat", "nodejs_compat_populate_process_env"]
 
-[build]
-command = "npm run build"
+[assets]
+directory = ".open-next/assets"
+binding = "ASSETS"
 
 [env.development]
-name = "anju-api-development"
+name = "anju-web-development"
 routes = [
-  { pattern = "development-api.vocesqueabrazan.com", custom_domain = true }
+  { pattern = "development-app.vocesqueabrazan.com", custom_domain = true }
 ]
+[env.development.assets]
+directory = ".open-next/assets"
+binding = "ASSETS"
 [env.development.observability]
 enabled = true
 [env.development.observability.logs]
@@ -21,21 +25,19 @@ invocation_logs = true
 enabled = false
 [env.development.vars]
 NODE_ENV = "production"
-SERVER_PORT = "8080"
-MCP_PORT = "8081"
 NEXT_PUBLIC_API_URL = "https://development-api.vocesqueabrazan.com"
 NEXT_PUBLIC_MCP_URL = "https://development-mcp.vocesqueabrazan.com"
 NEXT_PUBLIC_WEB_URL = "https://development-app.vocesqueabrazan.com"
 NEXT_PUBLIC_DOMAIN = "vocesqueabrazan.com"
-[[env.development.hyperdrive]]
-binding = "HYPERDRIVE"
-id = "20b38b96e12a4f45ac111fb7d8161edf"
-[[env.development.r2_buckets]]
-binding = "STORAGE_BUCKET"
-bucket_name = "anju-storage-development"
 
 [env.production]
-name = "anju-api-production"
+name = "anju-web-production"
+routes = [
+  { pattern = "app.anju.ai", custom_domain = true }
+]
+[env.production.assets]
+directory = ".open-next/assets"
+binding = "ASSETS"
 [env.production.observability]
 enabled = true
 [env.production.observability.logs]
@@ -45,15 +47,7 @@ invocation_logs = true
 enabled = false
 [env.production.vars]
 NODE_ENV = "production"
-SERVER_PORT = "8080"
-MCP_PORT = "8081"
 NEXT_PUBLIC_API_URL = "https://api.anju.ai"
 NEXT_PUBLIC_MCP_URL = "https://mcp.anju.ai"
 NEXT_PUBLIC_WEB_URL = "https://app.anju.ai"
 NEXT_PUBLIC_DOMAIN = "anju.ai"
-[[env.production.hyperdrive]]
-binding = "HYPERDRIVE"
-id = "<YOUR_HYPERDRIVE_ID>"
-[[env.production.r2_buckets]]
-binding = "STORAGE_BUCKET"
-bucket_name = "anju-storage-production"

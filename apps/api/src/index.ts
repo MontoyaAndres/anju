@@ -24,7 +24,8 @@ app
   .use(
     '*',
     cors({
-      origin: [process.env.NEXT_PUBLIC_WEB_URL!],
+      origin: (origin, c) =>
+        origin === utils.getEnv(c, 'NEXT_PUBLIC_WEB_URL') ? origin : null,
       credentials: true,
       allowHeaders: ['Content-Type', 'User-Agent'],
       allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']

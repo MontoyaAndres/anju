@@ -2,10 +2,13 @@ import { Context } from 'hono';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { betterAuth } from 'better-auth';
 import { v7 as uuid } from 'uuid';
+import { utils } from '@anju/utils';
 import { db } from '@anju/db';
 
 export const createAuth = (c: Context) => {
   const dbInstance = db.create(c);
+  const isProduction = utils.getEnv(c, 'NODE_ENV') === 'production';
+  const domain = utils.getEnv(c, 'NEXT_PUBLIC_DOMAIN');
 
   return betterAuth({
     appName: 'anju',
@@ -13,36 +16,35 @@ export const createAuth = (c: Context) => {
       provider: 'pg',
       schema: db.schema
     }),
-    baseURL: process.env.NEXT_PUBLIC_API_URL,
+    baseURL: utils.getEnv(c, 'NEXT_PUBLIC_API_URL'),
     basePath: '/auth',
-    secret: process.env.JWT_SECRET!,
+    secret: utils.getEnv(c, 'JWT_SECRET')!,
     socialProviders: {
       google: {
-        clientId: process.env.GOOGLE_CLIENT_ID!,
-        clientSecret: process.env.GOOGLE_CLIENT_SECRET!
+        clientId: utils.getEnv(c, 'GOOGLE_CLIENT_ID')!,
+        clientSecret: utils.getEnv(c, 'GOOGLE_CLIENT_SECRET')!
       },
       github: {
-        clientId: process.env.GITHUB_CLIENT_ID!,
-        clientSecret: process.env.GITHUB_CLIENT_SECRET!
+        clientId: utils.getEnv(c, 'GITHUB_CLIENT_ID')!,
+        clientSecret: utils.getEnv(c, 'GITHUB_CLIENT_SECRET')!
       }
     },
     trustedOrigins: [
-      process.env.NEXT_PUBLIC_WEB_URL!,
-      process.env.NEXT_PUBLIC_API_URL!
+      utils.getEnv(c, 'NEXT_PUBLIC_WEB_URL')!,
+      utils.getEnv(c, 'NEXT_PUBLIC_API_URL')!
     ],
     account: {
       storeStateStrategy: 'database',
       skipStateCookieCheck: true
     },
     advanced: {
-      crossSubDomainCookies:
-        process.env.NODE_ENV === 'production'
-          ? { enabled: true, domain: '.anju.ai' }
-          : { enabled: false },
+      crossSubDomainCookies: domain
+        ? { enabled: true, domain: `.${domain}` }
+        : { enabled: false },
       database: {
         generateId: () => uuid()
       },
-      useSecureCookies: process.env.NODE_ENV === 'production'
+      useSecureCookies: isProduction
     }
   });
 };

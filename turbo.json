@@ -18,7 +18,8 @@
     "SLACK_CLIENT_SECRET",
     "NEXT_PUBLIC_API_URL",
     "NEXT_PUBLIC_WEB_URL",
-    "NEXT_PUBLIC_MCP_URL"
+    "NEXT_PUBLIC_MCP_URL",
+    "NEXT_PUBLIC_DOMAIN"
   ],
   "tasks": {
     "build": {

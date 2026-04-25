@@ -30,7 +30,7 @@ const authorize = async (c: Context<AppEnv>) => {
     throw new Error(`Missing env: ${providerConfig.clientIdEnv}`);
   }
 
-  const callbackUrl = `${process.env.NEXT_PUBLIC_API_URL || ''}/oauth/${provider}/callback`;
+  const callbackUrl = `${utils.getEnv(c, 'NEXT_PUBLIC_API_URL')}/oauth/${provider}/callback`;
 
   const state = oauthState.encode({
     organizationId,
@@ -88,7 +88,7 @@ const callback = async (c: Context<AppEnv>) => {
     );
   }
 
-  const callbackUrl = `${process.env.NEXT_PUBLIC_API_URL || ''}/oauth/${provider}/callback`;
+  const callbackUrl = `${utils.getEnv(c, 'NEXT_PUBLIC_API_URL')}/oauth/${provider}/callback`;
 
   const tokenResponse = await fetch(providerConfig.tokenUrl, {
     method: 'POST',
@@ -209,7 +209,7 @@ const callback = async (c: Context<AppEnv>) => {
     }
   });
 
-  const redirectUrl = `${process.env.NEXT_PUBLIC_WEB_URL || ''}/organization/${organizationId}/project/${projectId}/tools?connected=${provider}`;
+  const redirectUrl = `${utils.getEnv(c, 'NEXT_PUBLIC_WEB_URL')}/organization/${organizationId}/project/${projectId}/tools?connected=${provider}`;
 
   return c.redirect(redirectUrl);
 };

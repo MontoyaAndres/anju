@@ -5,11 +5,15 @@
     "build": "next build",
     "dev": "dotenv -e ../../.env next dev",
     "start": "next start",
-    "clean": "rm -rf .next && rm -rf node_modules"
+    "clean": "rm -rf .next && rm -rf .open-next && rm -rf node_modules",
+    "cf-build": "opennextjs-cloudflare build",
+    "deploy-dev": "opennextjs-cloudflare deploy --env development",
+    "deploy-prod": "opennextjs-cloudflare deploy --env production",
+    "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts"
   },
   "dependencies": {
-    "@anju/utils": "*",
     "@anju/ui": "*",
+    "@anju/utils": "*",
     "next": "^16.1.6",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
@@ -17,6 +21,7 @@
   },
   "devDependencies": {
     "@anju/tsconfig": "*",
+    "@opennextjs/cloudflare": "^1.19.4",
     "@types/node": "^25.2.3",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",

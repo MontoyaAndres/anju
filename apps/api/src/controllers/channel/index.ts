@@ -57,7 +57,7 @@ const create = async (c: Context<AppEnv>) => {
 
   const rawSecret = uuid().replace(/-/g, '') + uuid().replace(/-/g, '');
   const hashedSecret = await utils.sha256Hex(rawSecret);
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+  const apiUrl = utils.getEnv(c, 'NEXT_PUBLIC_API_URL');
 
   if (!apiUrl) throw new Error('Missing env: NEXT_PUBLIC_API_URL');
 
@@ -139,7 +139,7 @@ const create = async (c: Context<AppEnv>) => {
   const { credentials: _c, webhookSecret: _w, ...safe } = result;
   return c.json({
     ...safe,
-    webhookUrl: buildWebhookUrl(result.id, result.platform)
+    webhookUrl: buildWebhookUrl(c, result.id, result.platform)
   });
 };
 
@@ -265,8 +265,12 @@ const webhook = async (c: Context<AppEnv>) => {
   return c.json({ error: `Unsupported platform: ${platform}` }, 400);
 };
 
-const buildWebhookUrl = (channelId: string, platform: string) => {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || '';
+const buildWebhookUrl = (
+  c: Context<AppEnv>,
+  channelId: string,
+  platform: string
+) => {
+  const apiUrl = utils.getEnv(c, 'NEXT_PUBLIC_API_URL');
   return `${apiUrl}/channel/${channelId}/webhook/${platform}`;
 };
 

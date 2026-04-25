@@ -1,27 +1,17 @@
 import { Context } from 'hono';
 import { eq } from 'drizzle-orm';
 import { db } from '@anju/db';
+import { utils } from '@anju/utils';
 
 // types
 import type { AppEnv } from '../../types';
 
-const MAX_AVATAR_BYTES = 5 * 1024 * 1024;
-const ALLOWED_IMAGE_TYPES = [
-  'image/png',
-  'image/jpeg',
-  'image/webp',
-  'image/gif'
-];
-
 const extensionFor = (mime: string) => {
-  if (mime === 'image/png') return 'png';
-  if (mime === 'image/webp') return 'webp';
-  if (mime === 'image/gif') return 'gif';
+  if (mime === utils.constants.MIMETYPE_IMAGE_PNG) return 'png';
+  if (mime === utils.constants.MIMETYPE_IMAGE_WEBP) return 'webp';
+  if (mime === utils.constants.MIMETYPE_IMAGE_GIF) return 'gif';
   return 'jpg';
 };
-
-const buildAvatarUrl = (userId: string, filename: string) =>
-  `${process.env.NEXT_PUBLIC_API_URL || ''}/user/${userId}/avatar/${filename}`;
 
 const uploadAvatar = async (c: Context<AppEnv>) => {
   const user = c.get('user');
@@ -32,10 +22,12 @@ const uploadAvatar = async (c: Context<AppEnv>) => {
   if (!file || !(file instanceof File)) {
     throw new Error('File is required');
   }
-  if (file.size > MAX_AVATAR_BYTES) {
-    throw new Error('Avatar size exceeds the 5MB limit');
+  if (file.size > utils.constants.MAX_FILE_SIZE) {
+    throw new Error(
+      `Avatar size exceeds the ${utils.constants.MAX_FILE_SIZE}MB limit`
+    );
   }
-  if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+  if (!utils.constants.USER_AVATAR_MIME_TYPES.includes(file.type)) {
     throw new Error(`Unsupported image type: ${file.type}`);
   }
 
@@ -51,7 +43,7 @@ const uploadAvatar = async (c: Context<AppEnv>) => {
     httpMetadata: { contentType: file.type }
   });
 
-  const image = buildAvatarUrl(user.id, filename);
+  const image = `${utils.getEnv(c, 'NEXT_PUBLIC_API_URL')}/user/${user.id}/avatar/${filename}`;
 
   const dbInstance = db.create(c);
   await dbInstance

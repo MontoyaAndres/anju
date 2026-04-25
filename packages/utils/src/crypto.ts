@@ -1,14 +1,14 @@
 import { Context } from 'hono';
 import { xchacha20poly1305 } from '@noble/ciphers/chacha.js';
+import { getEnv } from './getEnv';
 
 const PREFIX = 'enc:v1:';
 const NONCE_BYTES = 24;
 const KEY_BYTES = 32;
 const KEY_ENV = 'CRYPTO_SECRET';
 
-export const getCredentialEncryptionKey = (c?: Context) => {
-  const envBag = c?.env as Record<string, string | undefined> | undefined;
-  const rawKey = envBag?.[KEY_ENV] || process.env[KEY_ENV];
+export const getCredentialEncryptionKey = (c: Context) => {
+  const rawKey = getEnv(c, KEY_ENV);
   if (!rawKey) {
     throw new Error(`Missing env: ${KEY_ENV}`);
   }
