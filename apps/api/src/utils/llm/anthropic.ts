@@ -1,3 +1,4 @@
+import { utils } from '@anju/utils';
 import type {
   LlmAdapter,
   LlmAdapterInput,
@@ -34,9 +35,9 @@ const toAnthropicMessages = (messages: LlmMessage[]): AnthropicMessage[] => {
   const result: AnthropicMessage[] = [];
 
   for (const msg of messages) {
-    if (msg.role === 'system') continue;
+    if (msg.role === utils.constants.ROLE_MESSAGE_SYSTEM) continue;
 
-    if (msg.role === 'assistant') {
+    if (msg.role === utils.constants.ROLE_MESSAGE_ASSISTANT) {
       const content: AnthropicContentBlock[] = [];
       if (msg.content) content.push({ type: 'text', text: msg.content });
       if (msg.toolCalls?.length) {
@@ -49,27 +50,33 @@ const toAnthropicMessages = (messages: LlmMessage[]): AnthropicMessage[] => {
           });
         }
       }
-      result.push({ role: 'assistant', content });
+      result.push({
+        role: utils.constants.ROLE_MESSAGE_ASSISTANT,
+        content
+      });
       continue;
     }
 
-    if (msg.role === 'tool') {
+    if (msg.role === utils.constants.ROLE_MESSAGE_TOOL) {
       const last = result[result.length - 1];
       const block: AnthropicContentBlock = {
         type: 'tool_result',
         tool_use_id: msg.toolCallId || '',
         content: msg.content
       };
-      if (last && last.role === 'user') {
+      if (last && last.role === utils.constants.ROLE_MESSAGE_USER) {
         last.content.push(block);
       } else {
-        result.push({ role: 'user', content: [block] });
+        result.push({
+          role: utils.constants.ROLE_MESSAGE_USER,
+          content: [block]
+        });
       }
       continue;
     }
 
     result.push({
-      role: 'user',
+      role: utils.constants.ROLE_MESSAGE_USER,
       content: [{ type: 'text', text: msg.content }]
     });
   }

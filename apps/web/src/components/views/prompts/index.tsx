@@ -44,7 +44,7 @@ export const Prompts = () => {
   });
   const [visualMessages, setVisualMessages] = useState<
     { role: 'user' | 'assistant'; content: string }[]
-  >([{ role: 'user', content: '' }]);
+  >([{ role: utils.constants.ROLE_MESSAGE_USER, content: '' }]);
   const [messageMode, setMessageMode] = useState<'visual' | 'json'>('visual');
   const [schemaVars, setSchemaVars] = useState<
     {
@@ -120,7 +120,9 @@ export const Prompts = () => {
     setIsEditing(false);
     setIsCreating(true);
     setEditValues({ title: '', description: '', messagesJson: '' });
-    setVisualMessages([{ role: 'user', content: '' }]);
+    setVisualMessages([
+      { role: utils.constants.ROLE_MESSAGE_USER, content: '' }
+    ]);
     setMessageMode('visual');
     setSchemaVars([]);
     setErrors({});
@@ -455,11 +457,7 @@ export const Prompts = () => {
             <ChatBubbleOutlineOutlined />
             <h3>No prompts yet</h3>
             <p>Create a prompt template to expose through this MCP server.</p>
-            <UI.Button
-              variant="contained"
-              size="small"
-              onClick={handleCreate}
-            >
+            <UI.Button variant="contained" size="small" onClick={handleCreate}>
               <Add />
               <span className="button-text">New prompt</span>
             </UI.Button>
@@ -632,12 +630,18 @@ export const Prompts = () => {
                             <div className="panel-message-role-toggle">
                               <button
                                 type="button"
-                                className={`panel-role-btn ${msg.role === 'user' ? 'active' : ''}`}
+                                className={`panel-role-btn ${msg.role === utils.constants.ROLE_MESSAGE_USER ? 'active' : ''}`}
                                 disabled={submitting}
                                 onClick={() =>
                                   setVisualMessages(prev =>
                                     prev.map((m, idx) =>
-                                      idx === i ? { ...m, role: 'user' } : m
+                                      idx === i
+                                        ? {
+                                            ...m,
+                                            role: utils.constants
+                                              .ROLE_MESSAGE_USER
+                                          }
+                                        : m
                                     )
                                   )
                                 }
@@ -646,13 +650,17 @@ export const Prompts = () => {
                               </button>
                               <button
                                 type="button"
-                                className={`panel-role-btn ${msg.role === 'assistant' ? 'active' : ''}`}
+                                className={`panel-role-btn ${msg.role === utils.constants.ROLE_MESSAGE_ASSISTANT ? 'active' : ''}`}
                                 disabled={submitting}
                                 onClick={() =>
                                   setVisualMessages(prev =>
                                     prev.map((m, idx) =>
                                       idx === i
-                                        ? { ...m, role: 'assistant' }
+                                        ? {
+                                            ...m,
+                                            role: utils.constants
+                                              .ROLE_MESSAGE_ASSISTANT
+                                          }
                                         : m
                                     )
                                   )
@@ -677,7 +685,7 @@ export const Prompts = () => {
                           </div>
                           <UI.Input
                             placeholder={
-                              msg.role === 'user'
+                              msg.role === utils.constants.ROLE_MESSAGE_USER
                                 ? 'Write the user message... Use {{variable}} for dynamic values'
                                 : 'Write the assistant response...'
                             }
@@ -704,7 +712,10 @@ export const Prompts = () => {
                           onClick={() =>
                             setVisualMessages(prev => [
                               ...prev,
-                              { role: 'user', content: '' }
+                              {
+                                role: utils.constants.ROLE_MESSAGE_USER,
+                                content: ''
+                              }
                             ])
                           }
                         >

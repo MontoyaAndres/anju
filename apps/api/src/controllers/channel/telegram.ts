@@ -90,7 +90,7 @@ export const handleTelegramWebhook = async (c: Context<AppEnv>) => {
       ?.telegram?.bot || null;
 
   if (
-    message.chat.type !== 'private' &&
+    message.chat.type !== utils.constants.CHANNEL_CONVERSATION_SCOPE_PRIVATE &&
     !messageAddressesBot(message, botMeta)
   ) {
     return c.json({ ok: true });
@@ -106,12 +106,11 @@ export const handleTelegramWebhook = async (c: Context<AppEnv>) => {
     `user-${message.from.id}`;
   const conversationTitle =
     message.chat.title ||
-    (message.chat.type === 'private'
+    (message.chat.type === utils.constants.CHANNEL_CONVERSATION_SCOPE_PRIVATE
       ? `DM · ${participantLabel}`
       : `${message.chat.type} · ${message.chat.id}`);
 
   const cleanText = stripBotMention(message.text, botMeta?.username);
-  const conversationScope = telegramChatTypeToScope(message.chat.type);
 
   const slashCommand = parseSlashCommand(message, botMeta?.username);
   const promptMatch = slashCommand
@@ -127,7 +126,7 @@ export const handleTelegramWebhook = async (c: Context<AppEnv>) => {
       channelId: channelRow.id,
       externalConversationId: String(message.chat.id),
       conversationTitle,
-      conversationScope,
+      conversationScope: message.chat.type,
       externalParticipantId: String(message.from.id),
       participantDisplayName: displayName || message.from.username || null,
       participantMetadata: {
@@ -341,16 +340,6 @@ const resolveSlashPrompt = async (
   }
 
   return { promptId: match.id, args };
-};
-
-const telegramChatTypeToScope = (chatType: string): string => {
-  if (chatType === 'private') {
-    return utils.constants.CHANNEL_CONVERSATION_SCOPE_PRIVATE;
-  }
-  if (chatType === 'channel') {
-    return utils.constants.CHANNEL_CONVERSATION_SCOPE_CHANNEL;
-  }
-  return utils.constants.CHANNEL_CONVERSATION_SCOPE_GROUP;
 };
 
 const messageAddressesBot = (

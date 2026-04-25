@@ -53,8 +53,8 @@ const SOCIAL_PROVIDERS: {
   label: string;
   Icon: typeof Google;
 }[] = [
-  { id: 'google', label: 'Google', Icon: Google },
-  { id: 'github', label: 'GitHub', Icon: GitHub }
+  { id: utils.constants.SOCIAL_PROVIDER_GOOGLE, label: 'Google', Icon: Google },
+  { id: utils.constants.SOCIAL_PROVIDER_GITHUB, label: 'GitHub', Icon: GitHub }
 ];
 
 interface AuthProps {
@@ -165,8 +165,8 @@ const HomeLayout = ({ page }: { page: HomePage }) => {
       const next = new Set<SocialProvider>();
       for (const account of data) {
         if (
-          account.providerId === 'google' ||
-          account.providerId === 'github'
+          account.providerId === utils.constants.SOCIAL_PROVIDER_GOOGLE ||
+          account.providerId === utils.constants.SOCIAL_PROVIDER_GITHUB
         ) {
           next.add(account.providerId);
         }
@@ -369,9 +369,7 @@ const HomeLayout = ({ page }: { page: HomePage }) => {
     router.push('/organization');
   };
 
-  const handleProjectValueChange = (
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
+  const handleProjectValueChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setProjectValues(prev => ({ ...prev, [name]: value }));
     if (projectError[name as keyof typeof projectError]) {
@@ -420,8 +418,7 @@ const HomeLayout = ({ page }: { page: HomePage }) => {
       if (newProject?.error) {
         setProjectStatus('rejected');
         setProjectApiError(
-          newProject.error.message ||
-            'Something went wrong. Please try again.'
+          newProject.error.message || 'Something went wrong. Please try again.'
         );
         return;
       }
@@ -430,9 +427,7 @@ const HomeLayout = ({ page }: { page: HomePage }) => {
       setProjectModalOrgId(null);
       setSwitcherOpen(false);
       setOrganizations(null);
-      router.push(
-        `/organization/${projectModalOrgId}/project/${newProjectId}`
-      );
+      router.push(`/organization/${projectModalOrgId}/project/${newProjectId}`);
     } catch (err) {
       setProjectStatus('rejected');
       if (
@@ -801,22 +796,10 @@ const HomeLayout = ({ page }: { page: HomePage }) => {
                     {Array.from({ length: 3 }).map((_, i) => (
                       <div key={i} className="switcher-accordion-skeleton">
                         <div className="switcher-accordion-skeleton-texts">
-                          <UI.Skeleton
-                            variant="text"
-                            width="60%"
-                            height={16}
-                          />
-                          <UI.Skeleton
-                            variant="text"
-                            width="35%"
-                            height={12}
-                          />
+                          <UI.Skeleton variant="text" width="60%" height={16} />
+                          <UI.Skeleton variant="text" width="35%" height={12} />
                         </div>
-                        <UI.Skeleton
-                          variant="rounded"
-                          width={24}
-                          height={18}
-                        />
+                        <UI.Skeleton variant="rounded" width={24} height={18} />
                       </div>
                     ))}
                   </div>
@@ -864,7 +847,10 @@ const HomeLayout = ({ page }: { page: HomePage }) => {
                                         handleSelectProject(org.id, project.id)
                                       }
                                       onKeyDown={e => {
-                                        if (e.key === 'Enter' || e.key === ' ') {
+                                        if (
+                                          e.key === 'Enter' ||
+                                          e.key === ' '
+                                        ) {
                                           e.preventDefault();
                                           handleSelectProject(
                                             org.id,

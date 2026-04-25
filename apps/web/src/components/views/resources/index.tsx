@@ -563,11 +563,7 @@ export const Resources = () => {
               <div key={i} className="resource-item resource-item-skeleton">
                 <div className="resource-item-top">
                   <UI.Skeleton variant="text" width="45%" height={18} />
-                  <UI.Skeleton
-                    variant="rounded"
-                    width={50}
-                    height={18}
-                  />
+                  <UI.Skeleton variant="rounded" width={50} height={18} />
                 </div>
                 <div className="resource-item-meta">
                   <UI.Skeleton variant="text" width={80} height={12} />
@@ -583,11 +579,7 @@ export const Resources = () => {
             <FolderOpenOutlined />
             <h3>No resources yet</h3>
             <p>Add files or templates for this MCP server to serve.</p>
-            <UI.Button
-              variant="contained"
-              size="small"
-              onClick={handleCreate}
-            >
+            <UI.Button variant="contained" size="small" onClick={handleCreate}>
               <Add />
               <span className="button-text">New resource</span>
             </UI.Button>
@@ -616,9 +608,7 @@ export const Resources = () => {
                 <span>{resource.mimeType}</span>
                 {resource.encoding && <span>{resource.encoding}</span>}
                 {resource.size > 0 && <span>{formatSize(resource.size)}</span>}
-                <span>
-                  {new Date(resource.updatedAt).toLocaleDateString()}
-                </span>
+                <span>{new Date(resource.updatedAt).toLocaleDateString()}</span>
               </div>
             </div>
           ))}
@@ -697,15 +687,18 @@ export const Resources = () => {
                     }))
                   }
                   helperText={
-                    editValues.type === 'static'
+                    editValues.type === utils.constants.RESOURCE_TYPE_STATIC
                       ? "Fixed content that doesn't change"
                       : 'Dynamic content with variables (e.g. {userId})'
                   }
                   options={[
-                    { label: 'Static — Fixed content', value: 'static' },
+                    {
+                      label: 'Static — Fixed content',
+                      value: utils.constants.RESOURCE_TYPE_STATIC
+                    },
                     {
                       label: 'Template — Dynamic with variables',
-                      value: 'template'
+                      value: utils.constants.RESOURCE_TYPE_TEMPLATE
                     }
                   ]}
                 />

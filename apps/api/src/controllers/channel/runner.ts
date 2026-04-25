@@ -42,6 +42,14 @@ export const runChannelTurn = async (
   c: Context<AppEnv>,
   options: RunOptions
 ): Promise<RunResult> => {
+  if (
+    !utils.constants.CHANNEL_CONVERSATION_SCOPES.includes(
+      options.conversationScope as (typeof utils.constants.CHANNEL_CONVERSATION_SCOPES)[0]
+    )
+  ) {
+    throw new Error(`Invalid conversationScope: ${options.conversationScope}`);
+  }
+
   const dbInstance = db.create(c);
 
   const [channelRow] = await dbInstance
@@ -91,7 +99,7 @@ export const runChannelTurn = async (
   const [userMessage] = await dbInstance
     .insert(db.schema.channelMessage)
     .values({
-      role: utils.constants.CHANNEL_MESSAGE_ROLE_USER,
+      role: utils.constants.ROLE_MESSAGE_USER,
       content: options.userText,
       externalMessageId: options.externalMessageId || null,
       conversationId: conversation.id,
@@ -121,9 +129,7 @@ export const runChannelTurn = async (
     .select()
     .from(db.schema.artifactResource)
     .where(eq(db.schema.artifactResource.artifactId, artifactRow.id));
-  const artifactResourceByUri = new Map(
-    artifactResources.map(r => [r.uri, r])
-  );
+  const artifactResourceByUri = new Map(artifactResources.map(r => [r.uri, r]));
   const artifactResourceIdByUri = new Map<string, string>(
     artifactResources.map(r => [r.uri, r.id])
   );
@@ -158,7 +164,10 @@ export const runChannelTurn = async (
     );
 
     let userTurn: LlmMessage[] = [
-      { role: 'user', content: options.userText }
+      {
+        role: utils.constants.ROLE_MESSAGE_USER,
+        content: options.userText
+      }
     ];
 
     if (options.promptId) {
@@ -178,13 +187,21 @@ export const runChannelTurn = async (
                   ? content.text
                   : '';
             return {
-              role: m.role === 'assistant' ? 'assistant' : 'user',
+              role:
+                m.role === utils.constants.ROLE_MESSAGE_ASSISTANT
+                  ? utils.constants.ROLE_MESSAGE_ASSISTANT
+                  : utils.constants.ROLE_MESSAGE_USER,
               content: text
             } as LlmMessage;
           })
           .filter(m => m.content);
         if (userTurn.length === 0) {
-          userTurn = [{ role: 'user', content: options.userText }];
+          userTurn = [
+            {
+              role: utils.constants.ROLE_MESSAGE_USER,
+              content: options.userText
+            }
+          ];
         }
         usageEvents.push({
           kind: utils.constants.CHANNEL_USAGE_KIND_PROMPT,
@@ -237,7 +254,7 @@ export const runChannelTurn = async (
         completion.assistant.toolCalls.length === 0
       ) {
         messages.push({
-          role: 'assistant',
+          role: utils.constants.ROLE_MESSAGE_ASSISTANT,
           content: completion.assistant.content,
           toolCalls: completion.assistant.toolCalls
         });
@@ -245,7 +262,7 @@ export const runChannelTurn = async (
       }
 
       messages.push({
-        role: 'assistant',
+        role: utils.constants.ROLE_MESSAGE_ASSISTANT,
         content: completion.assistant.content,
         toolCalls: completion.assistant.toolCalls
       });
@@ -261,7 +278,7 @@ export const runChannelTurn = async (
           attachments
         );
         messages.push({
-          role: 'tool',
+          role: utils.constants.ROLE_MESSAGE_TOOL,
           content: toolResult,
           toolCallId: call.id
         });
@@ -274,7 +291,7 @@ export const runChannelTurn = async (
   const [assistantMessage] = await dbInstance
     .insert(db.schema.channelMessage)
     .values({
-      role: utils.constants.CHANNEL_MESSAGE_ROLE_ASSISTANT,
+      role: utils.constants.ROLE_MESSAGE_ASSISTANT,
       content: assistantText,
       conversationId: conversation.id,
       participantId: participant.id,
@@ -421,7 +438,11 @@ const loadRecentHistory = async (
     .limit(limit);
 
   return rows
-    .filter(r => r.role === 'user' || r.role === 'assistant')
+    .filter(
+      r =>
+        r.role === utils.constants.ROLE_MESSAGE_USER ||
+        r.role === utils.constants.ROLE_MESSAGE_ASSISTANT
+    )
     .reverse()
     .map(r => ({
       role: r.role as 'user' | 'assistant',

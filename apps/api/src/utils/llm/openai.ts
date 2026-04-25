@@ -1,3 +1,4 @@
+import { utils } from '@anju/utils';
 import type {
   LlmAdapter,
   LlmAdapterInput,
@@ -28,12 +29,19 @@ const toOpenAiMessages = (
   messages: LlmMessage[]
 ): OpenAiMessage[] => {
   const result: OpenAiMessage[] = [];
-  if (systemPrompt) result.push({ role: 'system', content: systemPrompt });
+  if (systemPrompt)
+    result.push({
+      role: utils.constants.ROLE_MESSAGE_SYSTEM,
+      content: systemPrompt
+    });
 
   for (const msg of messages) {
-    if (msg.role === 'assistant' && msg.toolCalls?.length) {
+    if (
+      msg.role === utils.constants.ROLE_MESSAGE_ASSISTANT &&
+      msg.toolCalls?.length
+    ) {
       result.push({
-        role: 'assistant',
+        role: utils.constants.ROLE_MESSAGE_ASSISTANT,
         content: msg.content || null,
         tool_calls: msg.toolCalls.map(tc => ({
           id: tc.id,
@@ -47,9 +55,9 @@ const toOpenAiMessages = (
       continue;
     }
 
-    if (msg.role === 'tool') {
+    if (msg.role === utils.constants.ROLE_MESSAGE_TOOL) {
       result.push({
-        role: 'tool',
+        role: utils.constants.ROLE_MESSAGE_TOOL,
         content: msg.content,
         tool_call_id: msg.toolCallId
       });

@@ -107,7 +107,7 @@ const business = async (c: Context<AppEnv>) => {
       icons: (resource.icons as any) || undefined
     };
 
-    if (resource.type === 'template') {
+    if (resource.type === utils.constants.RESOURCE_TYPE_TEMPLATE) {
       const template = new ResourceTemplate(resource.uri, {
         list: undefined
       });
