@@ -11,6 +11,7 @@ export interface ToolCredential {
   refreshToken?: string | null;
   expiresAt?: Date | null;
   scopes?: string | null;
+  needsReauth?: boolean;
 }
 
 export interface ToolContext {

@@ -165,6 +165,20 @@ const callback = async (c: Context<AppEnv>) => {
       : null;
 
     if (existingCredential) {
+      const previousMetadata =
+        existingCredential.metadata &&
+        typeof existingCredential.metadata === 'object'
+          ? (existingCredential.metadata as Record<string, unknown>)
+          : null;
+      let nextMetadata: Record<string, unknown> | null = null;
+      if (previousMetadata) {
+        const cleaned: Record<string, unknown> = { ...previousMetadata };
+        delete cleaned.needsReauth;
+        delete cleaned.reauthReason;
+        delete cleaned.reauthAt;
+        nextMetadata = Object.keys(cleaned).length > 0 ? cleaned : null;
+      }
+
       await tx
         .update(db.schema.artifactCredential)
         .set({
@@ -172,7 +186,8 @@ const callback = async (c: Context<AppEnv>) => {
           refreshToken:
             encryptedRefreshToken || existingCredential.refreshToken,
           expiresAt,
-          scopes: tokens.scope || existingCredential.scopes
+          scopes: tokens.scope || existingCredential.scopes,
+          metadata: nextMetadata
         })
         .where(eq(db.schema.artifactCredential.id, existingCredential.id));
     } else {

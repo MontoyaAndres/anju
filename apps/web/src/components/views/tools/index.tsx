@@ -62,6 +62,7 @@ interface ArtifactCredential {
   artifactId: string;
   createdAt: string;
   updatedAt: string;
+  metadata?: { needsReauth?: boolean; reauthReason?: string } | null;
 }
 
 const EXPANDED_GROUP_KEY = 'anju:expandedToolGroupId';
@@ -462,9 +463,10 @@ export const Tools = () => {
     if (creds.length === 0) return false;
     return creds.every(
       c =>
-        !c.hasRefreshToken &&
-        c.expiresAt &&
-        new Date(c.expiresAt) < new Date()
+        c.metadata?.needsReauth === true ||
+        (!c.hasRefreshToken &&
+          c.expiresAt &&
+          new Date(c.expiresAt) < new Date())
     );
   };
 

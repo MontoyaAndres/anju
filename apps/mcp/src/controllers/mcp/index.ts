@@ -168,9 +168,14 @@ const business = async (c: Context<AppEnv>) => {
             accessToken: cred.accessToken,
             refreshToken: cred.refreshToken,
             expiresAt: cred.expiresAt,
-            scopes: cred.scopes
+            scopes: cred.scopes,
+            needsReauth: cred.needsReauth === true
           }))
       : [];
+    const reauthRequired =
+      provider &&
+      toolCredentials.length > 0 &&
+      toolCredentials.every(cred => cred.needsReauth);
 
     mcpServer.registerTool(
       toolDef.key,
@@ -179,8 +184,18 @@ const business = async (c: Context<AppEnv>) => {
         description: toolDef.description || handler.description,
         inputSchema: schema as any
       },
-      async (args: any) =>
-        handler.handler(args, {
+      async (args: any) => {
+        if (reauthRequired) {
+          return {
+            content: [
+              {
+                type: 'text' as const,
+                text: `Error: ${provider} credential needs to be re-authorized. Open the Tools page and re-link ${provider}.`
+              }
+            ]
+          };
+        }
+        return handler.handler(args, {
           config: toolConfig,
           credentials: toolCredentials,
           resources: artifact.artifactResources,
@@ -188,7 +203,8 @@ const business = async (c: Context<AppEnv>) => {
           db: dbInstance,
           artifactId: artifact.id,
           embedQuery: (text: string) => generateEmbedding(c, text)
-        })
+        });
+      }
     );
   }
 
