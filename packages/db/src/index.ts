@@ -4,3 +4,5 @@ export const db = {
   create,
   schema,
 };
+
+export type { Database } from './lib';

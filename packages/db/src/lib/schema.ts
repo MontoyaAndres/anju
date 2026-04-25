@@ -6,7 +6,8 @@ import {
   index,
   integer,
   primaryKey,
-  boolean
+  boolean,
+  halfvec
 } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 import { v7 as uuid } from 'uuid';
@@ -515,6 +516,33 @@ export const artifactResource = pgTable('artifact_resource', {
     .$onUpdate(() => new Date())
 });
 
+export const artifactResourceChunk = pgTable(
+  'artifact_resource_chunk',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => uuid()),
+    resourceId: text('resource_id')
+      .notNull()
+      .references(() => artifactResource.id, { onDelete: 'cascade' }),
+    artifactId: text('artifact_id')
+      .notNull()
+      .references(() => artifact.id, { onDelete: 'cascade' }),
+    chunkIndex: integer('chunk_index').notNull(),
+    content: text('content').notNull(),
+    embedding: halfvec('embedding', { dimensions: 3072 }).notNull(),
+    createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow()
+  },
+  table => [
+    index('artifact_resource_chunk_resource_idx').on(table.resourceId),
+    index('artifact_resource_chunk_artifact_idx').on(table.artifactId),
+    index('artifact_resource_chunk_embedding_idx').using(
+      'hnsw',
+      table.embedding.op('halfvec_cosine_ops')
+    )
+  ]
+);
+
 export const userRelations = relations(user, ({ many }) => ({
   sessions: many(session),
   accounts: many(account),
@@ -728,9 +756,24 @@ export const artifactCredentialRelations = relations(
 
 export const artifactResourceRelations = relations(
   artifactResource,
-  ({ one }) => ({
+  ({ one, many }) => ({
     artifact: one(artifact, {
       fields: [artifactResource.artifactId],
+      references: [artifact.id]
+    }),
+    chunks: many(artifactResourceChunk)
+  })
+);
+
+export const artifactResourceChunkRelations = relations(
+  artifactResourceChunk,
+  ({ one }) => ({
+    resource: one(artifactResource, {
+      fields: [artifactResourceChunk.resourceId],
+      references: [artifactResource.id]
+    }),
+    artifact: one(artifact, {
+      fields: [artifactResourceChunk.artifactId],
       references: [artifact.id]
     })
   })

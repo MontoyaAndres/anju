@@ -24,9 +24,8 @@ const authorize = async (c: Context<AppEnv>) => {
     throw new Error(`Unsupported provider: ${provider}`);
   }
 
-  const clientId =
-    (c.env as any)?.[providerConfig.clientIdEnv] ||
-    process.env[providerConfig.clientIdEnv];
+  const clientId = utils.getEnv(c, providerConfig.clientIdEnv as string);
+
   if (!clientId) {
     throw new Error(`Missing env: ${providerConfig.clientIdEnv}`);
   }
@@ -80,12 +79,8 @@ const callback = async (c: Context<AppEnv>) => {
     throw new Error('Invalid state: missing organizationId or projectId');
   }
 
-  const clientId =
-    (c.env as any)?.[providerConfig.clientIdEnv] ||
-    process.env[providerConfig.clientIdEnv];
-  const clientSecret =
-    (c.env as any)?.[providerConfig.clientSecretEnv] ||
-    process.env[providerConfig.clientSecretEnv];
+  const clientId = utils.getEnv(c, providerConfig.clientIdEnv);
+  const clientSecret = utils.getEnv(c, providerConfig.clientSecretEnv);
 
   if (!clientId || !clientSecret) {
     throw new Error(
@@ -156,7 +151,10 @@ const callback = async (c: Context<AppEnv>) => {
       .from(db.schema.artifactCredential)
       .where(
         and(
-          eq(db.schema.artifactCredential.artifactId, currentArtifactByProject.id),
+          eq(
+            db.schema.artifactCredential.artifactId,
+            currentArtifactByProject.id
+          ),
           eq(db.schema.artifactCredential.provider, provider)
         )
       )
@@ -171,7 +169,8 @@ const callback = async (c: Context<AppEnv>) => {
         .update(db.schema.artifactCredential)
         .set({
           accessToken: encryptedAccessToken,
-          refreshToken: encryptedRefreshToken || existingCredential.refreshToken,
+          refreshToken:
+            encryptedRefreshToken || existingCredential.refreshToken,
           expiresAt,
           scopes: tokens.scope || existingCredential.scopes
         })

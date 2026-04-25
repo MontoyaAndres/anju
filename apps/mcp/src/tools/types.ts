@@ -1,5 +1,5 @@
 import { JsonSchema } from '@anju/utils';
-import { db } from '@anju/db';
+import { db, Database } from '@anju/db';
 import { InferSelectModel } from 'drizzle-orm';
 import { R2Bucket } from '@cloudflare/workers-types';
 
@@ -18,6 +18,9 @@ export interface ToolContext {
   credentials: ToolCredential[];
   resources: ArtifactResource[];
   bucket: R2Bucket;
+  db: Database;
+  artifactId: string;
+  embedQuery: (text: string) => Promise<number[] | null>;
 }
 
 export interface ToolDefinition {

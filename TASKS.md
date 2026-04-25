@@ -1,12 +1,6 @@
-- Channels does not save:
-  - telegram bot info
-  - channel_conversation save custom title or generate one
-  - channel_message save who the assistant is answering
-  - channel_message_usage does not save which tool is being used
 - When creating/uploading a resource create the vector data (Use postgres vector or cloudflare vector)
-- Create the channels(?) functinality for connecting mcp client with telegram, whatsapp, slack etc etc
-- Create outlook tool
-- Create slack tool
-- Search for more tools (Existing MCP's?)
+- Create tool for getting that vector data
+- Support resources and prompts for bots
+- Create outlook, slack tool and search for the best ones out there
 - Create landing
 - Create docs

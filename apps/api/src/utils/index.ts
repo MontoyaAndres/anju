@@ -3,8 +3,24 @@ import { oauthState } from './oauthState';
 import { providers } from './providers';
 import { getLlmAdapter } from './llm';
 import { createMcpClient } from './mcpClient';
+import {
+  generateEmbedding,
+  generateEmbeddings,
+  reindexResourceChunks
+} from './embedding';
+import { extractTextFromFile } from './extractText';
 
-export { createAuth, oauthState, providers, getLlmAdapter, createMcpClient };
+export {
+  createAuth,
+  oauthState,
+  providers,
+  getLlmAdapter,
+  createMcpClient,
+  generateEmbedding,
+  generateEmbeddings,
+  reindexResourceChunks,
+  extractTextFromFile
+};
 
 export type { McpClientHandle } from './mcpClient';
 export type { Auth } from './better-auth';

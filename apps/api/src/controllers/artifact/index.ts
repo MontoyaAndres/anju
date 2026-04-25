@@ -3,6 +3,8 @@ import { and, eq, sql } from 'drizzle-orm';
 import { utils } from '@anju/utils';
 import { db } from '@anju/db';
 
+import { extractTextFromFile, reindexResourceChunks } from '../../utils';
+
 // types
 import { AppEnv } from '../../types';
 
@@ -301,6 +303,16 @@ const createResource = async (c: Context<AppEnv>) => {
     return artifactResource[0];
   });
 
+  await reindexResourceChunks(c, {
+    id: result.id,
+    artifactId: result.artifactId,
+    title: result.title,
+    description: result.description,
+    uri: result.uri,
+    mimeType: result.mimeType,
+    content: result.content
+  });
+
   return c.json(result);
 };
 
@@ -388,6 +400,16 @@ const updateResource = async (c: Context<AppEnv>) => {
     }
 
     return artifactResource[0];
+  });
+
+  await reindexResourceChunks(c, {
+    id: result.id,
+    artifactId: result.artifactId,
+    title: result.title,
+    description: result.description,
+    uri: result.uri,
+    mimeType: result.mimeType,
+    content: result.content
   });
 
   return c.json(result);
@@ -783,6 +805,18 @@ const uploadResourceFile = async (c: Context<AppEnv>) => {
     }
 
     return artifactResource[0];
+  });
+
+  const extractedText = await extractTextFromFile(file);
+
+  await reindexResourceChunks(c, {
+    id: result.id,
+    artifactId: result.artifactId,
+    title: result.title,
+    description: result.description,
+    uri: result.uri,
+    mimeType: result.mimeType,
+    content: extractedText ?? result.content
   });
 
   return c.json(result);

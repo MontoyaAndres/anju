@@ -9,7 +9,11 @@ import { db } from '@anju/db';
 import { eq } from 'drizzle-orm';
 
 import { toolRegistry } from '../../tools';
-import { readResourceContent, refreshCredentialIfNeeded } from '../../utils';
+import {
+  readResourceContent,
+  refreshCredentialIfNeeded,
+  generateEmbedding
+} from '../../utils';
 
 // types
 import { AppEnv } from '../../types';
@@ -180,7 +184,10 @@ const business = async (c: Context<AppEnv>) => {
           config: toolConfig,
           credentials: toolCredentials,
           resources: artifact.artifactResources,
-          bucket
+          bucket,
+          db: dbInstance,
+          artifactId: artifact.id,
+          embedQuery: (text: string) => generateEmbedding(c, text)
         })
     );
   }

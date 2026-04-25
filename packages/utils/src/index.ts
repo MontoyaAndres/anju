@@ -1,4 +1,5 @@
 import { Schema } from './schema';
+import { getEnv } from './getEnv';
 import { fetcher } from './fetcher';
 import { constants } from './constants';
 import { hashObject } from './hashObject';
@@ -15,6 +16,7 @@ import { JsonSchema, jsonSchemaToZodShape } from './jsonSchemaToZodShape';
 
 export const utils = {
   Schema,
+  getEnv,
   fetcher,
   constants,
   hashObject,
