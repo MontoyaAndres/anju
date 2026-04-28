@@ -1,5 +1,6 @@
 import { Schema } from './schema';
 import { getEnv } from './getEnv';
+import type { EnvSource } from './getEnv';
 import { fetcher } from './fetcher';
 import { constants } from './constants';
 import { hashObject } from './hashObject';
@@ -74,4 +75,4 @@ export const utils = {
   formatRelative
 };
 
-export type { JsonSchema, MimeAttachment, MimeMessageInput };
+export type { JsonSchema, MimeAttachment, MimeMessageInput, EnvSource };

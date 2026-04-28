@@ -4,6 +4,9 @@ compatibility_date = "2025-11-17"
 
 compatibility_flags = ["nodejs_compat", "nodejs_compat_populate_process_env"]
 
+[limits]
+cpu_ms = 30000
+
 [build]
 command = "npm run build"
 
@@ -33,6 +36,16 @@ id = "20b38b96e12a4f45ac111fb7d8161edf"
 [[env.development.r2_buckets]]
 binding = "STORAGE_BUCKET"
 bucket_name = "anju-storage-development"
+[[env.development.queues.producers]]
+binding = "INDEX_QUEUE"
+queue = "anju-index-development"
+[[env.development.queues.consumers]]
+queue = "anju-index-development"
+max_batch_size = 1
+max_batch_timeout = 5
+max_concurrency = 5
+max_retries = 3
+dead_letter_queue = "anju-index-dlq-development"
 
 [env.production]
 name = "anju-api-production"
@@ -57,3 +70,13 @@ id = "<YOUR_HYPERDRIVE_ID>"
 [[env.production.r2_buckets]]
 binding = "STORAGE_BUCKET"
 bucket_name = "anju-storage-production"
+[[env.production.queues.producers]]
+binding = "INDEX_QUEUE"
+queue = "anju-index-production"
+[[env.production.queues.consumers]]
+queue = "anju-index-production"
+max_batch_size = 1
+max_batch_timeout = 5
+max_concurrency = 5
+max_retries = 3
+dead_letter_queue = "anju-index-dlq-production"

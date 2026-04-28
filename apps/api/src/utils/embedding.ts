@@ -1,10 +1,12 @@
-import { Context } from 'hono';
 import { GoogleGenAI } from '@google/genai';
-import { db, utils as dbUtils } from '@anju/db';
+import { db } from '@anju/db';
 import { utils } from '@anju/utils';
+import type { EnvSource } from '@anju/utils';
 import { eq } from 'drizzle-orm';
 
-import { AppEnv } from '../types';
+import type { Bindings } from '../types';
+
+type ApiEnvSource = EnvSource & { env: Bindings };
 
 export type EmbeddingTaskType =
   | 'RETRIEVAL_DOCUMENT'
@@ -103,11 +105,11 @@ const embedGemini = async (params: {
 };
 
 export const generateEmbeddings = async (
-  c: Context<AppEnv>,
+  source: ApiEnvSource,
   inputs: string[],
   taskType: EmbeddingTaskType = 'RETRIEVAL_DOCUMENT'
 ): Promise<number[][] | null> => {
-  const apiKey = utils.getEnv(c, 'EMBEDDING_API_KEY');
+  const apiKey = utils.getEnv(source, 'EMBEDDING_API_KEY');
   if (!apiKey || inputs.length === 0) return null;
 
   const out: number[][] = [];
@@ -120,17 +122,17 @@ export const generateEmbeddings = async (
 };
 
 export const generateEmbedding = async (
-  c: Context<AppEnv>,
+  source: ApiEnvSource,
   text: string,
   taskType: EmbeddingTaskType = 'RETRIEVAL_QUERY'
 ): Promise<number[] | null> => {
   if (!text.trim()) return null;
-  const embeddings = await generateEmbeddings(c, [text], taskType);
+  const embeddings = await generateEmbeddings(source, [text], taskType);
   return embeddings?.[0] ?? null;
 };
 
 export const reindexResourceChunks = async (
-  c: Context<AppEnv>,
+  source: ApiEnvSource,
   resource: {
     id: string;
     artifactId: string;
@@ -142,51 +144,40 @@ export const reindexResourceChunks = async (
     content?: string | null;
   }
 ): Promise<void> => {
-  try {
-    const header = buildHeader(resource);
-    const body = (resource.content || '').trim();
-    const fullText = [header, body].filter(Boolean).join('\n\n');
-    const chunks = chunkText(fullText);
+  const header = buildHeader(resource);
+  const body = (resource.content || '').trim();
+  const fullText = [header, body].filter(Boolean).join('\n\n');
+  const chunks = chunkText(fullText);
 
-    const dbInstance = db.create(c);
+  const dbInstance = db.create(source);
 
-    if (chunks.length === 0) {
-      await dbInstance
-        .delete(db.schema.artifactResourceChunk)
-        .where(eq(db.schema.artifactResourceChunk.resourceId, resource.id));
-      return;
-    }
-
-    const embeddings = await generateEmbeddings(
-      c,
-      chunks,
-      'RETRIEVAL_DOCUMENT'
-    );
-    if (!embeddings) return;
-
-    await dbInstance.transaction(async tx => {
-      await tx
-        .delete(db.schema.artifactResourceChunk)
-        .where(eq(db.schema.artifactResourceChunk.resourceId, resource.id));
-
-      await tx.insert(db.schema.artifactResourceChunk).values(
-        chunks.map((content, index) => ({
-          resourceId: resource.id,
-          artifactId: resource.artifactId,
-          chunkIndex: index,
-          content,
-          embedding: embeddings[index]
-        }))
-      );
-    });
-  } catch (error) {
-    await dbUtils.handleError(c, error, {
-      service: utils.constants.SERVICE_NAME_API,
-      metadata: {
-        source: 'reindexResourceChunks',
-        resourceId: resource.id,
-        artifactId: resource.artifactId
-      }
-    });
+  if (chunks.length === 0) {
+    await dbInstance
+      .delete(db.schema.artifactResourceChunk)
+      .where(eq(db.schema.artifactResourceChunk.resourceId, resource.id));
+    return;
   }
+
+  const embeddings = await generateEmbeddings(
+    source,
+    chunks,
+    'RETRIEVAL_DOCUMENT'
+  );
+  if (!embeddings) return;
+
+  await dbInstance.transaction(async tx => {
+    await tx
+      .delete(db.schema.artifactResourceChunk)
+      .where(eq(db.schema.artifactResourceChunk.resourceId, resource.id));
+
+    await tx.insert(db.schema.artifactResourceChunk).values(
+      chunks.map((content, index) => ({
+        resourceId: resource.id,
+        artifactId: resource.artifactId,
+        chunkIndex: index,
+        content,
+        embedding: embeddings[index]
+      }))
+    );
+  });
 };

@@ -3,7 +3,7 @@ import { and, eq, sql } from 'drizzle-orm';
 import { utils } from '@anju/utils';
 import { db } from '@anju/db';
 
-import { extractTextFromFile, reindexResourceChunks } from '../../utils';
+import { enqueueIndex } from '../../utils';
 
 // types
 import { AppEnv } from '../../types';
@@ -306,16 +306,7 @@ const createResource = async (c: Context<AppEnv>) => {
     return artifactResource[0];
   });
 
-  await reindexResourceChunks(c, {
-    id: result.id,
-    artifactId: result.artifactId,
-    title: result.title,
-    description: result.description,
-    uri: result.uri,
-    mimeType: result.mimeType,
-    fileName: result?.fileName,
-    content: result.content
-  });
+  await enqueueIndex(c.env, result.id);
 
   return c.json(result);
 };
@@ -415,16 +406,7 @@ const updateResource = async (c: Context<AppEnv>) => {
     return artifactResource[0];
   });
 
-  await reindexResourceChunks(c, {
-    id: result.id,
-    artifactId: result.artifactId,
-    title: result.title,
-    description: result.description,
-    uri: result.uri,
-    mimeType: result.mimeType,
-    fileName: result?.fileName,
-    content: result.content
-  });
+  await enqueueIndex(c.env, result.id);
 
   return c.json(result);
 };
@@ -821,18 +803,7 @@ const uploadResourceFile = async (c: Context<AppEnv>) => {
     return artifactResource[0];
   });
 
-  const extractedText = await extractTextFromFile(c, file);
-
-  await reindexResourceChunks(c, {
-    id: result.id,
-    artifactId: result.artifactId,
-    title: result.title,
-    description: result.description,
-    uri: result.uri,
-    mimeType: result.mimeType,
-    fileName: result?.fileName,
-    content: extractedText ?? result.content
-  });
+  await enqueueIndex(c.env, result.id);
 
   return c.json(result);
 };

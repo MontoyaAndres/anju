@@ -1,7 +1,13 @@
-import { Context } from 'hono';
+export interface EnvSource {
+  env?: Record<string, unknown> | unknown;
+}
 
-export const getEnv = (c: Context, key: string): string | undefined => {
-  const value = (c.env as unknown as Record<string, unknown>)?.[key];
+export const getEnv = (
+  source: EnvSource,
+  key: string
+): string | undefined => {
+  const env = (source.env as Record<string, unknown> | undefined) || undefined;
+  const value = env?.[key];
   if (typeof value === 'string') return value;
   return process.env[key];
 };

@@ -14,9 +14,15 @@ import {
 } from './controllers';
 import { UserMiddleware } from './middleware';
 import { createAuth } from './utils';
+import { handleIndexBatch } from './queue';
 
 // types
-import type { AppEnv } from './types';
+import type { AppEnv, Bindings } from './types';
+import type {
+  ExecutionContext,
+  MessageBatch
+} from '@cloudflare/workers-types';
+import type { IndexJob } from './queue';
 
 const app = new Hono<AppEnv>();
 
@@ -248,4 +254,11 @@ if (process.env.NODE_ENV === 'development') {
   });
 }
 
-export default app;
+export default {
+  fetch: app.fetch,
+  queue: (
+    batch: MessageBatch<IndexJob>,
+    env: Bindings,
+    ctx: ExecutionContext
+  ) => handleIndexBatch(batch, env, ctx)
+};

@@ -1,6 +1,7 @@
-import type { Hyperdrive, R2Bucket } from '@cloudflare/workers-types';
+import type { Hyperdrive, Queue, R2Bucket } from '@cloudflare/workers-types';
 
 import type { Auth } from './utils';
+import type { IndexJob } from './queue';
 
 export type Variables = {
   user: Auth['$Infer']['Session']['user'];
@@ -10,6 +11,7 @@ export type Variables = {
 export type Bindings = {
   HYPERDRIVE: Hyperdrive;
   STORAGE_BUCKET: R2Bucket;
+  INDEX_QUEUE: Queue<IndexJob>;
 };
 
 export type AppEnv = {

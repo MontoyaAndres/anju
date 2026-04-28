@@ -1,8 +1,4 @@
-import { Context } from 'hono';
-import { utils as dbUtils } from '@anju/db';
 import { utils } from '@anju/utils';
-
-import type { AppEnv } from '../types';
 
 const extractPdf = async (buffer: ArrayBuffer): Promise<string> => {
   const { extractText, getDocumentProxy } = await import('unpdf');
@@ -63,7 +59,6 @@ const extractPptx = async (buffer: ArrayBuffer): Promise<string> => {
 };
 
 export const extractTextFromFile = async (
-  c: Context<AppEnv>,
   file: File
 ): Promise<string | null> => {
   const mimeType = file.type;
@@ -102,10 +97,10 @@ export const extractTextFromFile = async (
         return null;
     }
   } catch (error) {
-    await dbUtils.handleError(c, error, {
-      service: utils.constants.SERVICE_NAME_API,
-      metadata: { source: 'extractTextFromFile', mimeType }
-    });
+    console.error(
+      `[${utils.constants.SERVICE_NAME_API}] extractTextFromFile failed`,
+      { mimeType, error }
+    );
     return null;
   }
 };
