@@ -46,6 +46,13 @@ export const Wrapper = styled.div<IProps>`
           flex-direction: row;
           align-items: flex-start;
           justify-content: space-between;
+          gap: 24px;
+        }
+
+        .channels-header-text {
+          flex: 1;
+          min-width: 0;
+          max-width: 640px;
         }
 
         .channels-title {
@@ -63,6 +70,9 @@ export const Wrapper = styled.div<IProps>`
         }
 
         .MuiButtonBase-root {
+          flex-shrink: 0;
+          align-self: flex-start;
+          white-space: nowrap;
           font-size: ${theme.fonts.sm};
           padding: 6px 14px;
           border-radius: 8px;

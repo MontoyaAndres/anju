@@ -493,7 +493,7 @@ export const Tools = () => {
     <Wrapper>
       <div className="tools-container">
         <div className="tools-header">
-          <div>
+          <div className="tools-header-text">
             <h1 className="tools-title">Tools</h1>
             <p className="tools-subtitle">
               Connect integrations and choose which tools this MCP server

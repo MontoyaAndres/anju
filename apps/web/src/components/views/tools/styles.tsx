@@ -23,7 +23,14 @@ export const Wrapper = styled.div`
       display: flex;
       align-items: flex-start;
       justify-content: space-between;
+      gap: 24px;
       margin-bottom: 20px;
+
+      .tools-header-text {
+        flex: 1;
+        min-width: 0;
+        max-width: 640px;
+      }
 
       .tools-title {
         font-size: ${theme.fonts['2xl']};

@@ -557,7 +557,7 @@ export const Resources = () => {
         className={`resources-list ${selectedResource || isCreating ? 'has-selection' : ''}`}
       >
         <div className="resources-header">
-          <div>
+          <div className="resources-header-text">
             <h1 className="resources-title">Resources</h1>
             <p className="resources-subtitle">
               Static files and templates this MCP server can serve to clients.

@@ -560,7 +560,7 @@ export const Channels = () => {
     <Wrapper panelWidth={panelWidth}>
       <div className={`channels-list ${showRightPanel ? 'has-selection' : ''}`}>
         <div className="channels-header">
-          <div>
+          <div className="channels-header-text">
             <h1 className="channels-title">Channels</h1>
             <p className="channels-subtitle">
               Connect this artifact to messaging platforms so users can chat

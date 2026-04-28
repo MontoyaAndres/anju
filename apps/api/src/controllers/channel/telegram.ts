@@ -337,12 +337,6 @@ const parseSlashCommand = (
   return { name: name.toLowerCase(), trailingText };
 };
 
-const slugifyPromptTitle = (title: string): string =>
-  title
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '_')
-    .replace(/^_+|_+$/g, '');
-
 const resolveSlashPrompt = async (
   c: Context<AppEnv>,
   artifactId: string,
@@ -354,7 +348,9 @@ const resolveSlashPrompt = async (
     .from(db.schema.artifactPrompt)
     .where(eq(db.schema.artifactPrompt.artifactId, artifactId));
 
-  const match = prompts.find(p => slugifyPromptTitle(p.title) === command.name);
+  const match = prompts.find(
+    p => utils.slugifyPromptTitle(p.title) === command.name
+  );
   if (!match) return null;
 
   const schema = match.schema as {

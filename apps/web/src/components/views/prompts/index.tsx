@@ -440,11 +440,12 @@ export const Prompts = () => {
         className={`prompts-list ${selectedPrompt || isCreating ? 'has-selection' : ''}`}
       >
         <div className="prompts-header">
-          <div>
+          <div className="prompts-header-text">
             <h1 className="prompts-title">Prompts</h1>
             <p className="prompts-subtitle">
               Reusable prompt templates with variables this MCP server can
-              expose.
+              expose. In linked chat channels each prompt becomes a slash
+              command (shown on every card).
             </p>
           </div>
           <UI.Button variant="contained" size="small" onClick={handleCreate}>
@@ -490,6 +491,14 @@ export const Prompts = () => {
               }}
             >
               <p className="prompt-item-title">{prompt.title}</p>
+              {utils.slugifyPromptTitle(prompt.title) && (
+                <code
+                  className="prompt-item-command"
+                  title="Slash command in linked chat channels"
+                >
+                  /{utils.slugifyPromptTitle(prompt.title)}
+                </code>
+              )}
               {prompt.description && (
                 <p className="prompt-item-description">{prompt.description}</p>
               )}
@@ -558,6 +567,12 @@ export const Prompts = () => {
                       });
                   }}
                 />
+                {utils.slugifyPromptTitle(editValues.title) && (
+                  <p className="panel-command-hint">
+                    Slash command:{' '}
+                    <code>/{utils.slugifyPromptTitle(editValues.title)}</code>
+                  </p>
+                )}
                 <UI.Input
                   label="Description"
                   name="description"

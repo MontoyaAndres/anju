@@ -46,6 +46,13 @@ export const Wrapper = styled.div<IProps>`
           flex-direction: row;
           align-items: flex-start;
           justify-content: space-between;
+          gap: 24px;
+        }
+
+        .prompts-header-text {
+          flex: 1;
+          min-width: 0;
+          max-width: 640px;
         }
 
         .prompts-title {
@@ -63,6 +70,9 @@ export const Wrapper = styled.div<IProps>`
         }
 
         .MuiButtonBase-root {
+          flex-shrink: 0;
+          align-self: flex-start;
+          white-space: nowrap;
           font-size: ${theme.fonts.sm};
           padding: 6px 14px;
           border-radius: 8px;
@@ -180,6 +190,20 @@ export const Wrapper = styled.div<IProps>`
             margin: 0;
           }
 
+          .prompt-item-command {
+            display: inline-block;
+            margin-top: 6px;
+            padding: 2px 8px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+              monospace;
+            font-size: ${theme.fonts.xs};
+            color: ${theme.colors.bastille}CC;
+            background-color: ${theme.colors.bastille}0D;
+            border: 1px solid ${theme.colors.alto};
+            border-radius: 4px;
+            line-height: 1.4;
+          }
+
           .prompt-item-description {
             font-size: ${theme.fonts.sm};
             color: ${theme.colors.bastille}99;
@@ -293,6 +317,23 @@ export const Wrapper = styled.div<IProps>`
           display: flex;
           flex-direction: column;
           gap: 16px;
+
+          .panel-command-hint {
+            margin: -8px 0 0 0;
+            font-size: ${theme.fonts.xs};
+            color: ${theme.colors.bastille}99;
+
+            code {
+              font-family: ui-monospace, SFMono-Regular, Menlo, Monaco,
+                Consolas, monospace;
+              font-size: ${theme.fonts.xs};
+              padding: 2px 6px;
+              color: ${theme.colors.bastille};
+              background-color: ${theme.colors.bastille}0D;
+              border: 1px solid ${theme.colors.alto};
+              border-radius: 4px;
+            }
+          }
 
           .panel-messages-section {
             .panel-messages-header {

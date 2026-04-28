@@ -41,6 +41,7 @@ import { toStringArray } from './coerce';
 import { validateMessageVariables } from './validateMessageVariables';
 import { JsonSchema, jsonSchemaToZodShape } from './jsonSchemaToZodShape';
 import { formatRelative } from './formatRelative';
+import { slugifyPromptTitle } from './slugifyPromptTitle';
 
 export const utils = {
   Schema,
@@ -72,7 +73,8 @@ export const utils = {
   toStringArray,
   jsonSchemaToZodShape,
   validateMessageVariables,
-  formatRelative
+  formatRelative,
+  slugifyPromptTitle
 };
 
 export type { JsonSchema, MimeAttachment, MimeMessageInput, EnvSource };
