@@ -3,7 +3,7 @@ import { ToolDefinition } from '../types';
 export const listResources: ToolDefinition = {
   title: 'List Resources',
   description:
-    'List all resources available to this MCP server. Returns an array of {uri, title, description, mimeType} objects. Call this before read-resource to discover what is available.',
+    'Enumerate every resource attached to this MCP server. Returns a JSON array of {uri, title, description, mimeType} objects so you can pick a URI for read-resource (to load contents) or send-resource (to deliver to the user). Use when you need a complete inventory; prefer search-resources when you are looking for content matching a query rather than browsing the full list.',
   schema: {
     type: 'object',
     properties: {}

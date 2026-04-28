@@ -2,7 +2,8 @@ import { ToolDefinition } from '../types';
 
 export const greeting: ToolDefinition = {
   title: 'Greeting',
-  description: 'Generates a personalized greeting message for the given name and language',
+  description:
+    'Return a templated hello message in English or Spanish for the given name. This is a demo / smoke-test tool with no real-world side effects — do NOT use it to greet the user in normal conversation; just respond directly. Only call when the user explicitly asks for the templated greeting (e.g. "test the greeting tool").',
   schema: {
     type: 'object',
     properties: {

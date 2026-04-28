@@ -3,7 +3,7 @@ import { ToolDefinition } from '../types';
 export const sendResource: ToolDefinition = {
   title: 'Send Resource',
   description:
-    'Send a resource to the user so they can see or download it (image preview, audio player, document, etc.). Use when the user asks to see, receive, or download a specific resource. Chain with list-resources to find URIs. Do not use for inline quoting — use read-resource for that.',
+    'Deliver a resource (image, document, audio, video, etc.) to the user as an attachment in the channel — they will see a preview / player / download link, not the raw text. Use when the user asks to see, receive, download, or be sent a specific resource. Pair with list-resources or search-resources to find the URI. Optional `caption` adds a short message alongside the attachment. Do NOT use for inline quoting or summarization — use read-resource for that.',
   schema: {
     type: 'object',
     properties: {

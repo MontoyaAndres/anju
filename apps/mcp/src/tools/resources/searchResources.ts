@@ -9,7 +9,7 @@ const MAX_LIMIT = 20;
 export const searchResources: ToolDefinition = {
   title: 'Search Resources',
   description:
-    'Semantic search over the resources available to this MCP server. Returns the chunks most relevant to the natural-language query, ranked by cosine similarity. Prefer this over list-resources when you are looking for specific content rather than enumerating everything.',
+    "REQUIRED FIRST CALL on every user message before composing your answer. Pass the user's question (or a slightly rephrased natural-language version) as `query` — this semantic-searches every resource attached to this MCP server and returns the chunks most relevant to it, ranked by cosine similarity. ALWAYS call this before answering anything about the user's data, project, or any domain-specific topic; skipping it means answering blind and risking hallucination. Returns up to `limit` excerpts (default 5, max 20) with uri/title/score/excerpt — cite them directly, or call read-resource for full content / send-resource to deliver the file. Only skip on pure chit-chat with no factual content (greetings, thanks).",
   schema: {
     type: 'object',
     properties: {
