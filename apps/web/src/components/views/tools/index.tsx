@@ -179,6 +179,25 @@ export const Tools = () => {
     });
   }, [installed]);
 
+  useEffect(() => {
+    const requestedId = router.query.selected;
+    if (typeof requestedId !== 'string' || installed.length === 0) return;
+    const match = installed.find(t => t.id === requestedId);
+    if (!match || editTool?.id === match.id) return;
+    setTab('installed');
+    const group = match.toolDefinition?.group;
+    const bucket = group?.provider || group?.id || 'none';
+    setExpandedInstalled(prev => {
+      if (prev.has(bucket)) return prev;
+      const next = new Set(prev);
+      next.add(bucket);
+      return next;
+    });
+    setConfigJson(JSON.stringify(match.config || {}, null, 2));
+    setConfigError(null);
+    setEditTool(match);
+  }, [router.query.selected, installed]);
+
   const toggleInstalledProvider = (provider: string) => {
     setExpandedInstalled(prev => {
       const next = new Set(prev);

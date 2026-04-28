@@ -2,6 +2,7 @@ import { Auth } from './auth';
 import { Tools } from './tools';
 import { Prompts } from './prompts';
 import { Resources } from './resources';
+import { Channels } from './channels';
 import { Organization } from './organization';
 
 export const Views = {
@@ -9,5 +10,6 @@ export const Views = {
   Tools,
   Prompts,
   Resources,
+  Channels,
   Organization
 };

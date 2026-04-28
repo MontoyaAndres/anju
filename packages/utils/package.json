@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@noble/ciphers": "^2.2.0",
+    "dayjs": "^1.11.20",
     "zod": "^4.3.6"
   },
   "devDependencies": {

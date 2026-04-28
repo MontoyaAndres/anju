@@ -4,6 +4,8 @@ import { Portal } from './portal';
 import { Alert } from './alert';
 import { Select } from './select';
 import { Skeleton } from './skeleton';
+import { CopyableBlock } from './copyable-block';
+import { Markdown } from './markdown';
 
 export const UI = {
   Input,
@@ -12,4 +14,6 @@ export const UI = {
   Alert,
   Select,
   Skeleton,
+  CopyableBlock,
+  Markdown
 };

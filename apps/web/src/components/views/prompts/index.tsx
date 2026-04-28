@@ -99,6 +99,17 @@ export const Prompts = () => {
   }, [organizationId, projectId]);
 
   useEffect(() => {
+    const requestedId = router.query.selected;
+    if (typeof requestedId !== 'string' || !prompts.length) return;
+    const match = prompts.find(p => p.id === requestedId);
+    if (match && selectedPrompt?.id !== match.id) {
+      setSelectedPrompt(match);
+      setIsEditing(false);
+      setIsCreating(false);
+    }
+  }, [router.query.selected, prompts]);
+
+  useEffect(() => {
     if (!isCreating && !isEditing) return;
     syncSchemaVars();
   }, [

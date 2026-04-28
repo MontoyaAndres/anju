@@ -32,7 +32,9 @@ import {
   AppsOutlined,
   AddOutlined,
   BusinessOutlined,
-  ExpandMoreOutlined
+  ExpandMoreOutlined,
+  Forum,
+  ForumOutlined
 } from '@mui/icons-material';
 
 import {
@@ -570,6 +572,27 @@ const HomeLayout = ({ page }: { page: HomePage }) => {
                   )}
                   <span className="button-text">Tools</span>
                 </UI.Button>
+                <UI.Button
+                  fullWidth
+                  className={
+                    pathname ===
+                    '/organization/[id]/project/[projectId]/channels'
+                      ? 'active'
+                      : ''
+                  }
+                  onClick={() => {
+                    setMobileMenuClicked(false);
+                    router.push(`${projectBase}/channels`);
+                  }}
+                >
+                  {pathname ===
+                  '/organization/[id]/project/[projectId]/channels' ? (
+                    <Forum />
+                  ) : (
+                    <ForumOutlined />
+                  )}
+                  <span className="button-text">Channels</span>
+                </UI.Button>
               </div>
               <div className="options-down">
                 <UI.Button fullWidth onClick={handleProfileOpen}>
@@ -678,6 +701,23 @@ const HomeLayout = ({ page }: { page: HomePage }) => {
                 <SettingsOutlined />
               )}
               <span className="button-text">Tools</span>
+            </UI.Button>
+            <UI.Button
+              fullWidth
+              className={
+                pathname === '/organization/[id]/project/[projectId]/channels'
+                  ? 'active'
+                  : ''
+              }
+              onClick={() => router.push(`${projectBase}/channels`)}
+            >
+              {pathname ===
+              '/organization/[id]/project/[projectId]/channels' ? (
+                <Forum />
+              ) : (
+                <ForumOutlined />
+              )}
+              <span className="button-text">Channels</span>
             </UI.Button>
           </div>
           <div

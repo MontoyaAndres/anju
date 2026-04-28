@@ -117,6 +117,17 @@ export const Resources = () => {
   }, [organizationId, projectId]);
 
   useEffect(() => {
+    const requestedId = router.query.selected;
+    if (typeof requestedId !== 'string' || !resources.length) return;
+    const match = resources.find(r => r.id === requestedId);
+    if (match && selectedResource?.id !== match.id) {
+      setSelectedResource(match);
+      setIsEditing(false);
+      setIsCreating(false);
+    }
+  }, [router.query.selected, resources]);
+
+  useEffect(() => {
     if (!selectedResource?.fileKey) {
       setFilePreviewUrl(null);
       setFilePreviewError(null);

@@ -12,6 +12,7 @@ import {
 } from './crypto';
 import { validateMessageVariables } from './validateMessageVariables';
 import { JsonSchema, jsonSchemaToZodShape } from './jsonSchemaToZodShape';
+import { formatRelative } from './formatRelative';
 
 export const utils = {
   Schema,
@@ -25,7 +26,8 @@ export const utils = {
   sha256Hex,
   timingSafeEqual,
   jsonSchemaToZodShape,
-  validateMessageVariables
+  validateMessageVariables,
+  formatRelative
 };
 
 export type { JsonSchema };

@@ -250,7 +250,13 @@ const listMessages = async (c: Context<AppEnv>) => {
     orderBy: desc(db.schema.channelMessage.createdAt),
     with: {
       participant: true,
-      usages: true
+      usages: {
+        with: {
+          artifactTool: { with: { toolDefinition: true } },
+          artifactResource: true,
+          artifactPrompt: true
+        }
+      }
     }
   });
 
