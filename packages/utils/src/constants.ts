@@ -191,7 +191,7 @@ const USER_AVATAR_MIME_TYPES = [
   MIMETYPE_IMAGE_GIF
 ];
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const MAX_FILE_SIZE = 24 * 1024 * 1024; // 24MB
 
 const CHANNEL_PLATFORM_TELEGRAM = 'telegram' as 'telegram';
 const CHANNEL_PLATFORM_SLACK = 'slack' as 'slack';

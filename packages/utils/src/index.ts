@@ -25,6 +25,16 @@ import {
   encodeRfc2047,
   formatMailHeader
 } from './mailHeaders';
+import {
+  buildMimeMessage,
+  sanitizeFilename,
+  formatFilenameHeader,
+  chunkBase64
+} from './mimeMessage';
+import type {
+  MimeAttachment,
+  MimeMessageInput
+} from './mimeMessage';
 import { parseHttpErrorMessage } from './parseHttpError';
 import { toStringArray } from './coerce';
 import { validateMessageVariables } from './validateMessageVariables';
@@ -53,6 +63,10 @@ export const utils = {
   sanitizeMailHeader,
   encodeRfc2047,
   formatMailHeader,
+  buildMimeMessage,
+  sanitizeFilename,
+  formatFilenameHeader,
+  chunkBase64,
   parseHttpErrorMessage,
   toStringArray,
   jsonSchemaToZodShape,
@@ -60,4 +74,4 @@ export const utils = {
   formatRelative
 };
 
-export type { JsonSchema };
+export type { JsonSchema, MimeAttachment, MimeMessageInput };

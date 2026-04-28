@@ -1,4 +1,5 @@
 import { utils } from '@anju/utils';
+import type { MimeAttachment, MimeMessageInput } from '@anju/utils';
 
 import { ToolContext, ToolDefinition } from '../types';
 
@@ -17,7 +18,10 @@ interface GmailPart {
   headers?: Array<{ name: string; value: string }>;
 }
 
-const findPartByMime = (part: GmailPart | undefined, target: string): GmailPart | null => {
+const findPartByMime = (
+  part: GmailPart | undefined,
+  target: string
+): GmailPart | null => {
   if (!part) return null;
   if (part.mimeType === target && part.body?.data) return part;
   for (const sub of part.parts || []) {
@@ -27,17 +31,25 @@ const findPartByMime = (part: GmailPart | undefined, target: string): GmailPart 
   return null;
 };
 
-const extractBodyText = (payload: GmailPart | undefined): { text: string; mimeType: string } => {
+const extractBodyText = (
+  payload: GmailPart | undefined
+): { text: string; mimeType: string } => {
   if (!payload) return { text: '', mimeType: '' };
 
   const plain = findPartByMime(payload, 'text/plain');
   if (plain?.body?.data) {
-    return { text: utils.base64UrlToUtf8(plain.body.data), mimeType: 'text/plain' };
+    return {
+      text: utils.base64UrlToUtf8(plain.body.data),
+      mimeType: 'text/plain'
+    };
   }
 
   const html = findPartByMime(payload, 'text/html');
   if (html?.body?.data) {
-    return { text: utils.base64UrlToUtf8(html.body.data), mimeType: 'text/html' };
+    return {
+      text: utils.base64UrlToUtf8(html.body.data),
+      mimeType: 'text/html'
+    };
   }
 
   if (payload.body?.data) {
@@ -63,7 +75,10 @@ const getAccessToken = (
 ): { ok: true; token: string } | { ok: false; response: ToolResult } => {
   const credential = context.credentials[0];
   if (!credential) {
-    return { ok: false, response: text('Error: Google credential not connected') };
+    return {
+      ok: false,
+      response: text('Error: Google credential not connected')
+    };
   }
   return { ok: true, token: credential.accessToken };
 };
@@ -84,30 +99,65 @@ const gmailFetch = async (
   return fetch(`${GMAIL_API_BASE}${path}`, { ...init, headers });
 };
 
-interface BuildMessageInput {
-  to: string;
-  subject: string;
-  body: string;
-  cc?: string;
-  bcc?: string;
-  inReplyTo?: string;
-  references?: string;
-  contentType?: 'text/html' | 'text/plain';
-}
+const loadAttachments = async (
+  uris: string[],
+  context: ToolContext
+): Promise<
+  { ok: true; attachments: MimeAttachment[] } | { ok: false; error: string }
+> => {
+  const attachments: MimeAttachment[] = [];
+  let total = 0;
 
-const buildRawMessage = (input: BuildMessageInput): string => {
-  const lines: string[] = [];
-  lines.push(`To: ${utils.formatMailHeader(input.to)}`);
-  if (input.cc) lines.push(`Cc: ${utils.formatMailHeader(input.cc)}`);
-  if (input.bcc) lines.push(`Bcc: ${utils.formatMailHeader(input.bcc)}`);
-  lines.push(`Subject: ${utils.formatMailHeader(input.subject)}`);
-  if (input.inReplyTo) lines.push(`In-Reply-To: ${utils.sanitizeMailHeader(input.inReplyTo)}`);
-  if (input.references) lines.push(`References: ${utils.sanitizeMailHeader(input.references)}`);
-  lines.push('MIME-Version: 1.0');
-  lines.push(`Content-Type: ${input.contentType || 'text/html'}; charset=utf-8`);
+  for (const uri of uris) {
+    const resource = context.resources.find(r => r.uri === uri);
+    if (!resource) return { ok: false, error: `Resource not found: ${uri}` };
 
-  return utils.utf8ToBase64Url(`${lines.join('\r\n')}\r\n\r\n${input.body}`);
+    let bytes: Uint8Array;
+    if (resource.fileKey) {
+      const obj = await context.bucket.get(resource.fileKey);
+      if (!obj) {
+        return {
+          ok: false,
+          error: `Resource bytes missing in storage for ${uri} (fileKey: ${resource.fileKey})`
+        };
+      }
+      bytes = new Uint8Array(await obj.arrayBuffer());
+    } else if (resource.content !== null && resource.content !== undefined) {
+      bytes = new TextEncoder().encode(resource.content);
+    } else {
+      return {
+        ok: false,
+        error: `Resource ${uri} has no inline content and no file in storage; cannot attach.`
+      };
+    }
+
+    total += bytes.byteLength;
+    if (total > utils.constants.MAX_FILE_SIZE) {
+      return {
+        ok: false,
+        error:
+          "Attachments exceed Gmail's 24 MB encoded message limit (raw ceiling ~18 MB). Reduce or split."
+      };
+    }
+
+    const filename =
+      resource.fileName ||
+      resource.title ||
+      uri.split('/').pop() ||
+      'attachment';
+
+    attachments.push({
+      filename,
+      mimeType: resource.mimeType || 'application/octet-stream',
+      base64: utils.bytesToBase64(bytes)
+    });
+  }
+
+  return { ok: true, attachments };
 };
+
+const buildRawMessage = (input: MimeMessageInput): string =>
+  utils.utf8ToBase64Url(utils.buildMimeMessage(input));
 
 const fetchMessageMetadata = async (
   token: string,
@@ -117,12 +167,22 @@ const fetchMessageMetadata = async (
   const params = new URLSearchParams();
   params.set('format', 'metadata');
   for (const h of headers) params.append('metadataHeaders', h);
-  const res = await gmailFetch(token, `/messages/${messageId}?${params.toString()}`);
+  const res = await gmailFetch(
+    token,
+    `/messages/${messageId}?${params.toString()}`
+  );
   if (!res.ok) throw new Error(await utils.parseHttpErrorMessage(res));
-  return (await res.json()) as { id: string; threadId: string; payload?: GmailPart };
+  return (await res.json()) as {
+    id: string;
+    threadId: string;
+    payload?: GmailPart;
+  };
 };
 
-const buildReferencesChain = (existing: string | undefined, messageIdHeader: string): string => {
+const buildReferencesChain = (
+  existing: string | undefined,
+  messageIdHeader: string
+): string => {
   const chain = (existing || '').trim();
   return chain ? `${chain} ${messageIdHeader}` : messageIdHeader;
 };
@@ -137,7 +197,7 @@ const ensurePrefix = (subject: string, prefix: string): string => {
 export const sendEmail: ToolDefinition = {
   title: 'Gmail: Send Email',
   description:
-    'Send a brand-new email from the connected Gmail account. Use only when starting a fresh thread; to continue an existing conversation use gmail-reply-email so threading and References headers are preserved. Body is treated as HTML and Content-Type is set to text/html. Non-ASCII subjects and bodies are encoded automatically. Returns the new message ID and thread ID.',
+    "Send a brand-new email from the connected Gmail account. Use only when starting a fresh thread; to continue an existing conversation use gmail-reply-email so threading and References headers are preserved. Body is treated as HTML and Content-Type is set to text/html. Non-ASCII subjects and bodies are encoded automatically. Pass attachmentUris (URIs from list-resources or search-resources) to attach files from the MCP's resources — combined raw size must stay under ~18 MB to fit Gmail's 24 MB encoded limit. Returns the new message ID and thread ID.",
   schema: {
     type: 'object',
     properties: {
@@ -145,10 +205,23 @@ export const sendEmail: ToolDefinition = {
       subject: { type: 'string', description: 'Email subject line.' },
       body: {
         type: 'string',
-        description: 'Email body. HTML is supported (Content-Type is text/html).'
+        description:
+          'Email body. HTML is supported (Content-Type is text/html).'
       },
-      cc: { type: 'string', description: 'Optional Cc recipient(s), comma-separated.' },
-      bcc: { type: 'string', description: 'Optional Bcc recipient(s), comma-separated.' }
+      cc: {
+        type: 'string',
+        description: 'Optional Cc recipient(s), comma-separated.'
+      },
+      bcc: {
+        type: 'string',
+        description: 'Optional Bcc recipient(s), comma-separated.'
+      },
+      attachmentUris: {
+        type: 'array',
+        items: { type: 'string' },
+        description:
+          'Optional list of resource URIs (from list-resources or search-resources) to attach as files. Combined raw size must be < ~18 MB.'
+      }
     },
     required: ['to', 'subject', 'body']
   },
@@ -156,29 +229,46 @@ export const sendEmail: ToolDefinition = {
     const auth = getAccessToken(context);
     if (!auth.ok) return auth.response;
 
+    const uris = utils.toStringArray(args.attachmentUris);
+    let attachments: MimeAttachment[] = [];
+    if (uris.length > 0) {
+      const loaded = await loadAttachments(uris, context);
+      if (!loaded.ok) return text(`Error loading attachments: ${loaded.error}`);
+      attachments = loaded.attachments;
+    }
+
     const raw = buildRawMessage({
       to: String(args.to),
       subject: String(args.subject),
       body: String(args.body),
       cc: args.cc ? String(args.cc) : undefined,
-      bcc: args.bcc ? String(args.bcc) : undefined
+      bcc: args.bcc ? String(args.bcc) : undefined,
+      attachments: attachments.length ? attachments : undefined
     });
 
     const response = await gmailFetch(auth.token, '/messages/send', {
       method: 'POST',
       body: JSON.stringify({ raw })
     });
-    if (!response.ok) return text(`Error sending email: ${await utils.parseHttpErrorMessage(response)}`);
+    if (!response.ok)
+      return text(
+        `Error sending email: ${await utils.parseHttpErrorMessage(response)}`
+      );
 
     const result: any = await response.json();
-    return text(`Email sent. Message ID: ${result.id} (thread ${result.threadId})`);
+    const attachNote = attachments.length
+      ? ` with ${attachments.length} attachment(s)`
+      : '';
+    return text(
+      `Email sent${attachNote}. Message ID: ${result.id} (thread ${result.threadId})`
+    );
   }
 };
 
 export const replyEmail: ToolDefinition = {
   title: 'Gmail: Reply',
   description:
-    'Reply to an existing email, preserving its Gmail thread by setting In-Reply-To, References, and threadId. Subject is auto-prefixed with "Re:" if not already present. Set replyAll=true to also include the original To and Cc recipients. Use this — not gmail-send-email — whenever continuing an existing conversation, so the reply lands in the same thread on the recipient side. Returns the new message ID and thread ID.',
+    'Reply to an existing email, preserving its Gmail thread by setting In-Reply-To, References, and threadId. Subject is auto-prefixed with "Re:" if not already present. Set replyAll=true to also include the original To and Cc recipients. Pass attachmentUris (from list-resources or search-resources) to attach files. Use this — not gmail-send-email — whenever continuing an existing conversation, so the reply lands in the same thread on the recipient side. Returns the new message ID and thread ID.',
   schema: {
     type: 'object',
     properties: {
@@ -190,6 +280,12 @@ export const replyEmail: ToolDefinition = {
       replyAll: {
         type: 'boolean',
         description: 'If true, also reply to the original To and Cc recipients.'
+      },
+      attachmentUris: {
+        type: 'array',
+        items: { type: 'string' },
+        description:
+          'Optional list of resource URIs to attach as files. Combined raw size must be < ~18 MB.'
       }
     },
     required: ['messageId', 'body']
@@ -218,11 +314,23 @@ export const replyEmail: ToolDefinition = {
     const headers = parseHeaders(original.payload?.headers);
     const originalMessageId = headers['message-id'];
     if (!originalMessageId) {
-      return text('Error: original message has no Message-ID header; cannot thread reply.');
+      return text(
+        'Error: original message has no Message-ID header; cannot thread reply.'
+      );
     }
 
     const replyTo = headers['from'] || '';
-    const cc = replyAll ? [headers['to'], headers['cc']].filter(Boolean).join(', ') : '';
+    const cc = replyAll
+      ? [headers['to'], headers['cc']].filter(Boolean).join(', ')
+      : '';
+
+    const uris = utils.toStringArray(args.attachmentUris);
+    let attachments: MimeAttachment[] = [];
+    if (uris.length > 0) {
+      const loaded = await loadAttachments(uris, context);
+      if (!loaded.ok) return text(`Error loading attachments: ${loaded.error}`);
+      attachments = loaded.attachments;
+    }
 
     const raw = buildRawMessage({
       to: replyTo,
@@ -230,17 +338,29 @@ export const replyEmail: ToolDefinition = {
       subject: ensurePrefix(headers['subject'] || '(no subject)', 'Re:'),
       body: String(args.body),
       inReplyTo: originalMessageId,
-      references: buildReferencesChain(headers['references'], originalMessageId)
+      references: buildReferencesChain(
+        headers['references'],
+        originalMessageId
+      ),
+      attachments: attachments.length ? attachments : undefined
     });
 
     const response = await gmailFetch(auth.token, '/messages/send', {
       method: 'POST',
       body: JSON.stringify({ raw, threadId: original.threadId })
     });
-    if (!response.ok) return text(`Error sending reply: ${await utils.parseHttpErrorMessage(response)}`);
+    if (!response.ok)
+      return text(
+        `Error sending reply: ${await utils.parseHttpErrorMessage(response)}`
+      );
 
     const result: any = await response.json();
-    return text(`Reply sent. Message ID: ${result.id} (thread ${result.threadId})`);
+    const attachNote = attachments.length
+      ? ` with ${attachments.length} attachment(s)`
+      : '';
+    return text(
+      `Reply sent${attachNote}. Message ID: ${result.id} (thread ${result.threadId})`
+    );
   }
 };
 
@@ -251,11 +371,15 @@ export const forwardEmail: ToolDefinition = {
   schema: {
     type: 'object',
     properties: {
-      messageId: { type: 'string', description: 'Gmail message ID to forward.' },
+      messageId: {
+        type: 'string',
+        description: 'Gmail message ID to forward.'
+      },
       to: { type: 'string', description: 'Recipient email address.' },
       body: {
         type: 'string',
-        description: 'Optional intro text prepended above the forwarded content.'
+        description:
+          'Optional intro text prepended above the forwarded content.'
       },
       cc: { type: 'string', description: 'Optional Cc recipient(s).' }
     },
@@ -267,8 +391,14 @@ export const forwardEmail: ToolDefinition = {
 
     const messageId = String(args.messageId);
 
-    const fullRes = await gmailFetch(auth.token, `/messages/${messageId}?format=full`);
-    if (!fullRes.ok) return text(`Error loading message: ${await utils.parseHttpErrorMessage(fullRes)}`);
+    const fullRes = await gmailFetch(
+      auth.token,
+      `/messages/${messageId}?format=full`
+    );
+    if (!fullRes.ok)
+      return text(
+        `Error loading message: ${await utils.parseHttpErrorMessage(fullRes)}`
+      );
     const full: any = await fullRes.json();
 
     const headers = parseHeaders(full.payload?.headers);
@@ -298,7 +428,10 @@ export const forwardEmail: ToolDefinition = {
       method: 'POST',
       body: JSON.stringify({ raw })
     });
-    if (!response.ok) return text(`Error forwarding email: ${await utils.parseHttpErrorMessage(response)}`);
+    if (!response.ok)
+      return text(
+        `Error forwarding email: ${await utils.parseHttpErrorMessage(response)}`
+      );
 
     const result: any = await response.json();
     return text(`Forwarded. Message ID: ${result.id}`);
@@ -314,13 +447,15 @@ export const listEmails: ToolDefinition = {
     properties: {
       query: {
         type: 'string',
-        description: 'Gmail search query. Leave empty to list recent inbox messages.'
+        description:
+          'Gmail search query. Leave empty to list recent inbox messages.'
       },
       maxResults: {
         type: 'number',
         minimum: 1,
         maximum: 50,
-        description: 'Maximum number of messages to return (1-50). Defaults to 10.'
+        description:
+          'Maximum number of messages to return (1-50). Defaults to 10.'
       }
     }
   },
@@ -335,8 +470,14 @@ export const listEmails: ToolDefinition = {
     if (args.query) params.set('q', String(args.query));
     params.set('maxResults', String(maxResults));
 
-    const response = await gmailFetch(auth.token, `/messages?${params.toString()}`);
-    if (!response.ok) return text(`Error listing emails: ${await utils.parseHttpErrorMessage(response)}`);
+    const response = await gmailFetch(
+      auth.token,
+      `/messages?${params.toString()}`
+    );
+    if (!response.ok)
+      return text(
+        `Error listing emails: ${await utils.parseHttpErrorMessage(response)}`
+      );
 
     const data: any = await response.json();
     const messages: Array<{ id: string }> = data.messages || [];
@@ -383,7 +524,10 @@ export const readEmail: ToolDefinition = {
       auth.token,
       `/messages/${String(args.messageId)}?format=full`
     );
-    if (!response.ok) return text(`Error reading email: ${await utils.parseHttpErrorMessage(response)}`);
+    if (!response.ok)
+      return text(
+        `Error reading email: ${await utils.parseHttpErrorMessage(response)}`
+      );
 
     const detail: any = await response.json();
     const headers = parseHeaders(detail.payload?.headers);
@@ -427,7 +571,10 @@ export const trashEmail: ToolDefinition = {
       `/messages/${String(args.messageId)}/trash`,
       { method: 'POST' }
     );
-    if (!response.ok) return text(`Error trashing email: ${await utils.parseHttpErrorMessage(response)}`);
+    if (!response.ok)
+      return text(
+        `Error trashing email: ${await utils.parseHttpErrorMessage(response)}`
+      );
 
     return text(`Email ${args.messageId} moved to Trash.`);
   }
@@ -443,7 +590,10 @@ export const listLabels: ToolDefinition = {
     if (!auth.ok) return auth.response;
 
     const response = await gmailFetch(auth.token, '/labels');
-    if (!response.ok) return text(`Error listing labels: ${await utils.parseHttpErrorMessage(response)}`);
+    if (!response.ok)
+      return text(
+        `Error listing labels: ${await utils.parseHttpErrorMessage(response)}`
+      );
 
     const data: any = await response.json();
     const labels = (data.labels || [])
@@ -481,7 +631,9 @@ export const modifyLabels: ToolDefinition = {
     const addLabelIds = utils.toStringArray(args.addLabelIds);
     const removeLabelIds = utils.toStringArray(args.removeLabelIds);
     if (addLabelIds.length === 0 && removeLabelIds.length === 0) {
-      return text('Error: provide at least one of addLabelIds or removeLabelIds.');
+      return text(
+        'Error: provide at least one of addLabelIds or removeLabelIds.'
+      );
     }
 
     const response = await gmailFetch(
@@ -492,7 +644,10 @@ export const modifyLabels: ToolDefinition = {
         body: JSON.stringify({ addLabelIds, removeLabelIds })
       }
     );
-    if (!response.ok) return text(`Error modifying labels: ${await utils.parseHttpErrorMessage(response)}`);
+    if (!response.ok)
+      return text(
+        `Error modifying labels: ${await utils.parseHttpErrorMessage(response)}`
+      );
 
     return text(`Labels updated for message ${args.messageId}.`);
   }
@@ -525,14 +680,19 @@ export const batchModifyLabels: ToolDefinition = {
     const addLabelIds = utils.toStringArray(args.addLabelIds);
     const removeLabelIds = utils.toStringArray(args.removeLabelIds);
     if (addLabelIds.length === 0 && removeLabelIds.length === 0) {
-      return text('Error: provide at least one of addLabelIds or removeLabelIds.');
+      return text(
+        'Error: provide at least one of addLabelIds or removeLabelIds.'
+      );
     }
 
     const response = await gmailFetch(auth.token, '/messages/batchModify', {
       method: 'POST',
       body: JSON.stringify({ ids, addLabelIds, removeLabelIds })
     });
-    if (!response.ok) return text(`Error in batch modify: ${await utils.parseHttpErrorMessage(response)}`);
+    if (!response.ok)
+      return text(
+        `Error in batch modify: ${await utils.parseHttpErrorMessage(response)}`
+      );
 
     return text(`Updated labels on ${ids.length} message(s).`);
   }
@@ -550,7 +710,8 @@ export const listThreads: ToolDefinition = {
         type: 'number',
         minimum: 1,
         maximum: 50,
-        description: 'Maximum number of threads to return (1-50). Defaults to 10.'
+        description:
+          'Maximum number of threads to return (1-50). Defaults to 10.'
       }
     }
   },
@@ -565,11 +726,18 @@ export const listThreads: ToolDefinition = {
     if (args.query) params.set('q', String(args.query));
     params.set('maxResults', String(maxResults));
 
-    const response = await gmailFetch(auth.token, `/threads?${params.toString()}`);
-    if (!response.ok) return text(`Error listing threads: ${await utils.parseHttpErrorMessage(response)}`);
+    const response = await gmailFetch(
+      auth.token,
+      `/threads?${params.toString()}`
+    );
+    if (!response.ok)
+      return text(
+        `Error listing threads: ${await utils.parseHttpErrorMessage(response)}`
+      );
 
     const data: any = await response.json();
-    const threads: Array<{ id: string; snippet?: string; historyId?: string }> = data.threads || [];
+    const threads: Array<{ id: string; snippet?: string; historyId?: string }> =
+      data.threads || [];
     if (threads.length === 0) return text('No threads found.');
 
     const lines = threads.map(t => `- Thread ${t.id} :: ${t.snippet || ''}`);
@@ -594,13 +762,17 @@ export const getThread: ToolDefinition = {
 
     const params = new URLSearchParams();
     params.set('format', 'metadata');
-    for (const h of ['Subject', 'From', 'To', 'Date']) params.append('metadataHeaders', h);
+    for (const h of ['Subject', 'From', 'To', 'Date'])
+      params.append('metadataHeaders', h);
 
     const response = await gmailFetch(
       auth.token,
       `/threads/${String(args.threadId)}?${params.toString()}`
     );
-    if (!response.ok) return text(`Error loading thread: ${await utils.parseHttpErrorMessage(response)}`);
+    if (!response.ok)
+      return text(
+        `Error loading thread: ${await utils.parseHttpErrorMessage(response)}`
+      );
 
     const data: any = await response.json();
     const messages: any[] = data.messages || [];
@@ -611,14 +783,16 @@ export const getThread: ToolDefinition = {
       return `${i + 1}. [${m.id}] ${h['date'] || ''} — From: ${h['from'] || 'unknown'} — Subject: ${h['subject'] || '(no subject)'}\n   Snippet: ${m.snippet || ''}`;
     });
 
-    return text(`Thread ${data.id} — ${messages.length} message(s):\n\n${lines.join('\n\n')}`);
+    return text(
+      `Thread ${data.id} — ${messages.length} message(s):\n\n${lines.join('\n\n')}`
+    );
   }
 };
 
 export const createDraft: ToolDefinition = {
   title: 'Gmail: Create Draft',
   description:
-    "Create a draft email saved in Gmail's Drafts folder. The draft is NOT sent — call gmail-send-draft when the user is ready, gmail-update-draft to revise, or gmail-delete-draft to abandon. Use whenever the user wants to compose now and review/send later, or whenever you are unsure if the user wants to actually send. Returns the draft ID.",
+    "Create a draft email saved in Gmail's Drafts folder. The draft is NOT sent — call gmail-send-draft when the user is ready, gmail-update-draft to revise, or gmail-delete-draft to abandon. Pass attachmentUris (from list-resources or search-resources) to attach files. Use whenever the user wants to compose now and review/send later, or whenever you are unsure if the user wants to actually send. Returns the draft ID.",
   schema: {
     type: 'object',
     properties: {
@@ -626,7 +800,13 @@ export const createDraft: ToolDefinition = {
       subject: { type: 'string', description: 'Email subject line.' },
       body: { type: 'string', description: 'Email body. HTML is supported.' },
       cc: { type: 'string', description: 'Optional Cc recipient(s).' },
-      bcc: { type: 'string', description: 'Optional Bcc recipient(s).' }
+      bcc: { type: 'string', description: 'Optional Bcc recipient(s).' },
+      attachmentUris: {
+        type: 'array',
+        items: { type: 'string' },
+        description:
+          'Optional list of resource URIs to attach as files. Combined raw size must be < ~18 MB.'
+      }
     },
     required: ['to', 'subject', 'body']
   },
@@ -634,22 +814,37 @@ export const createDraft: ToolDefinition = {
     const auth = getAccessToken(context);
     if (!auth.ok) return auth.response;
 
+    const uris = utils.toStringArray(args.attachmentUris);
+    let attachments: MimeAttachment[] = [];
+    if (uris.length > 0) {
+      const loaded = await loadAttachments(uris, context);
+      if (!loaded.ok) return text(`Error loading attachments: ${loaded.error}`);
+      attachments = loaded.attachments;
+    }
+
     const raw = buildRawMessage({
       to: String(args.to),
       subject: String(args.subject),
       body: String(args.body),
       cc: args.cc ? String(args.cc) : undefined,
-      bcc: args.bcc ? String(args.bcc) : undefined
+      bcc: args.bcc ? String(args.bcc) : undefined,
+      attachments: attachments.length ? attachments : undefined
     });
 
     const response = await gmailFetch(auth.token, '/drafts', {
       method: 'POST',
       body: JSON.stringify({ message: { raw } })
     });
-    if (!response.ok) return text(`Error creating draft: ${await utils.parseHttpErrorMessage(response)}`);
+    if (!response.ok)
+      return text(
+        `Error creating draft: ${await utils.parseHttpErrorMessage(response)}`
+      );
 
     const result: any = await response.json();
-    return text(`Draft created. Draft ID: ${result.id}`);
+    const attachNote = attachments.length
+      ? ` with ${attachments.length} attachment(s)`
+      : '';
+    return text(`Draft created${attachNote}. Draft ID: ${result.id}`);
   }
 };
 
@@ -664,7 +859,8 @@ export const listDrafts: ToolDefinition = {
         type: 'number',
         minimum: 1,
         maximum: 50,
-        description: 'Maximum number of drafts to return (1-50). Defaults to 10.'
+        description:
+          'Maximum number of drafts to return (1-50). Defaults to 10.'
       }
     }
   },
@@ -678,11 +874,18 @@ export const listDrafts: ToolDefinition = {
     const params = new URLSearchParams();
     params.set('maxResults', String(maxResults));
 
-    const response = await gmailFetch(auth.token, `/drafts?${params.toString()}`);
-    if (!response.ok) return text(`Error listing drafts: ${await utils.parseHttpErrorMessage(response)}`);
+    const response = await gmailFetch(
+      auth.token,
+      `/drafts?${params.toString()}`
+    );
+    if (!response.ok)
+      return text(
+        `Error listing drafts: ${await utils.parseHttpErrorMessage(response)}`
+      );
 
     const data: any = await response.json();
-    const drafts: Array<{ id: string; message?: { id: string } }> = data.drafts || [];
+    const drafts: Array<{ id: string; message?: { id: string } }> =
+      data.drafts || [];
     if (drafts.length === 0) return text('No drafts found.');
 
     const lines = await Promise.all(
@@ -723,7 +926,10 @@ export const getDraft: ToolDefinition = {
       auth.token,
       `/drafts/${String(args.draftId)}?format=full`
     );
-    if (!response.ok) return text(`Error reading draft: ${await utils.parseHttpErrorMessage(response)}`);
+    if (!response.ok)
+      return text(
+        `Error reading draft: ${await utils.parseHttpErrorMessage(response)}`
+      );
 
     const data: any = await response.json();
     const headers = parseHeaders(data.message?.payload?.headers);
@@ -748,7 +954,7 @@ export const getDraft: ToolDefinition = {
 export const updateDraft: ToolDefinition = {
   title: 'Gmail: Update Draft',
   description:
-    'Replace the contents of an existing draft entirely. This does NOT merge — every field you pass overwrites the previous draft, so include the full to / subject / body even when only revising one of them. Use after gmail-get-draft when the user requests changes. Does not send the draft (use gmail-send-draft for that).',
+    'Replace the contents of an existing draft entirely. This does NOT merge — every field you pass overwrites the previous draft, so include the full to / subject / body even when only revising one of them. Pass attachmentUris (from list-resources or search-resources) to attach files; omitting it removes any previously-attached files. Use after gmail-get-draft when the user requests changes. Does not send the draft (use gmail-send-draft for that).',
   schema: {
     type: 'object',
     properties: {
@@ -757,7 +963,13 @@ export const updateDraft: ToolDefinition = {
       subject: { type: 'string', description: 'Email subject line.' },
       body: { type: 'string', description: 'Email body. HTML is supported.' },
       cc: { type: 'string', description: 'Optional Cc recipient(s).' },
-      bcc: { type: 'string', description: 'Optional Bcc recipient(s).' }
+      bcc: { type: 'string', description: 'Optional Bcc recipient(s).' },
+      attachmentUris: {
+        type: 'array',
+        items: { type: 'string' },
+        description:
+          'Optional list of resource URIs to attach. Replaces any prior attachments on the draft. Combined raw size must be < ~18 MB.'
+      }
     },
     required: ['draftId', 'to', 'subject', 'body']
   },
@@ -765,21 +977,40 @@ export const updateDraft: ToolDefinition = {
     const auth = getAccessToken(context);
     if (!auth.ok) return auth.response;
 
+    const uris = utils.toStringArray(args.attachmentUris);
+    let attachments: MimeAttachment[] = [];
+    if (uris.length > 0) {
+      const loaded = await loadAttachments(uris, context);
+      if (!loaded.ok) return text(`Error loading attachments: ${loaded.error}`);
+      attachments = loaded.attachments;
+    }
+
     const raw = buildRawMessage({
       to: String(args.to),
       subject: String(args.subject),
       body: String(args.body),
       cc: args.cc ? String(args.cc) : undefined,
-      bcc: args.bcc ? String(args.bcc) : undefined
+      bcc: args.bcc ? String(args.bcc) : undefined,
+      attachments: attachments.length ? attachments : undefined
     });
 
-    const response = await gmailFetch(auth.token, `/drafts/${String(args.draftId)}`, {
-      method: 'PUT',
-      body: JSON.stringify({ message: { raw } })
-    });
-    if (!response.ok) return text(`Error updating draft: ${await utils.parseHttpErrorMessage(response)}`);
+    const response = await gmailFetch(
+      auth.token,
+      `/drafts/${String(args.draftId)}`,
+      {
+        method: 'PUT',
+        body: JSON.stringify({ message: { raw } })
+      }
+    );
+    if (!response.ok)
+      return text(
+        `Error updating draft: ${await utils.parseHttpErrorMessage(response)}`
+      );
 
-    return text(`Draft ${args.draftId} updated.`);
+    const attachNote = attachments.length
+      ? ` (with ${attachments.length} attachment(s))`
+      : '';
+    return text(`Draft ${args.draftId} updated${attachNote}.`);
   }
 };
 
@@ -798,10 +1029,17 @@ export const deleteDraft: ToolDefinition = {
     const auth = getAccessToken(context);
     if (!auth.ok) return auth.response;
 
-    const response = await gmailFetch(auth.token, `/drafts/${String(args.draftId)}`, {
-      method: 'DELETE'
-    });
-    if (!response.ok) return text(`Error deleting draft: ${await utils.parseHttpErrorMessage(response)}`);
+    const response = await gmailFetch(
+      auth.token,
+      `/drafts/${String(args.draftId)}`,
+      {
+        method: 'DELETE'
+      }
+    );
+    if (!response.ok)
+      return text(
+        `Error deleting draft: ${await utils.parseHttpErrorMessage(response)}`
+      );
 
     return text(`Draft ${args.draftId} deleted.`);
   }
@@ -826,7 +1064,10 @@ export const sendDraft: ToolDefinition = {
       method: 'POST',
       body: JSON.stringify({ id: String(args.draftId) })
     });
-    if (!response.ok) return text(`Error sending draft: ${await utils.parseHttpErrorMessage(response)}`);
+    if (!response.ok)
+      return text(
+        `Error sending draft: ${await utils.parseHttpErrorMessage(response)}`
+      );
 
     const result: any = await response.json();
     return text(`Draft sent. Message ID: ${result.id}`);
@@ -843,7 +1084,10 @@ export const getProfile: ToolDefinition = {
     if (!auth.ok) return auth.response;
 
     const response = await gmailFetch(auth.token, '/profile');
-    if (!response.ok) return text(`Error loading profile: ${await utils.parseHttpErrorMessage(response)}`);
+    if (!response.ok)
+      return text(
+        `Error loading profile: ${await utils.parseHttpErrorMessage(response)}`
+      );
 
     const data: any = await response.json();
     return text(
