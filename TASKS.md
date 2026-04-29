@@ -1,5 +1,4 @@
-- allow tools to send files
-- check why is not executing the search resources tool
+- Allow sources when using search resources tool
 - Create outlook, slack tool and search for the best ones out there
 - Create landing
 - Create docs
