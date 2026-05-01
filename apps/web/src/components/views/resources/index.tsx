@@ -70,7 +70,7 @@ export const Resources = () => {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [deleteAlert, setDeleteAlert] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [contentMode, setContentMode] = useState<'text' | 'file'>('text');
+  const [contentMode, setContentMode] = useState<'text' | 'file'>('file');
   const [file, setFile] = useState<File | null>(null);
   const [filePreviewUrl, setFilePreviewUrl] = useState<string | null>(null);
   const [filePreviewError, setFilePreviewError] = useState<string | null>(null);
@@ -178,7 +178,7 @@ export const Resources = () => {
     setIsEditing(false);
     setIsCreating(true);
     setEditValues(INITIAL_EDIT_VALUES);
-    setContentMode('text');
+    setContentMode('file');
     setFile(null);
     setShowAdvanced(false);
     setAnnotations({ audience: [], priority: '' });
@@ -731,6 +731,15 @@ export const Resources = () => {
                     <div className="panel-content-mode-toggle">
                       <button
                         type="button"
+                        className={`panel-content-mode-btn ${contentMode === 'file' ? 'active' : ''}`}
+                        disabled={submitting}
+                        onClick={() => setContentMode('file')}
+                      >
+                        <UploadFile />
+                        File
+                      </button>
+                      <button
+                        type="button"
                         className={`panel-content-mode-btn ${contentMode === 'text' ? 'active' : ''}`}
                         disabled={submitting}
                         onClick={() => {
@@ -740,15 +749,6 @@ export const Resources = () => {
                       >
                         <TextFields />
                         Text
-                      </button>
-                      <button
-                        type="button"
-                        className={`panel-content-mode-btn ${contentMode === 'file' ? 'active' : ''}`}
-                        disabled={submitting}
-                        onClick={() => setContentMode('file')}
-                      >
-                        <UploadFile />
-                        File
                       </button>
                     </div>
                   </div>

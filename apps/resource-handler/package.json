@@ -4,8 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "node esbuild.config.mjs",
-    "start": "node dist/server.js",
+    "build": "node esbuild.config.mjs && tsc --emitDeclarationOnly",
+    "start": "node ./dist/server.js",
     "clean": "rm -rf dist && rm -rf node_modules"
   },
   "dependencies": {
