@@ -1,0 +1,9 @@
+**/node_modules
+**/dist
+**/.next
+**/.open-next
+**/.turbo
+**/.wrangler
+**/.git
+**/.env*
+**/*.log

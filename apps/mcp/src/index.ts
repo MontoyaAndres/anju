@@ -36,13 +36,4 @@ app
   .post('/', MCPController.business)
   .get('/health', MCPController.health);
 
-if (process.env.NODE_ENV === 'development') {
-  import('@hono/node-server').then(({ serve }) => {
-    serve({
-      fetch: app.fetch,
-      port: Number(process.env.MCP_PORT)
-    });
-  });
-}
-
 export default app;

@@ -1,0 +1,25 @@
+{
+  "name": "@anju/resource-handler",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node esbuild.config.mjs",
+    "start": "node dist/server.js",
+    "clean": "rm -rf dist && rm -rf node_modules"
+  },
+  "dependencies": {
+    "@anju/db": "*",
+    "@anju/utils": "*",
+    "fflate": "^0.8.2",
+    "mammoth": "^1.12.0",
+    "unpdf": "^1.6.0",
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
+  },
+  "devDependencies": {
+    "@anju/tsconfig": "*",
+    "@types/node": "^25.2.3",
+    "esbuild": "^0.27.3",
+    "typescript": "^5.9.3"
+  }
+}

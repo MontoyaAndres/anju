@@ -6,6 +6,7 @@
     "rootDir": "./src",
     "resolveJsonModule": true,
     "isolatedModules": true,
+    "types": ["@cloudflare/workers-types"]
   },
   "exclude": ["node_modules"],
   "include": ["src"]

@@ -20,7 +20,12 @@ const CHANNEL_STATUS = [STATUS_ACTIVE, STATUS_DISABLED];
 
 const SERVICE_NAME_API = 'api';
 const SERVICE_NAME_MCP = 'mcp';
-const SERVICE_NAMES = [SERVICE_NAME_API, SERVICE_NAME_MCP];
+const SERVICE_NAME_RESOURCE_HANDLER = 'resource_handler';
+const SERVICE_NAMES = [
+  SERVICE_NAME_API,
+  SERVICE_NAME_MCP,
+  SERVICE_NAME_RESOURCE_HANDLER
+];
 
 const SOCIAL_PROVIDER_GOOGLE = 'google' as 'google';
 const SOCIAL_PROVIDER_GITHUB = 'github' as 'github';
@@ -248,6 +253,20 @@ const CHUNK_TARGET_CHARS = 2000;
 const CHUNK_OVERLAP_CHARS = 200;
 const EMBED_BATCH_SIZE = 96;
 
+const RESOURCE_HANDLER_SLEEP_AFTER = '10m';
+
+const BASE64_DATA_URI_RE =
+  /data:image\/[a-zA-Z0-9+\-.]+;base64,[A-Za-z0-9+/=\s]+/g;
+const RAW_BASE64_BLOB_RE = /[A-Za-z0-9+/]{512,}={0,2}/g;
+
+const CHUNK_SEPARATORS: Array<{ split: string | RegExp; join: string }> = [
+  { split: /\n(?=#{1,6}\s)/, join: '\n' },
+  { split: '\n\n', join: '\n\n' },
+  { split: '\n', join: '\n' },
+  { split: '. ', join: '. ' },
+  { split: ' ', join: ' ' }
+];
+
 const DEFAULT_MAX_TOKENS = 4096;
 
 const RESOURCE_TOOL_KEY_LIST_RESOURCES = 'list-resources';
@@ -279,6 +298,7 @@ export const constants = {
   CHANNEL_STATUS,
   SERVICE_NAME_API,
   SERVICE_NAME_MCP,
+  SERVICE_NAME_RESOURCE_HANDLER,
   SOCIAL_PROVIDER_GOOGLE,
   SOCIAL_PROVIDER_GITHUB,
   SOCIAL_PROVIDERS,
@@ -373,6 +393,10 @@ export const constants = {
   CHUNK_TARGET_CHARS,
   CHUNK_OVERLAP_CHARS,
   EMBED_BATCH_SIZE,
+  RESOURCE_HANDLER_SLEEP_AFTER,
+  BASE64_DATA_URI_RE,
+  RAW_BASE64_BLOB_RE,
+  CHUNK_SEPARATORS,
   DEFAULT_MAX_TOKENS,
   RESOURCE_TOOL_KEY_LIST_RESOURCES,
   RESOURCE_TOOL_KEY_SEARCH_RESOURCES,

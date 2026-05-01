@@ -148,7 +148,8 @@ const loadAttachments = async (
 
     attachments.push({
       filename,
-      mimeType: resource.mimeType || 'application/octet-stream',
+      mimeType:
+        resource.mimeType || utils.constants.MIMETYPE_APPLICATION_OCTET_STREAM,
       base64: utils.bytesToBase64(bytes)
     });
   }

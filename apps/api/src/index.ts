@@ -18,10 +18,7 @@ import { handleIndexBatch } from './queue';
 
 // types
 import type { AppEnv, Bindings } from './types';
-import type {
-  ExecutionContext,
-  MessageBatch
-} from '@cloudflare/workers-types';
+import type { ExecutionContext, MessageBatch } from '@cloudflare/workers-types';
 import type { IndexJob } from './queue';
 
 const app = new Hono<AppEnv>();
@@ -245,14 +242,7 @@ app
   )
   .get('/oauth/:provider/callback', OAuthController.callback);
 
-if (process.env.NODE_ENV === 'development') {
-  import('@hono/node-server').then(({ serve }) => {
-    serve({
-      fetch: app.fetch,
-      port: Number(process.env.SERVER_PORT)
-    });
-  });
-}
+export { ResourceHandler } from './containers';
 
 export default {
   fetch: app.fetch,

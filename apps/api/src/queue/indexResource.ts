@@ -1,9 +1,10 @@
 import type { ExecutionContext, MessageBatch } from '@cloudflare/workers-types';
-import { db } from '@anju/db';
-import { utils } from '@anju/utils';
+import { db, utils as dbUtils } from '@anju/db';
+import { ExtractedDocument, utils } from '@anju/utils';
 import { eq } from 'drizzle-orm';
 
-import { extractTextFromFile, reindexResourceChunks } from '../utils';
+import { reindexResourceChunks } from '../utils';
+import { getResourceHandler } from '../containers';
 
 import type { Bindings } from '../types';
 
@@ -28,19 +29,50 @@ const indexOne = async (env: Bindings, resourceId: string): Promise<void> => {
     return;
   }
 
-  let extractedText: string | null = null;
-  if (resource.fileKey) {
+  let documents: ExtractedDocument[] | null = null;
+  if (
+    resource.fileKey &&
+    resource.mimeType &&
+    utils.isEmbeddableMimeType(resource.mimeType)
+  ) {
     const obj = await env.STORAGE_BUCKET.get(resource.fileKey);
     if (!obj) {
       throw new Error(
         `Resource bytes missing in storage for ${resourceId} (fileKey: ${resource.fileKey})`
       );
     }
-    const buffer = await obj.arrayBuffer();
-    const file = new File([buffer], resource.fileName || resource.title, {
-      type: resource.mimeType || 'application/octet-stream'
+
+    const handler = getResourceHandler(env);
+    const fileName = resource.fileName || resource.title;
+    const response = await handler.fetch('http://resource-handler/extract', {
+      method: 'POST',
+      headers: {
+        'content-type': utils.constants.MIMETYPE_APPLICATION_OCTET_STREAM,
+        'x-mime-type': resource.mimeType,
+        'x-file-name': encodeURIComponent(fileName)
+      },
+      body: obj.body as unknown as BodyInit
     });
-    extractedText = await extractTextFromFile(file);
+
+    if (!response.ok) {
+      const detail = await response.text().catch(() => '');
+      const { refId } = await dbUtils.handleError(
+        { env, request: { method: 'QUEUE', path: '/indexResource' } },
+        new Error(detail || `status ${response.status}`),
+        {
+          service: utils.constants.SERVICE_NAME_API,
+          metadata: { resourceId, status: response.status }
+        }
+      );
+      throw new Error(
+        `resource-handler /extract failed (${response.status}) for ${resourceId} (refId: ${refId})`
+      );
+    }
+
+    const payload = (await response.json()) as {
+      documents: ExtractedDocument[] | null;
+    };
+    documents = payload.documents;
   }
 
   await reindexResourceChunks(source, {
@@ -51,7 +83,8 @@ const indexOne = async (env: Bindings, resourceId: string): Promise<void> => {
     uri: resource.uri,
     mimeType: resource.mimeType,
     fileName: resource.fileName,
-    content: extractedText ?? resource.content
+    content: resource.content,
+    documents
   });
 };
 
@@ -66,13 +99,21 @@ export const handleIndexBatch = async (
   _ctx: ExecutionContext
 ): Promise<void> => {
   for (const message of batch.messages) {
+    const { resourceId } = message.body;
     try {
-      await indexOne(env, message.body.resourceId);
+      await indexOne(env, resourceId);
       message.ack();
     } catch (error) {
-      console.error(
-        `[${utils.constants.SERVICE_NAME_API}] indexResource ${message.body.resourceId} failed`,
-        error
+      await dbUtils.handleError(
+        {
+          env,
+          request: { method: 'QUEUE', path: '/indexResource' }
+        },
+        error,
+        {
+          service: utils.constants.SERVICE_NAME_API,
+          metadata: { resourceId, queue: batch.queue }
+        }
       );
       if (isRateLimitError(error)) {
         message.retry({

@@ -197,6 +197,13 @@
       "when": 1777150863038,
       "tag": "0027_flippant_silver_centurion",
       "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1777646372669,
+      "tag": "0028_great_risque",
+      "breakpoints": true
     }
   ]
 }

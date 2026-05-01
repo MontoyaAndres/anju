@@ -8,7 +8,6 @@ import {
   generateEmbeddings,
   reindexResourceChunks
 } from './embedding';
-import { extractTextFromFile } from './extractText';
 import { markdownToTelegramHtml } from './telegramFormat';
 import { enqueueIndex } from './queue';
 
@@ -21,7 +20,6 @@ export {
   generateEmbedding,
   generateEmbeddings,
   reindexResourceChunks,
-  extractTextFromFile,
   markdownToTelegramHtml,
   enqueueIndex
 };

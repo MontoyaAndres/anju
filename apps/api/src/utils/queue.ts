@@ -7,13 +7,7 @@ export const enqueueIndex = async (
 ): Promise<void> => {
   const ids = Array.isArray(resourceIds) ? resourceIds : [resourceIds];
   if (ids.length === 0) return;
-
-  if (!env.INDEX_QUEUE) {
-    console.warn(
-      'INDEX_QUEUE binding is missing; skipping enqueue. Resources will not be indexed.'
-    );
-    return;
-  }
+  if (!env.INDEX_QUEUE) return;
 
   if (ids.length === 1) {
     await env.INDEX_QUEUE.send({ resourceId: ids[0] } satisfies IndexJob);

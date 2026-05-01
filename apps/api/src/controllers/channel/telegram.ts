@@ -232,7 +232,8 @@ const sendTelegramAttachment = async (
   }
 ) => {
   const { resource, caption } = attachment;
-  const mime = resource.mimeType || 'application/octet-stream';
+  const mime =
+    resource.mimeType || utils.constants.MIMETYPE_APPLICATION_OCTET_STREAM;
 
   let method: 'sendPhoto' | 'sendVideo' | 'sendAudio' | 'sendDocument';
   let field: 'photo' | 'video' | 'audio' | 'document';

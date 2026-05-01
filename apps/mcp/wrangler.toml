@@ -21,8 +21,6 @@ invocation_logs = true
 enabled = false
 [env.development.vars]
 NODE_ENV = "production"
-SERVER_PORT = "8080"
-MCP_PORT = "8081"
 NEXT_PUBLIC_API_URL = "https://development-api.vocesqueabrazan.com"
 NEXT_PUBLIC_MCP_URL = "https://development-mcp.vocesqueabrazan.com"
 NEXT_PUBLIC_WEB_URL = "https://development-app.vocesqueabrazan.com"
@@ -45,8 +43,6 @@ invocation_logs = true
 enabled = false
 [env.production.vars]
 NODE_ENV = "production"
-SERVER_PORT = "8080"
-MCP_PORT = "8081"
 NEXT_PUBLIC_API_URL = "https://api.anju.ai"
 NEXT_PUBLIC_MCP_URL = "https://mcp.anju.ai"
 NEXT_PUBLIC_WEB_URL = "https://app.anju.ai"

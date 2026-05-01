@@ -532,6 +532,7 @@ export const artifactResourceChunk = pgTable(
     chunkIndex: integer('chunk_index').notNull(),
     content: text('content').notNull(),
     embedding: halfvec('embedding', { dimensions: 3072 }).notNull(),
+    metadata: json('metadata'),
     createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow()
   },
   table => [

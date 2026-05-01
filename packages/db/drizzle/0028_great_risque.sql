@@ -1,0 +1,1 @@
+ALTER TABLE "artifact_resource_chunk" ADD COLUMN "metadata" json;

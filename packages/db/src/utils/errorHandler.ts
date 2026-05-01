@@ -17,6 +17,25 @@ export interface HandleErrorResult {
   body: Record<string, unknown>;
 }
 
+interface RequestContext {
+  method?: string | null;
+  path?: string | null;
+  query?: string | null;
+  userAgent?: string | null;
+  ipAddress?: string | null;
+  userId?: string | null;
+  organizationId?: string | null;
+  projectId?: string | null;
+}
+
+interface DbSource {
+  env: { HYPERDRIVE: { connectionString: string } };
+}
+
+export type HandleErrorSource =
+  | Context
+  | (DbSource & { request?: RequestContext });
+
 const matchStatus = (message: string): 400 | 401 | 403 | 404 | 409 | null => {
   const lower = message.toLowerCase();
 
@@ -30,31 +49,38 @@ const matchStatus = (message: string): 400 | 401 | 403 | 404 | 409 | null => {
   return null;
 };
 
-const extractContext = (c: Context) => {
-  const user = (c.get('user') as { id?: string } | undefined) || undefined;
-  return {
-    method: c.req.method,
-    path: c.req.path,
-    query: new URL(c.req.url).search || null,
-    userAgent: c.req.header('user-agent') || null,
-    ipAddress:
-      c.req.header('cf-connecting-ip') ||
-      c.req.header('x-forwarded-for') ||
-      null,
-    userId: user?.id || null,
-    organizationId: c.req.param('organizationId') || null,
-    projectId: c.req.param('projectId') || null
-  };
+const isHonoContext = (source: HandleErrorSource): source is Context =>
+  typeof (source as Context).get === 'function' &&
+  typeof (source as Context).req?.method === 'string';
+
+const extractContext = (source: HandleErrorSource): RequestContext => {
+  if (isHonoContext(source)) {
+    const c = source;
+    const user = (c.get('user') as { id?: string } | undefined) || undefined;
+    return {
+      method: c.req.method,
+      path: c.req.path,
+      query: new URL(c.req.url).search || null,
+      userAgent: c.req.header('user-agent') || null,
+      ipAddress:
+        c.req.header('cf-connecting-ip') ||
+        c.req.header('x-forwarded-for') ||
+        null,
+      userId: user?.id || null,
+      organizationId: c.req.param('organizationId') || null,
+      projectId: c.req.param('projectId') || null
+    };
+  }
+  return source.request ?? {};
 };
 
 export const handleError = async (
-  c: Context,
+  source: HandleErrorSource,
   error: unknown,
   options: HandleErrorOptions
 ): Promise<HandleErrorResult> => {
   const refId = uuid();
   const err = error as { name?: string; message?: string; stack?: string };
-  console.error(`[${options.service} ref ${refId}]`, err);
 
   let status: 400 | 401 | 403 | 404 | 409 | 500;
   let body: Record<string, unknown>;
@@ -81,8 +107,8 @@ export const handleError = async (
     }
   }
 
-  const ctx = extractContext(c);
-  const dbInstance = db.create(c);
+  const ctx = extractContext(source);
+  const dbInstance = db.create(source);
   await dbInstance
     .insert(db.schema.errorLog)
     .values({
@@ -95,6 +121,10 @@ export const handleError = async (
       ...ctx,
       metadata: options.metadata ?? null
     })
+    .returning()
+    .then(values =>
+      console.warn(`Error saved with referenceId: ${values[0].referenceId}`)
+    )
     .catch(e => console.error('Failed to persist error log', e));
 
   return { refId, status, body };

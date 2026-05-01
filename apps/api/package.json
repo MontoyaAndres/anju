@@ -3,7 +3,7 @@
   "version": "0.0.1",
   "scripts": {
     "build": "node esbuild.config.mjs && tsc --emitDeclarationOnly",
-    "dev": "dotenv -e ../../.env -- nodemon --exec \"node -r esbuild-register ./src/index.ts\" -e .ts",
+    "dev": "dotenv -e ../../.env -- wrangler dev --env development --port 8080",
     "start": "node ./dist/index.js",
     "clean": "rm -rf dist && rm -rf node_modules",
     "deploy-dev": "wrangler deploy --env development",
@@ -13,20 +13,16 @@
     "@anju/db": "*",
     "@anju/utils": "*",
     "@anthropic-ai/sdk": "^0.91.1",
+    "@cloudflare/containers": "^0.3.3",
     "@google/genai": "^1.50.1",
     "@modelcontextprotocol/sdk": "^1.26.0",
     "better-auth": "^1.4.18",
-    "fflate": "^0.8.2",
     "hono": "^4.11.9",
-    "mammoth": "^1.12.0",
-    "openai": "^6.34.0",
-    "unpdf": "^1.6.0",
-    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
+    "openai": "^6.34.0"
   },
   "devDependencies": {
     "@anju/tsconfig": "*",
     "@cloudflare/workers-types": "^4.20260217.0",
-    "@hono/node-server": "^1.19.9",
     "@types/node": "^25.2.3",
     "esbuild": "^0.27.3",
     "esbuild-register": "^3.6.0",

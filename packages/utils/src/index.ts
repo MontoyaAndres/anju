@@ -42,6 +42,26 @@ import { validateMessageVariables } from './validateMessageVariables';
 import { JsonSchema, jsonSchemaToZodShape } from './jsonSchemaToZodShape';
 import { formatRelative } from './formatRelative';
 import { slugifyPromptTitle } from './slugifyPromptTitle';
+import {
+  decodeEntities,
+  parseOpenXmlProps,
+  stripBase64Images,
+  sanitizeMetadataString,
+  serializeMetadataValue
+} from './sanitize';
+import {
+  chunkText,
+  splitRecursive,
+  buildHeader,
+  prepareChunks
+} from './chunking';
+import type { Separator, ChunkMetadata, PreparedChunk } from './chunking';
+import { isEmbeddableMimeType } from './embeddable';
+import type {
+  ExtractedDocument,
+  ExtractedDocumentMetadata,
+  ExtractedDocumentSource
+} from './extractedDocument';
 
 export const utils = {
   Schema,
@@ -74,7 +94,28 @@ export const utils = {
   jsonSchemaToZodShape,
   validateMessageVariables,
   formatRelative,
-  slugifyPromptTitle
+  slugifyPromptTitle,
+  decodeEntities,
+  parseOpenXmlProps,
+  stripBase64Images,
+  sanitizeMetadataString,
+  serializeMetadataValue,
+  chunkText,
+  splitRecursive,
+  buildHeader,
+  prepareChunks,
+  isEmbeddableMimeType
 };
 
-export type { JsonSchema, MimeAttachment, MimeMessageInput, EnvSource };
+export type {
+  JsonSchema,
+  MimeAttachment,
+  MimeMessageInput,
+  EnvSource,
+  Separator,
+  ChunkMetadata,
+  PreparedChunk,
+  ExtractedDocument,
+  ExtractedDocumentMetadata,
+  ExtractedDocumentSource
+};

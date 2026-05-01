@@ -3,8 +3,7 @@
   "globalDependencies": [".env"],
   "globalEnv": [
     "NODE_ENV",
-    "SERVER_PORT",
-    "MCP_PORT",
+    "RESOURCE_HANDLER_PORT",
     "DATABASE_URL",
     "JWT_SECRET",
     "CRYPTO_SECRET",

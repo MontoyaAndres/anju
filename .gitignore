@@ -141,3 +141,5 @@ vite.config.ts.timestamp-*
 .turbo
 .wrangler
 .open-next
+.dev.vars
+.dev.vars.*

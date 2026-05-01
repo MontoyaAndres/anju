@@ -75,7 +75,8 @@ const downloadAvatar = async (c: Context<AppEnv>) => {
   return new Response(object.body as unknown as ReadableStream, {
     headers: {
       'Content-Type':
-        object.httpMetadata?.contentType || 'application/octet-stream',
+        object.httpMetadata?.contentType ||
+        utils.constants.MIMETYPE_APPLICATION_OCTET_STREAM,
       'Cache-Control': 'public, max-age=3600'
     }
   });
