@@ -3,6 +3,8 @@ import { utils } from '@anju/utils';
 import { utils as dbUtils } from '@anju/db';
 
 import { extractDocuments } from './extract.js';
+import { handleGmailSend } from './gmailSend.js';
+import { handleTelegramSend } from './telegramSend.js';
 
 const readBody = (req: http.IncomingMessage): Promise<Buffer> =>
   new Promise((resolve, reject) => {
@@ -59,6 +61,16 @@ const server = http.createServer(async (req, res) => {
 
     if (req.method === 'POST' && req.url === '/extract') {
       await handleExtract(req, res);
+      return;
+    }
+
+    if (req.method === 'POST' && req.url === '/gmail/send') {
+      await handleGmailSend(req, res);
+      return;
+    }
+
+    if (req.method === 'POST' && req.url === '/telegram/send') {
+      await handleTelegramSend(req, res);
       return;
     }
 

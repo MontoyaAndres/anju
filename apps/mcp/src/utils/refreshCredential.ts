@@ -133,12 +133,12 @@ export const refreshCredentialIfNeeded = async (
       return decrypted;
     }
 
-    const tokens = (await response.json()) as {
+    const tokens: {
       access_token?: string;
       refresh_token?: string;
       expires_in?: number;
       scope?: string;
-    };
+    } = await response.json();
     if (!tokens.access_token) return decrypted;
 
     const nextAccessToken = tokens.access_token;

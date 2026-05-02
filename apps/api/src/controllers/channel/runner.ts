@@ -7,6 +7,7 @@ import { createMcpClient, getLlmAdapter } from '../../utils';
 
 import type { LlmMessage, LlmToolCall, LlmToolDefinition } from '../../utils';
 import type { AppEnv } from '../../types';
+import { Client } from '@modelcontextprotocol/sdk/client';
 
 type ArtifactResourceRow = InferSelectModel<typeof db.schema.artifactResource>;
 
@@ -156,7 +157,7 @@ export const runChannelTurn = async (
   try {
     const toolsResponse = await mcp.client.listTools();
     const llmTools: LlmToolDefinition[] = (toolsResponse.tools || []).map(
-      (tool: any) => ({
+      tool => ({
         name: tool.name,
         description: tool.description,
         inputSchema: tool.inputSchema || { type: 'object', properties: {} }
@@ -178,7 +179,7 @@ export const runChannelTurn = async (
           arguments: options.promptArgs || {}
         });
         userTurn = (promptResult.messages || [])
-          .map((m: any) => {
+          .map(m => {
             const content = m.content;
             const text =
               typeof content === 'string'
@@ -212,7 +213,7 @@ export const runChannelTurn = async (
           output: promptResult,
           latencyMs: Date.now() - start
         });
-      } catch (err: any) {
+      } catch (error: any) {
         usageEvents.push({
           kind: utils.constants.CHANNEL_USAGE_KIND_PROMPT,
           toolName: options.promptId,
@@ -221,7 +222,7 @@ export const runChannelTurn = async (
           input: options.promptArgs || {},
           output: null,
           latencyMs: Date.now() - start,
-          errorMessage: err?.message || String(err)
+          errorMessage: error?.message || String(error)
         });
       }
     }
@@ -310,7 +311,7 @@ export const runChannelTurn = async (
         artifactResourceId: event.artifactResourceId || null,
         artifactPromptId: event.artifactPromptId || null,
         input: event.input,
-        output: event.output as any,
+        output: event.output,
         latencyMs: event.latencyMs,
         errorMessage: event.errorMessage || null,
         messageId: assistantMessage.id
@@ -456,7 +457,7 @@ const URI_BEARING_RESOURCE_TOOL_KEYS = new Set(
 );
 
 const executeToolCall = async (
-  client: any,
+  client: Client,
   call: LlmToolCall,
   usageEvents: Array<{
     kind: string;
@@ -518,7 +519,7 @@ const executeToolCall = async (
       latencyMs
     });
     return text;
-  } catch (err: any) {
+  } catch (error: any) {
     const latencyMs = Date.now() - start;
     usageEvents.push({
       kind,
@@ -528,9 +529,9 @@ const executeToolCall = async (
       input: call.arguments,
       output: null,
       latencyMs,
-      errorMessage: err?.message || String(err)
+      errorMessage: error?.message || String(error)
     });
-    return `Error calling tool ${call.name}: ${err?.message || err}`;
+    return `Error calling tool ${call.name}: ${error?.message || error}`;
   }
 };
 
@@ -538,7 +539,7 @@ const extractToolText = (result: any): string => {
   const content = result?.content;
   if (!Array.isArray(content)) return JSON.stringify(result);
   const texts = content
-    .filter((c: any) => c?.type === 'text' && typeof c.text === 'string')
-    .map((c: any) => c.text);
+    .filter(c => c?.type === 'text' && typeof c.text === 'string')
+    .map(c => c.text);
   return texts.join('\n') || JSON.stringify(result);
 };

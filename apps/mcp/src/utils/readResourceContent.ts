@@ -31,7 +31,11 @@ export const readResourceContent = async (
       );
     }
 
-    if (utils.constants.TEXT_MIME_TYPES.includes(resource.mimeType)) {
+    if (
+      utils.constants.TEXT_MIME_TYPES.includes(
+        resource.mimeType as (typeof utils.constants.TEXT_MIME_TYPES)[0]
+      )
+    ) {
       const text = await object.text();
 
       return {

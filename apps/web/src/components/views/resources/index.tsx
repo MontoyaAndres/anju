@@ -29,7 +29,7 @@ interface Resource {
   type: string;
   status: string;
   description: string | null;
-  mimeType: string;
+  mimeType: (typeof utils.constants.MIMETYPES)[0];
   content: string | null;
   size: number;
   encoding: string | null;
@@ -48,7 +48,7 @@ const INITIAL_EDIT_VALUES = {
   uri: '',
   type: 'static',
   description: '',
-  mimeType: utils.constants.MIMETYPE_TEXT,
+  mimeType: utils.constants.MIMETYPE_TEXT as string,
   content: '',
   size: '0',
   encoding: 'utf-8'

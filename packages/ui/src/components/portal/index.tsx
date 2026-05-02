@@ -6,15 +6,13 @@ export interface IProps {
   selector?: string;
 }
 
-declare const document: any;
-
 export const Portal = (props: IProps) => {
   const { children, selector = '#modal' } = props;
-  const ref = useRef(null);
+  const ref = useRef<HTMLDivElement | null>(null);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    ref.current = document.querySelector(selector);
+    ref.current = document.querySelector<HTMLDivElement>(selector);
     setMounted(true);
   }, [selector]);
 

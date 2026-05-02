@@ -16,7 +16,7 @@ const {
 const TEXT_MIME_TYPES = constants.TEXT_MIME_TYPES as readonly string[];
 
 const extractPdf = async (
-  buffer: ArrayBuffer,
+  buffer: Buffer<ArrayBufferLike>,
   source: ExtractedDocumentSource
 ): Promise<ExtractedDocument[]> => {
   const { extractText, getDocumentProxy, getMeta } = await import('unpdf');
@@ -95,7 +95,7 @@ const splitDocxPages = (documentXml: string): string[] => {
 };
 
 const extractDocx = async (
-  buffer: ArrayBuffer,
+  buffer: Buffer<ArrayBufferLike>,
   source: ExtractedDocumentSource
 ): Promise<ExtractedDocument[]> => {
   let coreProps: Record<string, string> = {};
@@ -130,7 +130,7 @@ const extractDocx = async (
     }));
   }
 
-  const mammoth: any = await import('mammoth');
+  const mammoth = await import('mammoth');
   const result = await mammoth.extractRawText({ buffer });
   const text = (result?.value || '').trim();
   if (!text) return [];
@@ -148,10 +148,10 @@ const extractDocx = async (
 };
 
 const extractXlsx = async (
-  buffer: ArrayBuffer,
+  buffer: Buffer<ArrayBufferLike>,
   source: ExtractedDocumentSource
 ): Promise<ExtractedDocument[]> => {
-  const XLSX: any = await import('xlsx');
+  const XLSX = await import('xlsx');
   const workbook = XLSX.read(new Uint8Array(buffer), {
     type: 'array',
     cellDates: true
@@ -227,7 +227,7 @@ const extractSlideTitle = (xml: string): string | undefined => {
 };
 
 const extractPptx = async (
-  buffer: ArrayBuffer,
+  buffer: Buffer<ArrayBufferLike>,
   source: ExtractedDocumentSource
 ): Promise<ExtractedDocument[]> => {
   const { unzipSync, strFromU8 } = await import('fflate');
@@ -286,7 +286,7 @@ const extractPptx = async (
 };
 
 const extractPlainText = (
-  buffer: ArrayBuffer,
+  buffer: Buffer<ArrayBufferLike>,
   source: ExtractedDocumentSource
 ): ExtractedDocument[] => {
   const text = new TextDecoder('utf-8').decode(buffer).trim();
@@ -303,7 +303,7 @@ const extractPlainText = (
 };
 
 export const extractDocuments = async (
-  buffer: ArrayBuffer,
+  buffer: Buffer<ArrayBufferLike>,
   mimeType: string,
   fileName?: string
 ): Promise<ExtractedDocument[] | null> => {

@@ -69,53 +69,68 @@ const LANGUAGE_EN = 'en';
 const LANGUAGE_ES = 'es';
 const LANGUAGES = [LANGUAGE_EN, LANGUAGE_ES];
 
-const MIMETYPE_TEXT = 'text/plain';
-const MIMETYPE_TEXT_CSV = 'text/csv';
-const MIMETYPE_TEXT_HTML = 'text/html';
-const MIMETYPE_VIDEO_MP4 = 'video/mp4';
-const MIMETYPE_IMAGE_PNG = 'image/png';
-const MIMETYPE_IMAGE_GIF = 'image/gif';
-const MIMETYPE_AUDIO_MP3 = 'audio/mpeg';
-const MIMETYPE_IMAGE_JPEG = 'image/jpeg';
-const MIMETYPE_IMAGE_WEBP = 'image/webp';
-const MIMETYPE_APPLICATION_PDF = 'application/pdf';
-const MIMETYPE_APPLICATION_ZIP = 'application/zip';
-const MIMETYPE_APPLICATION_RAR = 'application/x-rar-compressed';
-const MIMETYPE_APPLICATION_JSON = 'application/json';
-const MIMETYPE_APPLICATION_MSWORD = 'application/msword';
-const MIMETYPE_APPLICATION_ZIP_WINDOWS = 'application/x-zip-compressed';
-const MIMETYPE_APPLICATION_VND_MS_EXCEL = 'application/vnd.ms-excel';
+const MIMETYPE_TEXT = 'text/plain' as 'text/plain';
+const MIMETYPE_TEXT_CSV = 'text/csv' as 'text/csv';
+const MIMETYPE_TEXT_HTML = 'text/html' as 'text/html';
+const MIMETYPE_VIDEO_MP4 = 'video/mp4' as 'video/mp4';
+const MIMETYPE_IMAGE_PNG = 'image/png' as 'image/png';
+const MIMETYPE_IMAGE_GIF = 'image/gif' as 'image/gif';
+const MIMETYPE_AUDIO_MP3 = 'audio/mpeg' as 'audio/mpeg';
+const MIMETYPE_IMAGE_JPEG = 'image/jpeg' as 'image/jpeg';
+const MIMETYPE_IMAGE_WEBP = 'image/webp' as 'image/webp';
+const MIMETYPE_APPLICATION_PDF = 'application/pdf' as 'application/pdf';
+const MIMETYPE_APPLICATION_ZIP = 'application/zip' as 'application/zip';
+const MIMETYPE_APPLICATION_RAR =
+  'application/x-rar-compressed' as 'application/x-rar-compressed';
+const MIMETYPE_APPLICATION_JSON = 'application/json' as 'application/json';
+const MIMETYPE_APPLICATION_MSWORD =
+  'application/msword' as 'application/msword';
+const MIMETYPE_APPLICATION_ZIP_WINDOWS =
+  'application/x-zip-compressed' as 'application/x-zip-compressed';
+const MIMETYPE_APPLICATION_VND_MS_EXCEL =
+  'application/vnd.ms-excel' as 'application/vnd.ms-excel';
 const MIMETYPE_APPLICATION_VND_OPENXMLFORMATS_OFFICEDOCUMENT_SPREADSHEETML_SHEET =
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' as 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 const MIMETYPE_APPLICATION_VND_OPENXMLFORMATS_OFFICEDOCUMENT_WORDPROCESSINGML_DOCUMENT =
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document' as 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 const MIMETYPE_APPLICATION_VND_OPENXMLFORMATS_OFFICEDOCUMENT_PRESENTATIONML_PRESENTATION =
-  'application/vnd.openxmlformats-officedocument.presentationml.presentation';
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation' as 'application/vnd.openxmlformats-officedocument.presentationml.presentation';
 const MIMETYPE_APPLICATION_VND_GOOGLE_APPS_DOCUMENT =
-  'application/vnd.google-apps.document';
+  'application/vnd.google-apps.document' as 'application/vnd.google-apps.document';
 const MIMETYPE_APPLICATION_VND_GOOGLE_APPS_SPREADSHEET =
-  'application/vnd.google-apps.spreadsheet';
+  'application/vnd.google-apps.spreadsheet' as 'application/vnd.google-apps.spreadsheet';
 const MIMETYPE_APPLICATION_VND_GOOGLE_APPS_PRESENTATION =
-  'application/vnd.google-apps.presentation';
-const MIMETYPE_APPLICATION_XML = 'application/xml';
-const MIMETYPE_APPLICATION_JAVASCRIPT = 'application/javascript';
-const MIMETYPE_APPLICATION_TYPESCRIPT = 'application/typescript';
-const MIMETYPE_APPLICATION_YAML = 'application/yaml';
-const MIMETYPE_APPLICATION_X_YAML = 'application/x-yaml';
-const MIMETYPE_APPLICATION_TOML = 'application/toml';
-const MIMETYPE_APPLICATION_X_SH = 'application/x-sh';
-const MIMETYPE_APPLICATION_SQL = 'application/sql';
-const MIMETYPE_APPLICATION_GRAPHQL = 'application/graphql';
-const MIMETYPE_APPLICATION_LD_JSON = 'application/ld+json';
-const MIMETYPE_APPLICATION_XHTML_XML = 'application/xhtml+xml';
-const MIMETYPE_APPLICATION_X_HTTPD_PHP = 'application/x-httpd-php';
-const MIMETYPE_APPLICATION_X_PYTHON_CODE = 'application/x-python-code';
+  'application/vnd.google-apps.presentation' as 'application/vnd.google-apps.presentation';
+const MIMETYPE_APPLICATION_XML = 'application/xml' as 'application/xml';
+const MIMETYPE_APPLICATION_JAVASCRIPT =
+  'application/javascript' as 'application/javascript';
+const MIMETYPE_APPLICATION_TYPESCRIPT =
+  'application/typescript' as 'application/typescript';
+const MIMETYPE_APPLICATION_YAML = 'application/yaml' as 'application/yaml';
+const MIMETYPE_APPLICATION_X_YAML =
+  'application/x-yaml' as 'application/x-yaml';
+const MIMETYPE_APPLICATION_TOML = 'application/toml' as 'application/toml';
+const MIMETYPE_APPLICATION_X_SH = 'application/x-sh' as 'application/x-sh';
+const MIMETYPE_APPLICATION_SQL = 'application/sql' as 'application/sql';
+const MIMETYPE_APPLICATION_GRAPHQL =
+  'application/graphql' as 'application/graphql';
+const MIMETYPE_APPLICATION_LD_JSON =
+  'application/ld+json' as 'application/ld+json';
+const MIMETYPE_APPLICATION_XHTML_XML =
+  'application/xhtml+xml' as 'application/xhtml+xml';
+const MIMETYPE_APPLICATION_X_HTTPD_PHP =
+  'application/x-httpd-php' as 'application/x-httpd-php';
+const MIMETYPE_APPLICATION_X_PYTHON_CODE =
+  'application/x-python-code' as 'application/x-python-code';
 const MIMETYPE_APPLICATION_X_WWW_FORM_URLENCODED =
-  'application/x-www-form-urlencoded';
-const MIMETYPE_APPLICATION_CSV = 'application/csv';
-const MIMETYPE_APPLICATION_X_RUBY = 'application/x-ruby';
-const MIMETYPE_APPLICATION_X_PERL = 'application/x-perl';
-const MIMETYPE_APPLICATION_OCTET_STREAM = 'application/octet-stream';
+  'application/x-www-form-urlencoded' as 'application/x-www-form-urlencoded';
+const MIMETYPE_APPLICATION_CSV = 'application/csv' as 'application/csv';
+const MIMETYPE_APPLICATION_X_RUBY =
+  'application/x-ruby' as 'application/x-ruby';
+const MIMETYPE_APPLICATION_X_PERL =
+  'application/x-perl' as 'application/x-perl';
+const MIMETYPE_APPLICATION_OCTET_STREAM =
+  'application/octet-stream' as 'application/octet-stream';
 const MIMETYPES = [
   MIMETYPE_TEXT,
   MIMETYPE_TEXT_CSV,
@@ -198,6 +213,14 @@ const USER_AVATAR_MIME_TYPES = [
 ];
 
 const MAX_FILE_SIZE = 24 * 1024 * 1024; // 24MB
+
+// Gmail caps a sent message at 25MB encoded. Combined raw attachment size
+// must stay under ~18MB so the base64 multipart envelope fits.
+const GMAIL_MAX_RAW_ATTACHMENT_BYTES = 18 * 1024 * 1024;
+
+// Telegram Bot API per-method file caps (sendPhoto vs sendDocument differ).
+const TELEGRAM_MAX_PHOTO_BYTES = 10 * 1024 * 1024;
+const TELEGRAM_MAX_FILE_BYTES = 50 * 1024 * 1024;
 
 const RATE_LIMIT_BACKOFF_SECONDS = 60;
 
@@ -366,6 +389,9 @@ export const constants = {
   RESOURCE_ICON_THEME_LIGHT,
   RESOURCE_ICON_THEMES,
   MAX_FILE_SIZE,
+  GMAIL_MAX_RAW_ATTACHMENT_BYTES,
+  TELEGRAM_MAX_PHOTO_BYTES,
+  TELEGRAM_MAX_FILE_BYTES,
   RATE_LIMIT_BACKOFF_SECONDS,
   ENCODINGS,
   CHANNEL_PLATFORM_TELEGRAM,

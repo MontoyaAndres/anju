@@ -2,12 +2,14 @@ import { Context } from 'hono';
 import { eq } from 'drizzle-orm';
 import { db, utils as dbUtils } from '@anju/db';
 import { utils } from '@anju/utils';
+import type { TelegramSendRequest } from '@anju/utils';
+import { getResourceHandler } from '@anju/containers';
 
 import { runChannelTurn } from './runner';
 import { markdownToTelegramHtml } from '../../utils';
 
 import type { ChannelAttachment } from './runner';
-import type { AppEnv } from '../../types';
+import type { AppEnv, Bindings } from '../../types';
 
 interface TelegramMessageEntity {
   type: string;
@@ -141,8 +143,8 @@ export const handleTelegramWebhook = async (c: Context<AppEnv>) => {
     });
     replyText = result.assistantText;
     attachments = result.attachments;
-  } catch (err: any) {
-    const { refId } = await dbUtils.handleError(c, err, {
+  } catch (error: any) {
+    const { refId } = await dbUtils.handleError(c, error, {
       service: utils.constants.SERVICE_NAME_API,
       metadata: {
         source: 'channel-runner',
@@ -171,7 +173,7 @@ export const handleTelegramWebhook = async (c: Context<AppEnv>) => {
       message.chat.id,
       message.message_id,
       attachment,
-      c.env.STORAGE_BUCKET
+      c.env
     ).catch(err =>
       dbUtils.handleError(c, err, {
         service: utils.constants.SERVICE_NAME_API,
@@ -225,68 +227,60 @@ const sendTelegramAttachment = async (
   chatId: number,
   replyToMessageId: number,
   attachment: ChannelAttachment,
-  bucket: {
-    get: (
-      key: string
-    ) => Promise<{ arrayBuffer: () => Promise<ArrayBuffer> } | null>;
-  }
+  env: Bindings
 ) => {
   const { resource, caption } = attachment;
   const mime =
     resource.mimeType || utils.constants.MIMETYPE_APPLICATION_OCTET_STREAM;
 
-  let method: 'sendPhoto' | 'sendVideo' | 'sendAudio' | 'sendDocument';
-  let field: 'photo' | 'video' | 'audio' | 'document';
-  if (mime.startsWith('image/')) {
-    method = 'sendPhoto';
-    field = 'photo';
-  } else if (mime.startsWith('video/')) {
-    method = 'sendVideo';
-    field = 'video';
-  } else if (mime.startsWith('audio/')) {
-    method = 'sendAudio';
-    field = 'audio';
-  } else {
-    method = 'sendDocument';
-    field = 'document';
-  }
-
-  let bytes: ArrayBuffer;
+  let arrayBuffer: ArrayBuffer;
   let filename: string;
   if (resource.fileKey) {
-    const object = await bucket.get(resource.fileKey);
+    const object = await env.STORAGE_BUCKET.get(resource.fileKey);
     if (!object) {
       throw new Error(
         `Resource file not found in storage: ${resource.fileKey}`
       );
     }
-    bytes = await object.arrayBuffer();
+    arrayBuffer = await object.arrayBuffer();
     filename = resource.fileName || resource.title || 'file';
   } else if (resource.content != null) {
-    bytes = new TextEncoder().encode(resource.content).buffer as ArrayBuffer;
+    const bytes = new TextEncoder().encode(resource.content);
+    arrayBuffer = bytes.buffer.slice(
+      bytes.byteOffset,
+      bytes.byteOffset + bytes.byteLength
+    ) as ArrayBuffer;
     const base = resource.fileName || resource.title || 'file';
     filename = /\.[a-z0-9]+$/i.test(base) ? base : `${base}.txt`;
   } else {
     throw new Error(`Resource has no content or fileKey: ${resource.uri}`);
   }
 
-  const form = new FormData();
-  form.append('chat_id', String(chatId));
-  form.append('reply_to_message_id', String(replyToMessageId));
-  if (caption) {
-    form.append('caption', markdownToTelegramHtml(caption).slice(0, 1024));
-    form.append('parse_mode', 'HTML');
-  }
-  form.append(field, new Blob([bytes], { type: mime }), filename);
+  const metadata: TelegramSendRequest = {
+    botToken,
+    chatId,
+    replyToMessageId,
+    caption: caption
+      ? markdownToTelegramHtml(caption).slice(0, 1024)
+      : undefined,
+    parseMode: caption ? 'HTML' : undefined
+  };
 
-  const response = await fetch(
-    `${utils.constants.TELEGRAM_API_BASE}/bot${botToken}/${method}`,
+  const form = new FormData();
+  form.append('metadata', JSON.stringify(metadata));
+  form.append('file', new Blob([arrayBuffer], { type: mime }), filename);
+
+  const handler = getResourceHandler(env);
+  const response = await handler.fetch(
+    'http://resource-handler/telegram/send',
     { method: 'POST', body: form }
   );
 
   if (!response.ok) {
     const body = await response.text().catch(() => '');
-    throw new Error(`Telegram ${method} failed: ${response.status} ${body}`);
+    throw new Error(
+      `Telegram send via container failed: ${response.status} ${body}`
+    );
   }
 };
 
@@ -506,7 +500,17 @@ export const getTelegramBotInfo = async (
     const error = await response.text();
     throw new Error(`Telegram getMe failed: ${error}`);
   }
-  const data: any = await response.json();
+  const data: {
+    result: {
+      id: number;
+      is_bot: boolean;
+      first_name: string;
+      username: string;
+      can_join_groups: boolean;
+      can_read_all_group_messages: boolean;
+      supports_inline_queries: boolean;
+    };
+  } = await response.json();
   const bot = data.result;
   return {
     id: bot.id,

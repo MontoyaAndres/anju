@@ -107,7 +107,12 @@ const callback = async (c: Context<AppEnv>) => {
     throw new Error(`Token exchange failed: ${error}`);
   }
 
-  const tokens: any = await tokenResponse.json();
+  const tokens: {
+    access_token: string;
+    refresh_token: string;
+    expires_in: number;
+    scope: string;
+  } = await tokenResponse.json();
 
   const encryptionKey = utils.getCredentialEncryptionKey(c);
   const encryptedAccessToken = utils.encryptString(

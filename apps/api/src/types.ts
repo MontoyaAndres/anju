@@ -1,8 +1,8 @@
 import type { Hyperdrive, Queue, R2Bucket } from '@cloudflare/workers-types';
+import type { ResourceHandler } from '@anju/containers';
 
 import type { Auth } from './utils';
 import type { IndexJob } from './queue';
-import type { ResourceHandler } from './containers';
 
 export type Variables = {
   user: Auth['$Infer']['Session']['user'];

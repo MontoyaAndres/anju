@@ -10,10 +10,10 @@
     "deploy-prod": "wrangler deploy --env production"
   },
   "dependencies": {
+    "@anju/containers": "*",
     "@anju/db": "*",
     "@anju/utils": "*",
     "@anthropic-ai/sdk": "^0.91.1",
-    "@cloudflare/containers": "^0.3.3",
     "@google/genai": "^1.50.1",
     "@modelcontextprotocol/sdk": "^1.26.0",
     "better-auth": "^1.4.18",

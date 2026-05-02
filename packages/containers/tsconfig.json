@@ -1,13 +1,13 @@
 {
   "extends": "@anju/tsconfig/base.json",
   "compilerOptions": {
-    "lib": ["ES2021", "dom"],
     "outDir": "./dist",
+    "declaration": true,
+    "declarationMap": true,
+    "emitDeclarationOnly": false,
     "rootDir": "./src",
-    "resolveJsonModule": true,
-    "isolatedModules": true,
     "types": ["@cloudflare/workers-types"]
   },
-  "exclude": ["node_modules"],
-  "include": ["src"]
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules"]
 }

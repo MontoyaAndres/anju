@@ -36,6 +36,15 @@ import type {
   MimeAttachment,
   MimeMessageInput
 } from './mimeMessage';
+import type {
+  GmailOperation,
+  GmailSendRequest,
+  GmailSendResponse
+} from './gmailSend';
+import type {
+  TelegramSendRequest,
+  TelegramSendResponse
+} from './telegramSend';
 import { parseHttpErrorMessage } from './parseHttpError';
 import { toStringArray } from './coerce';
 import { validateMessageVariables } from './validateMessageVariables';
@@ -116,6 +125,11 @@ export type {
   JsonSchema,
   MimeAttachment,
   MimeMessageInput,
+  GmailOperation,
+  GmailSendRequest,
+  GmailSendResponse,
+  TelegramSendRequest,
+  TelegramSendResponse,
   EnvSource,
   Separator,
   ChunkMetadata,

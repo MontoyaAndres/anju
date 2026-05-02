@@ -1,0 +1,26 @@
+{
+  "name": "@anju/containers",
+  "version": "0.0.1",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf dist && rm -rf node_modules"
+  },
+  "dependencies": {
+    "@anju/utils": "*",
+    "@cloudflare/containers": "^0.3.3"
+  },
+  "devDependencies": {
+    "@anju/tsconfig": "*",
+    "@cloudflare/workers-types": "^4.20260217.0",
+    "typescript": "^5.9.3"
+  }
+}

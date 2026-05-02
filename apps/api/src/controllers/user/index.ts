@@ -27,7 +27,11 @@ const uploadAvatar = async (c: Context<AppEnv>) => {
       `Avatar size exceeds the ${utils.constants.MAX_FILE_SIZE}MB limit`
     );
   }
-  if (!utils.constants.USER_AVATAR_MIME_TYPES.includes(file.type)) {
+  if (
+    !utils.constants.USER_AVATAR_MIME_TYPES.includes(
+      file.type as (typeof utils.constants.USER_AVATAR_MIME_TYPES)[0]
+    )
+  ) {
     throw new Error(`Unsupported image type: ${file.type}`);
   }
 

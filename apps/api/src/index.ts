@@ -242,7 +242,7 @@ app
   )
   .get('/oauth/:provider/callback', OAuthController.callback);
 
-export { ResourceHandler } from './containers';
+export { ResourceHandler } from '@anju/containers';
 
 export default {
   fetch: app.fetch,

@@ -3,6 +3,8 @@ import { db, Database } from '@anju/db';
 import { InferSelectModel } from 'drizzle-orm';
 import { R2Bucket } from '@cloudflare/workers-types';
 
+import type { Bindings } from '../types';
+
 type ArtifactResource = InferSelectModel<typeof db.schema.artifactResource>;
 
 export interface ToolCredential {
@@ -19,6 +21,7 @@ export interface ToolContext {
   credentials: ToolCredential[];
   resources: ArtifactResource[];
   bucket: R2Bucket;
+  env: Bindings;
   db: Database;
   artifactId: string;
   embedQuery: (text: string) => Promise<number[] | null>;

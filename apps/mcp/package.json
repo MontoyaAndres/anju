@@ -10,6 +10,7 @@
     "deploy-prod": "wrangler deploy --env production"
   },
   "dependencies": {
+    "@anju/containers": "*",
     "@anju/db": "*",
     "@anju/utils": "*",
     "@google/genai": "^1.50.1",

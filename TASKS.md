@@ -1,4 +1,5 @@
-- Show sources to bots
+- Show sources to bots (let the user decide if she wants to show the source, by default ACTIVE)
+- make http endpoint generate types for apps
 - Allow save crawl url, google drive, onedrive, etc
 - Create outlook, slack tool and search for the best ones out there
 - Create landing

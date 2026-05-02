@@ -2,9 +2,9 @@ import type { ExecutionContext, MessageBatch } from '@cloudflare/workers-types';
 import { db, utils as dbUtils } from '@anju/db';
 import { ExtractedDocument, utils } from '@anju/utils';
 import { eq } from 'drizzle-orm';
+import { getResourceHandler } from '@anju/containers';
 
 import { reindexResourceChunks } from '../utils';
-import { getResourceHandler } from '../containers';
 
 import type { Bindings } from '../types';
 
@@ -69,9 +69,9 @@ const indexOne = async (env: Bindings, resourceId: string): Promise<void> => {
       );
     }
 
-    const payload = (await response.json()) as {
+    const payload: {
       documents: ExtractedDocument[] | null;
-    };
+    } = await response.json();
     documents = payload.documents;
   }
 

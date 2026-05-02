@@ -70,9 +70,9 @@ const business = async (c: Context<AppEnv>) => {
       {
         title: prompt.title,
         description: prompt.description || undefined,
-        argsSchema: schema as any
+        argsSchema: schema
       },
-      async (args: any) => {
+      async args => {
         const promptMessages = (prompt.messages || []) as Array<{
           role: 'user' | 'assistant';
           content: string;
@@ -103,8 +103,16 @@ const business = async (c: Context<AppEnv>) => {
       title: resource.title,
       description: resource.description || undefined,
       mimeType: resource.mimeType || undefined,
-      annotations: (resource.annotations as any) || undefined,
-      icons: (resource.icons as any) || undefined
+      annotations: resource.annotations || undefined,
+      icons:
+        (resource.icons as
+          | {
+              src: string;
+              mimeType?: string | undefined;
+              sizes?: string[] | undefined;
+              theme?: 'light' | 'dark' | undefined;
+            }[]
+          | undefined) || undefined
     };
 
     if (resource.type === utils.constants.RESOURCE_TYPE_TEMPLATE) {
@@ -182,9 +190,9 @@ const business = async (c: Context<AppEnv>) => {
       {
         title: toolDef.title || handler.title,
         description: toolDef.description || handler.description,
-        inputSchema: schema as any
+        inputSchema: schema
       },
-      async (args: any) => {
+      async args => {
         if (reauthRequired) {
           return {
             content: [
@@ -200,6 +208,7 @@ const business = async (c: Context<AppEnv>) => {
           credentials: toolCredentials,
           resources: artifact.artifactResources,
           bucket,
+          env: c.env,
           db: dbInstance,
           artifactId: artifact.id,
           embedQuery: (text: string) => generateEmbedding(c, text)
