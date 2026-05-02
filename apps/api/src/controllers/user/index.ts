@@ -24,7 +24,7 @@ const uploadAvatar = async (c: Context<AppEnv>) => {
   }
   if (file.size > utils.constants.MAX_FILE_SIZE) {
     throw new Error(
-      `Avatar size exceeds the ${utils.constants.MAX_FILE_SIZE}MB limit`
+      `Avatar size exceeds the ${utils.constants.MAX_FILE_SIZE / (1024 * 1024)}MB limit`
     );
   }
   if (

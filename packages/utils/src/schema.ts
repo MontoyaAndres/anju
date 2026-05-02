@@ -128,9 +128,13 @@ const ARTIFACT_CREATE_RESOURCE = z.object({
     message: 'Unsupported mime type'
   }),
   content: z.string().optional(),
-  size: z.number().int().min(0).max(constants.MAX_FILE_SIZE, {
-    message: 'File size exceeds the 10MB limit'
-  }),
+  size: z
+    .number()
+    .int()
+    .min(0)
+    .max(constants.MAX_FILE_SIZE, {
+      message: `File size exceeds the ${constants.MAX_FILE_SIZE / (1024 * 1024)}MB limit`
+    }),
   encoding: z.string().max(50).optional(),
   fileKey: z.string().optional(),
   fileName: z.string().optional(),
@@ -169,9 +173,13 @@ const ARTIFACT_UPDATE_RESOURCE = z.object({
     message: 'Unsupported mime type'
   }),
   content: z.string().optional(),
-  size: z.number().int().min(0).max(constants.MAX_FILE_SIZE, {
-    message: 'File size exceeds the 10MB limit'
-  }),
+  size: z
+    .number()
+    .int()
+    .min(0)
+    .max(constants.MAX_FILE_SIZE, {
+      message: `File size exceeds the ${constants.MAX_FILE_SIZE / (1024 * 1024)}MB limit`
+    }),
   encoding: z.string().max(50).optional(),
   fileKey: z.string().optional(),
   fileName: z.string().optional(),

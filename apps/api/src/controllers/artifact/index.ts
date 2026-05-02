@@ -738,7 +738,9 @@ const uploadResourceFile = async (c: Context<AppEnv>) => {
   }
 
   if (file.size > utils.constants.MAX_FILE_SIZE) {
-    throw new Error('File size exceeds the 10MB limit');
+    throw new Error(
+      `File size exceeds the ${utils.constants.MAX_FILE_SIZE / (1024 * 1024)}MB limit`
+    );
   }
 
   if (!(utils.constants.MIMETYPES as readonly string[]).includes(file.type)) {

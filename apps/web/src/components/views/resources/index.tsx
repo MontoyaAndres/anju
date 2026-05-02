@@ -497,7 +497,7 @@ export const Resources = () => {
     if (selected.size > utils.constants.MAX_FILE_SIZE) {
       setErrors(prev => ({
         ...prev,
-        file: 'File size exceeds the 10MB limit'
+        file: `File size exceeds the ${utils.constants.MAX_FILE_SIZE / (1024 * 1024)}MB limit`
       }));
       e.target.value = '';
       return;
