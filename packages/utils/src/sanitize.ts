@@ -25,6 +25,7 @@ export const stripBase64Images = (text: string): string =>
     .replace(/<img\b[^>]*\bsrc=["']?data:image\/[^>]*>/gi, '')
     .replace(/!\[[^\]]*\]\(\s*data:image\/[^)]*\)/g, '')
     .replace(constants.BASE64_DATA_URI_RE, '')
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '')
     .replace(/[ \t]+\n/g, '\n')
     .replace(/\n{3,}/g, '\n\n')
     .trim();
@@ -33,6 +34,7 @@ export const sanitizeMetadataString = (value: string): string =>
   value
     .replace(constants.BASE64_DATA_URI_RE, '')
     .replace(constants.RAW_BASE64_BLOB_RE, '')
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '')
     .trim();
 
 export const serializeMetadataValue = (value: unknown): unknown => {

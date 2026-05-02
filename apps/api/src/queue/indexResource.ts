@@ -86,6 +86,26 @@ const indexOne = async (env: Bindings, resourceId: string): Promise<void> => {
     content: resource.content,
     documents
   });
+
+  await dbInstance
+    .update(db.schema.artifactResource)
+    .set({ status: utils.constants.STATUS_COMPLETED })
+    .where(eq(db.schema.artifactResource.id, resource.id));
+};
+
+const markResourceFailed = async (
+  env: Bindings,
+  resourceId: string
+): Promise<void> => {
+  try {
+    const dbInstance = db.create({ env });
+    await dbInstance
+      .update(db.schema.artifactResource)
+      .set({ status: utils.constants.STATUS_FAILED })
+      .where(eq(db.schema.artifactResource.id, resourceId));
+  } catch {
+    // status update is best-effort; original error is already logged
+  }
 };
 
 const isRateLimitError = (error: unknown): boolean => {
@@ -115,6 +135,7 @@ export const handleIndexBatch = async (
           metadata: { resourceId, queue: batch.queue }
         }
       );
+      await markResourceFailed(env, resourceId);
       if (isRateLimitError(error)) {
         message.retry({
           delaySeconds: utils.constants.RATE_LIMIT_BACKOFF_SECONDS

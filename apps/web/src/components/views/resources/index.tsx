@@ -27,6 +27,7 @@ interface Resource {
   title: string;
   uri: string;
   type: string;
+  status: string;
   description: string | null;
   mimeType: string;
   content: string | null;
@@ -89,6 +90,9 @@ export const Resources = () => {
     id: string;
     projectId: string;
   };
+  const hasPendingResources = resources.some(
+    r => r.status === utils.constants.STATUS_PENDING
+  );
   const apiBase = `/organization/${organizationId}/project/${projectId}/artifact/resource`;
 
   const fetchResources = async (signal?: AbortSignal) => {
@@ -102,6 +106,9 @@ export const Resources = () => {
       if (signal?.aborted) return;
       if (data && !data.error) {
         setResources(data);
+        setSelectedResource(prev =>
+          prev ? (data.find((r: Resource) => r.id === prev.id) ?? prev) : prev
+        );
       }
       setStatus('resolved');
     } catch {
@@ -115,6 +122,12 @@ export const Resources = () => {
     fetchResources(controller.signal);
     return () => controller.abort();
   }, [organizationId, projectId]);
+
+  useEffect(() => {
+    if (!hasPendingResources) return;
+    const interval = setInterval(() => fetchResources(), 3000);
+    return () => clearInterval(interval);
+  }, [hasPendingResources]);
 
   useEffect(() => {
     const requestedId = router.query.selected;
@@ -613,6 +626,7 @@ export const Resources = () => {
             >
               <div className="resource-item-top">
                 <p className="resource-item-title">{resource.title}</p>
+                <UI.Status status={resource.status} />
                 <span className="resource-item-type">{resource.type}</span>
               </div>
               <div className="resource-item-meta">
@@ -642,6 +656,9 @@ export const Resources = () => {
                   ? 'Edit Resource'
                   : selectedResource!.title}
             </h2>
+            {!isEditing && !isCreating && selectedResource && (
+              <UI.Status status={selectedResource.status} variant="badge" />
+            )}
             <div className="panel-actions">
               {!isEditing && !isCreating && (
                 <>

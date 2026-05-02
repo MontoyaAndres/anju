@@ -17,29 +17,30 @@ const embedGemini = async (params: {
   apiKey: string;
   inputs: string[];
   taskType: EmbeddingTaskType;
-}): Promise<number[][]> => {
-  const ai = new GoogleGenAI({ apiKey: params.apiKey });
-  const response = await ai.models.embedContent({
-    model: utils.constants.EMBEDDING_MODEL,
-    contents: params.inputs,
-    config: { taskType: params.taskType }
-  });
+}): Promise<number[][]> =>
+  utils.withRateLimitRetry(async () => {
+    const ai = new GoogleGenAI({ apiKey: params.apiKey });
+    const response = await ai.models.embedContent({
+      model: utils.constants.EMBEDDING_MODEL,
+      contents: params.inputs,
+      config: { taskType: params.taskType }
+    });
 
-  const items = response.embeddings;
-  if (!Array.isArray(items)) {
-    throw new Error('Gemini embedding response missing embeddings array');
-  }
-
-  return items.map(item => {
-    if (!item.values) throw new Error('Gemini embedding missing values');
-    if (item.values.length !== utils.constants.EMBEDDING_DIMENSIONS) {
-      throw new Error(
-        `Gemini returned ${item.values.length} dims; expected ${utils.constants.EMBEDDING_DIMENSIONS}.`
-      );
+    const items = response.embeddings;
+    if (!Array.isArray(items)) {
+      throw new Error('Gemini embedding response missing embeddings array');
     }
-    return item.values;
+
+    return items.map(item => {
+      if (!item.values) throw new Error('Gemini embedding missing values');
+      if (item.values.length !== utils.constants.EMBEDDING_DIMENSIONS) {
+        throw new Error(
+          `Gemini returned ${item.values.length} dims; expected ${utils.constants.EMBEDDING_DIMENSIONS}.`
+        );
+      }
+      return item.values;
+    });
   });
-};
 
 export const generateEmbeddings = async (
   source: ApiEnvSource,
@@ -54,6 +55,9 @@ export const generateEmbeddings = async (
     const batch = inputs.slice(i, i + utils.constants.EMBED_BATCH_SIZE);
     const embeddings = await embedGemini({ apiKey, inputs: batch, taskType });
     out.push(...embeddings);
+    if (i + utils.constants.EMBED_BATCH_SIZE < inputs.length) {
+      await utils.sleep(100);
+    }
   }
   return out;
 };
@@ -108,6 +112,9 @@ export const reindexResourceChunks = async (
       inputs: batch.map(p => p.content),
       taskType: 'RETRIEVAL_DOCUMENT'
     });
+    if (i + batchSize < prepared.length) {
+      await utils.sleep(100);
+    }
     try {
       await dbInstance.insert(db.schema.artifactResourceChunk).values(
         batch.map((chunk, j) => ({

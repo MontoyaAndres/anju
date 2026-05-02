@@ -15,19 +15,21 @@ export const generateEmbedding = async (
   const apiKey = utils.getEnv(c, 'EMBEDDING_API_KEY');
   if (!apiKey || !text.trim()) return null;
 
-  const ai = new GoogleGenAI({ apiKey });
-  const response = await ai.models.embedContent({
-    model: utils.constants.EMBEDDING_MODEL,
-    contents: text,
-    config: { taskType }
-  });
+  return utils.withRateLimitRetry(async () => {
+    const ai = new GoogleGenAI({ apiKey });
+    const response = await ai.models.embedContent({
+      model: utils.constants.EMBEDDING_MODEL,
+      contents: text,
+      config: { taskType }
+    });
 
-  const values = response.embeddings?.[0]?.values;
-  if (!Array.isArray(values)) return null;
-  if (values.length !== utils.constants.EMBEDDING_DIMENSIONS) {
-    throw new Error(
-      `Gemini returned ${values.length} dims; expected ${utils.constants.EMBEDDING_DIMENSIONS}.`
-    );
-  }
-  return values;
+    const values = response.embeddings?.[0]?.values;
+    if (!Array.isArray(values)) return null;
+    if (values.length !== utils.constants.EMBEDDING_DIMENSIONS) {
+      throw new Error(
+        `Gemini returned ${values.length} dims; expected ${utils.constants.EMBEDDING_DIMENSIONS}.`
+      );
+    }
+    return values;
+  });
 };

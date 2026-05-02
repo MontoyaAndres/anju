@@ -282,6 +282,7 @@ const createResource = async (c: Context<AppEnv>) => {
         title: currentValues.title,
         uri: currentValues.uri,
         type: currentValues.type,
+        status: utils.constants.STATUS_PENDING,
         description: currentValues.description ?? null,
         mimeType: currentValues.mimeType,
         content: currentValues.content ?? null,
@@ -374,6 +375,7 @@ const updateResource = async (c: Context<AppEnv>) => {
         title: currentValues.title,
         uri: currentValues.uri,
         type: currentValues.type,
+        status: utils.constants.STATUS_PENDING,
         description: currentValues.description || null,
         mimeType: currentValues.mimeType,
         content: currentValues.content || null,
@@ -786,7 +788,8 @@ const uploadResourceFile = async (c: Context<AppEnv>) => {
         fileKey: key,
         fileName: file.name,
         mimeType: file.type,
-        size: file.size
+        size: file.size,
+        status: utils.constants.STATUS_PENDING
       })
       .where(
         and(

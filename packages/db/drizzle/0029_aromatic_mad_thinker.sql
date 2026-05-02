@@ -1,0 +1,1 @@
+ALTER TABLE "artifact_resource" ADD COLUMN "status" text DEFAULT 'COMPLETED' NOT NULL;

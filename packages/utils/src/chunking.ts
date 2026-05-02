@@ -104,7 +104,7 @@ export const prepareChunks = (
   if (documents && documents.length > 0) {
     const out: PreparedChunk[] = [];
     documents.forEach((doc, docIndex) => {
-      const body = (doc.pageContent || '').trim();
+      const body = (doc.pageContent || '').replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '').trim();
       if (!body) return;
       const text = docIndex === 0 && header ? `${header}\n\n${body}` : body;
       const pieces = chunkText(text, options);
@@ -122,7 +122,7 @@ export const prepareChunks = (
     return out;
   }
 
-  const body = (fallbackContent || '').trim();
+  const body = (fallbackContent || '').replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '').trim();
   const fullText = [header, body].filter(Boolean).join('\n\n');
   return chunkText(fullText, options).map(content => ({
     content,

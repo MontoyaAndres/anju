@@ -57,6 +57,8 @@ import {
 } from './chunking';
 import type { Separator, ChunkMetadata, PreparedChunk } from './chunking';
 import { isEmbeddableMimeType } from './embeddable';
+import { sleep, isRateLimitError, withRateLimitRetry } from './retry';
+import type { RateLimitRetryOptions } from './retry';
 import type {
   ExtractedDocument,
   ExtractedDocumentMetadata,
@@ -104,7 +106,10 @@ export const utils = {
   splitRecursive,
   buildHeader,
   prepareChunks,
-  isEmbeddableMimeType
+  isEmbeddableMimeType,
+  sleep,
+  isRateLimitError,
+  withRateLimitRetry
 };
 
 export type {
@@ -117,5 +122,6 @@ export type {
   PreparedChunk,
   ExtractedDocument,
   ExtractedDocumentMetadata,
-  ExtractedDocumentSource
+  ExtractedDocumentSource,
+  RateLimitRetryOptions
 };

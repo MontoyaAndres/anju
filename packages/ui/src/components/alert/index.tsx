@@ -88,7 +88,7 @@ interface SnackbarItem {
   message: string;
 }
 
-interface SnackbarContextValue {
+export interface SnackbarContextValue {
   show: (variant: SnackbarVariant, message: string) => void;
   success: (message: string) => void;
   error: (message: string) => void;

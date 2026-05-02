@@ -6,6 +6,7 @@ import { Select } from './select';
 import { Skeleton } from './skeleton';
 import { CopyableBlock } from './copyable-block';
 import { Markdown } from './markdown';
+import { Status } from './status';
 
 export const UI = {
   Input,
@@ -15,5 +16,6 @@ export const UI = {
   Select,
   Skeleton,
   CopyableBlock,
-  Markdown
+  Markdown,
+  Status
 };
