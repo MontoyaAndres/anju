@@ -42,12 +42,7 @@ const handleExtract = async (
   }
 
   const body = await readBody(req);
-  const arrayBuffer = body.buffer.slice(
-    body.byteOffset,
-    body.byteOffset + body.byteLength
-  ) as ArrayBuffer;
-
-  const documents = await extractDocuments(arrayBuffer, mimeType, fileName);
+  const documents = await extractDocuments(body, mimeType, fileName);
   sendJson(res, 200, { documents });
 };
 
