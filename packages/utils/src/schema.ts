@@ -132,6 +132,65 @@ const CRAWL_CONFIG = z.object({
     .default(constants.CRAWL_DEFAULT_MAX_DEPTH)
 });
 
+const ARTIFACT_CREATE_WEBSITE_VIEW = z.object({
+  title: z.string().min(3).max(200),
+  uri: z
+    .url('Enter a valid URL')
+    .refine(
+      v => /^https?:\/\//i.test(v),
+      'Only http and https URLs are supported'
+    ),
+  description: z.string().optional(),
+  maxPages: z
+    .number()
+    .int()
+    .min(1)
+    .max(constants.CRAWL_MAX_PAGES_LIMIT),
+  maxDepth: z
+    .number()
+    .int()
+    .min(0)
+    .max(constants.CRAWL_MAX_DEPTH_LIMIT)
+});
+
+const ARTIFACT_CREATE_WEBSITE = z.object({
+  title: z.string().min(3).max(200),
+  uri: z
+    .url('Enter a valid URL')
+    .refine(
+      v => /^https?:\/\//i.test(v),
+      'Only http and https URLs are supported'
+    ),
+  description: z.string().optional(),
+  crawlConfig: z.object({
+    maxPages: z
+      .number()
+      .int()
+      .min(1)
+      .max(constants.CRAWL_MAX_PAGES_LIMIT),
+    maxDepth: z
+      .number()
+      .int()
+      .min(0)
+      .max(constants.CRAWL_MAX_DEPTH_LIMIT)
+  }),
+  projectId: z.uuid(),
+  userId: z.uuid(),
+  organizationId: z.uuid()
+});
+
+const ARTIFACT_UPDATE_WEBSITE_VIEW = z.object({
+  title: z.string().min(3).max(200),
+  description: z.string().optional()
+});
+
+const ARTIFACT_UPDATE_WEBSITE = ARTIFACT_UPDATE_WEBSITE_VIEW.extend({
+  resourceId: z.uuid(),
+  projectId: z.uuid(),
+  userId: z.uuid(),
+  organizationId: z.uuid()
+});
+
 const ARTIFACT_CREATE_RESOURCE = z.object({
   title: z.string().min(3).max(200),
   uri: z.string(),
@@ -433,6 +492,10 @@ export const Schema = {
   ARTIFACT_REMOVE_PROMPT,
   ARTIFACT_CREATE_RESOURCE,
   ARTIFACT_CREATE_RESOURCE_VIEW,
+  ARTIFACT_CREATE_WEBSITE,
+  ARTIFACT_CREATE_WEBSITE_VIEW,
+  ARTIFACT_UPDATE_WEBSITE,
+  ARTIFACT_UPDATE_WEBSITE_VIEW,
   ARTIFACT_UPDATE_RESOURCE,
   ARTIFACT_UPDATE_RESOURCE_VIEW,
   ARTIFACT_GET_RESOURCE,

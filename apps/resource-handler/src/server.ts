@@ -65,7 +65,7 @@ const handleCrawlDiscover = async (
     sendJson(res, 400, { error: 'missing url' });
     return;
   }
-  const pages = await crawlDiscover({
+  const result = await crawlDiscover({
     url: body.url,
     maxPages: Math.min(
       body.maxPages ?? utils.constants.CRAWL_DEFAULT_MAX_PAGES,
@@ -76,7 +76,7 @@ const handleCrawlDiscover = async (
       utils.constants.CRAWL_MAX_DEPTH_LIMIT
     )
   });
-  sendJson(res, 200, { pages });
+  sendJson(res, 200, result);
 };
 
 const handleCrawlPage = async (

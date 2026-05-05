@@ -69,13 +69,25 @@ const discoverOne = async (
     );
   }
 
-  const payload: { pages: DiscoveredPage[] } = await response.json();
+  const payload: {
+    pages: DiscoveredPage[];
+    seed: Record<string, unknown> | null;
+  } = await response.json();
   const pages = payload.pages || [];
+  const seed = payload.seed || null;
+
+  const mergedParentMetadata = {
+    ...(resource.metadata as Record<string, unknown> | null),
+    ...(seed ? { seo: seed } : {})
+  };
 
   if (pages.length === 0) {
     await dbInstance
       .update(db.schema.artifactResource)
-      .set({ status: utils.constants.STATUS_COMPLETED })
+      .set({
+        status: utils.constants.STATUS_COMPLETED,
+        ...(seed ? { metadata: mergedParentMetadata } : {})
+      })
       .where(eq(db.schema.artifactResource.id, resourceId));
     return;
   }
@@ -102,7 +114,8 @@ const discoverOne = async (
     .update(db.schema.artifactResource)
     .set({
       childResourceCount: pages.length,
-      status: utils.constants.STATUS_PENDING
+      status: utils.constants.STATUS_PENDING,
+      ...(seed ? { metadata: mergedParentMetadata } : {})
     })
     .where(eq(db.schema.artifactResource.id, resourceId));
 

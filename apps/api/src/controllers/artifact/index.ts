@@ -1,5 +1,5 @@
 import { Context } from 'hono';
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, isNull, sql } from 'drizzle-orm';
 import { utils } from '@anju/utils';
 import { db } from '@anju/db';
 
@@ -223,12 +223,11 @@ const removePrompt = async (c: Context<AppEnv>) => {
 
 const createResource = async (c: Context<AppEnv>) => {
   const body = await c.req.json();
-  const currentValues = await utils.Schema.ARTIFACT_CREATE_RESOURCE.parseAsync({
-    ...body,
-    projectId: c.req.param('projectId'),
-    userId: c.get('user').id,
-    organizationId: c.req.param('organizationId')
-  });
+  const projectId = c.req.param('projectId');
+  const organizationId = c.req.param('organizationId');
+  const userId = c.get('user').id;
+  const isWebsite =
+    body?.sourceType === utils.constants.RESOURCE_SOURCE_TYPE_WEBSITE;
 
   const dbInstance = db.create(c);
 
@@ -238,8 +237,8 @@ const createResource = async (c: Context<AppEnv>) => {
       .from(db.schema.project)
       .where(
         and(
-          eq(db.schema.project.id, currentValues.projectId),
-          eq(db.schema.project.organizationId, currentValues.organizationId)
+          eq(db.schema.project.id, projectId),
+          eq(db.schema.project.organizationId, organizationId)
         )
       )
       .limit(1);
@@ -251,14 +250,73 @@ const createResource = async (c: Context<AppEnv>) => {
     const [currentArtifactByProject] = await tx
       .select()
       .from(db.schema.artifact)
-      .where(eq(db.schema.artifact.projectId, currentValues.projectId))
+      .where(eq(db.schema.artifact.projectId, projectId))
       .limit(1);
 
     if (!currentArtifactByProject) {
       throw new Error('Artifact not found for the project');
     }
 
-    const [existingResource] = await tx
+    if (isWebsite) {
+      const websiteValues =
+        await utils.Schema.ARTIFACT_CREATE_WEBSITE.parseAsync({
+          ...body,
+          projectId,
+          userId,
+          organizationId
+        });
+
+      const [conflicting] = await tx
+        .select()
+        .from(db.schema.artifactResource)
+        .where(
+          and(
+            eq(
+              db.schema.artifactResource.artifactId,
+              currentArtifactByProject.id
+            ),
+            eq(db.schema.artifactResource.uri, websiteValues.uri)
+          )
+        )
+        .limit(1);
+
+      if (conflicting) {
+        throw new Error('Resource URI must be unique');
+      }
+
+      const [created] = await tx
+        .insert(db.schema.artifactResource)
+        .values({
+          title: websiteValues.title,
+          uri: websiteValues.uri,
+          type: utils.constants.RESOURCE_TYPE_STATIC,
+          sourceType: utils.constants.RESOURCE_SOURCE_TYPE_WEBSITE,
+          status: utils.constants.STATUS_PENDING,
+          description: websiteValues.description ?? null,
+          mimeType: utils.constants.MIMETYPE_TEXT,
+          crawlConfig: websiteValues.crawlConfig,
+          artifactId: currentArtifactByProject.id
+        })
+        .returning();
+
+      await tx
+        .update(db.schema.artifact)
+        .set({
+          artifactResourceCount: sql`(${db.schema.artifact.artifactResourceCount}::int + 1)::int`
+        })
+        .where(eq(db.schema.artifact.id, currentArtifactByProject.id));
+
+      return created;
+    }
+
+    const fileValues = await utils.Schema.ARTIFACT_CREATE_RESOURCE.parseAsync({
+      ...body,
+      projectId,
+      userId,
+      organizationId
+    });
+
+    const [conflicting] = await tx
       .select()
       .from(db.schema.artifactResource)
       .where(
@@ -267,34 +325,34 @@ const createResource = async (c: Context<AppEnv>) => {
             db.schema.artifactResource.artifactId,
             currentArtifactByProject.id
           ),
-          eq(db.schema.artifactResource.uri, currentValues.uri)
+          eq(db.schema.artifactResource.uri, fileValues.uri)
         )
       )
       .limit(1);
 
-    if (existingResource) {
+    if (conflicting) {
       throw new Error('Resource URI must be unique');
     }
 
-    const artifactResource = await tx
+    const [created] = await tx
       .insert(db.schema.artifactResource)
       .values({
-        title: currentValues.title,
-        uri: currentValues.uri,
-        type: currentValues.type,
-        sourceType: currentValues.sourceType,
+        title: fileValues.title,
+        uri: fileValues.uri,
+        type: fileValues.type,
+        sourceType: fileValues.sourceType,
         status: utils.constants.STATUS_PENDING,
-        description: currentValues.description ?? null,
-        mimeType: currentValues.mimeType,
-        content: currentValues.content ?? null,
-        size: currentValues.size ?? null,
-        encoding: currentValues.encoding ?? null,
-        fileKey: currentValues.fileKey ?? null,
-        fileName: currentValues.fileName ?? null,
-        annotations: currentValues.annotations ?? null,
-        icons: currentValues.icons ?? null,
-        metadata: currentValues.metadata ?? null,
-        crawlConfig: currentValues.crawlConfig ?? null,
+        description: fileValues.description ?? null,
+        mimeType: fileValues.mimeType,
+        content: fileValues.content ?? null,
+        size: fileValues.size ?? null,
+        encoding: fileValues.encoding ?? null,
+        fileKey: fileValues.fileKey ?? null,
+        fileName: fileValues.fileName ?? null,
+        annotations: fileValues.annotations ?? null,
+        icons: fileValues.icons ?? null,
+        metadata: fileValues.metadata ?? null,
+        crawlConfig: fileValues.crawlConfig ?? null,
         artifactId: currentArtifactByProject.id
       })
       .returning();
@@ -306,12 +364,10 @@ const createResource = async (c: Context<AppEnv>) => {
       })
       .where(eq(db.schema.artifact.id, currentArtifactByProject.id));
 
-    return artifactResource[0];
+    return created;
   });
 
-  if (
-    currentValues.sourceType === utils.constants.RESOURCE_SOURCE_TYPE_WEBSITE
-  ) {
+  if (isWebsite) {
     await enqueueCrawlDiscover(c.env, result.id);
   } else {
     await enqueueIndex(c.env, result.id);
@@ -322,24 +378,21 @@ const createResource = async (c: Context<AppEnv>) => {
 
 const updateResource = async (c: Context<AppEnv>) => {
   const body = await c.req.json();
-  const currentValues = await utils.Schema.ARTIFACT_UPDATE_RESOURCE.parseAsync({
-    ...body,
-    resourceId: c.req.param('resourceId'),
-    projectId: c.req.param('projectId'),
-    userId: c.get('user').id,
-    organizationId: c.req.param('organizationId')
-  });
+  const projectId = c.req.param('projectId');
+  const organizationId = c.req.param('organizationId');
+  const resourceId = c.req.param('resourceId');
+  const userId = c.get('user').id;
 
   const dbInstance = db.create(c);
 
-  const result = await dbInstance.transaction(async tx => {
+  const { result, isWebsite } = await dbInstance.transaction(async tx => {
     const [project] = await tx
       .select()
       .from(db.schema.project)
       .where(
         and(
-          eq(db.schema.project.id, currentValues.projectId),
-          eq(db.schema.project.organizationId, currentValues.organizationId)
+          eq(db.schema.project.id, projectId),
+          eq(db.schema.project.organizationId, organizationId)
         )
       )
       .limit(1);
@@ -351,14 +404,61 @@ const updateResource = async (c: Context<AppEnv>) => {
     const [currentArtifactByProject] = await tx
       .select()
       .from(db.schema.artifact)
-      .where(eq(db.schema.artifact.projectId, currentValues.projectId))
+      .where(eq(db.schema.artifact.projectId, projectId))
       .limit(1);
 
     if (!currentArtifactByProject) {
       throw new Error('Artifact not found for the project');
     }
 
-    const [existingResource] = await tx
+    const [existing] = await tx
+      .select()
+      .from(db.schema.artifactResource)
+      .where(
+        and(
+          eq(db.schema.artifactResource.id, resourceId),
+          eq(db.schema.artifactResource.artifactId, currentArtifactByProject.id)
+        )
+      )
+      .limit(1);
+
+    if (!existing) {
+      throw new Error('Resource not found');
+    }
+
+    if (
+      existing.sourceType === utils.constants.RESOURCE_SOURCE_TYPE_WEBSITE
+    ) {
+      const websiteValues =
+        await utils.Schema.ARTIFACT_UPDATE_WEBSITE.parseAsync({
+          ...body,
+          resourceId,
+          projectId,
+          userId,
+          organizationId
+        });
+
+      const [updated] = await tx
+        .update(db.schema.artifactResource)
+        .set({
+          title: websiteValues.title,
+          description: websiteValues.description ?? null
+        })
+        .where(eq(db.schema.artifactResource.id, resourceId))
+        .returning();
+
+      return { result: updated, isWebsite: true };
+    }
+
+    const fileValues = await utils.Schema.ARTIFACT_UPDATE_RESOURCE.parseAsync({
+      ...body,
+      resourceId,
+      projectId,
+      userId,
+      organizationId
+    });
+
+    const [conflicting] = await tx
       .select()
       .from(db.schema.artifactResource)
       .where(
@@ -367,57 +467,59 @@ const updateResource = async (c: Context<AppEnv>) => {
             db.schema.artifactResource.artifactId,
             currentArtifactByProject.id
           ),
-          eq(db.schema.artifactResource.uri, currentValues.uri),
-          sql`${db.schema.artifactResource.id} <> ${currentValues.resourceId}`
+          eq(db.schema.artifactResource.uri, fileValues.uri),
+          sql`${db.schema.artifactResource.id} <> ${resourceId}`
         )
       )
       .limit(1);
 
-    if (existingResource) {
+    if (conflicting) {
       throw new Error('Resource URI must be unique');
     }
 
-    const artifactResource = await tx
+    const [updated] = await tx
       .update(db.schema.artifactResource)
       .set({
-        title: currentValues.title,
-        uri: currentValues.uri,
-        type: currentValues.type,
-        sourceType: currentValues.sourceType,
+        title: fileValues.title,
+        uri: fileValues.uri,
+        type: fileValues.type,
+        sourceType: fileValues.sourceType,
         status: utils.constants.STATUS_PENDING,
-        description: currentValues.description || null,
-        mimeType: currentValues.mimeType,
-        content: currentValues.content || null,
-        size: currentValues.size ?? null,
-        encoding: currentValues.encoding || null,
-        annotations: currentValues.annotations || null,
-        icons: currentValues.icons || null,
-        ...(currentValues.fileKey !== undefined && {
-          fileKey: currentValues.fileKey
+        description: fileValues.description || null,
+        mimeType: fileValues.mimeType,
+        content: fileValues.content || null,
+        size: fileValues.size ?? null,
+        encoding: fileValues.encoding || null,
+        annotations: fileValues.annotations || null,
+        icons: fileValues.icons || null,
+        ...(fileValues.fileKey !== undefined && {
+          fileKey: fileValues.fileKey
         }),
-        ...(currentValues.fileName !== undefined && {
-          fileName: currentValues.fileName
+        ...(fileValues.fileName !== undefined && {
+          fileName: fileValues.fileName
         }),
-        ...(currentValues.metadata !== undefined && {
-          metadata: currentValues.metadata
+        ...(fileValues.metadata !== undefined && {
+          metadata: fileValues.metadata
         })
       })
       .where(
         and(
-          eq(db.schema.artifactResource.id, currentValues.resourceId),
+          eq(db.schema.artifactResource.id, resourceId),
           eq(db.schema.artifactResource.artifactId, currentArtifactByProject.id)
         )
       )
       .returning();
 
-    if (!artifactResource[0]) {
+    if (!updated) {
       throw new Error('Resource not found');
     }
 
-    return artifactResource[0];
+    return { result: updated, isWebsite: false };
   });
 
-  await enqueueIndex(c.env, result.id);
+  if (!isWebsite) {
+    await enqueueIndex(c.env, result.id);
+  }
 
   return c.json(result);
 };
@@ -429,20 +531,36 @@ const listResources = async (c: Context<AppEnv>) => {
     organizationId: c.req.param('organizationId')
   });
 
+  const parentResourceId = c.req.query('parentResourceId') || null;
+
   const dbInstance = db.create(c);
 
-  const artifact = await dbInstance.query.artifact.findFirst({
-    where: eq(db.schema.artifact.projectId, currentValues.projectId),
-    with: {
-      artifactResources: true
-    }
-  });
+  const [artifactRow] = await dbInstance
+    .select()
+    .from(db.schema.artifact)
+    .where(eq(db.schema.artifact.projectId, currentValues.projectId))
+    .limit(1);
 
-  if (!artifact) {
+  if (!artifactRow) {
     throw new Error('Artifact not found for the project');
   }
 
-  return c.json(artifact.artifactResources);
+  const list = await dbInstance
+    .select()
+    .from(db.schema.artifactResource)
+    .where(
+      and(
+        eq(db.schema.artifactResource.artifactId, artifactRow.id),
+        parentResourceId
+          ? eq(
+              db.schema.artifactResource.parentResourceId,
+              parentResourceId
+            )
+          : isNull(db.schema.artifactResource.parentResourceId)
+      )
+    );
+
+  return c.json(list);
 };
 
 const removeResource = async (c: Context<AppEnv>) => {
@@ -510,6 +628,18 @@ const removeResource = async (c: Context<AppEnv>) => {
         artifactResourceCount: sql`(${db.schema.artifact.artifactResourceCount}::int - ${removedCount})::int`
       })
       .where(eq(db.schema.artifact.id, currentArtifactByProject.id));
+
+    const removed = deleteResource[0];
+    if (removed.parentResourceId) {
+      await tx
+        .update(db.schema.artifactResource)
+        .set({
+          childResourceCount: sql`GREATEST(${db.schema.artifactResource.childResourceCount}::int - 1, 0)`
+        })
+        .where(
+          eq(db.schema.artifactResource.id, removed.parentResourceId)
+        );
+    }
   });
 
   return c.json(currentValues);

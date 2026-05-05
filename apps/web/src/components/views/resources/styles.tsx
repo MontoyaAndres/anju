@@ -69,10 +69,119 @@ export const Wrapper = styled.div<IProps>`
           line-height: 1.4;
         }
 
+        .resources-header-actions {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          flex-shrink: 0;
+        }
+
+        .resources-view-toggle {
+          display: inline-flex;
+          align-items: center;
+          background-color: ${theme.colors.bastille}08;
+          border: 1px solid ${theme.colors.alto};
+          border-radius: 8px;
+          padding: 3px;
+          gap: 2px;
+
+          button {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            border: none;
+            background: transparent;
+            border-radius: 6px;
+            font-size: ${theme.fonts.sm};
+            font-weight: 500;
+            color: ${theme.colors.bastille}99;
+            cursor: pointer;
+            transition: background-color 0.15s ease, color 0.15s ease;
+
+            & > svg {
+              width: 16px;
+              height: 16px;
+            }
+
+            &:hover {
+              color: ${theme.colors.bastille};
+            }
+
+            &.active {
+              background-color: ${theme.colors.white};
+              color: ${theme.colors.bastille};
+              font-weight: 600;
+              box-shadow: 0 1px 2px ${theme.colors.bastille}1A;
+            }
+          }
+        }
+      }
+
+      .resources-toolbar {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 16px;
+        flex-wrap: wrap;
+
+        .resources-back {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+          padding: 6px 10px;
+          border: 1px solid ${theme.colors.alto};
+          border-radius: 8px;
+          background: transparent;
+          cursor: pointer;
+          font-size: ${theme.fonts.sm};
+          color: ${theme.colors.bastille};
+          transition: background-color 0.15s ease;
+
+          & > svg {
+            width: 16px;
+            height: 16px;
+          }
+
+          &:hover {
+            background-color: ${theme.colors.bastille}08;
+          }
+        }
+
+        .resources-search {
+          flex: 1;
+          min-width: 200px;
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          padding: 6px 10px;
+          border: 1px solid ${theme.colors.alto};
+          border-radius: 8px;
+          background-color: ${theme.colors.white};
+
+          & > svg {
+            width: 16px;
+            height: 16px;
+            color: ${theme.colors.bastille}80;
+            flex-shrink: 0;
+          }
+
+          input {
+            flex: 1;
+            border: none;
+            outline: none;
+            background: transparent;
+            font-size: ${theme.fonts.sm};
+            color: ${theme.colors.bastille};
+
+            &::placeholder {
+              color: ${theme.colors.bastille}66;
+            }
+          }
+        }
+
         .MuiButtonBase-root {
           flex-shrink: 0;
-          align-self: flex-start;
-          white-space: nowrap;
           font-size: ${theme.fonts.sm};
           padding: 6px 14px;
           border-radius: 8px;
@@ -80,7 +189,6 @@ export const Wrapper = styled.div<IProps>`
           display: inline-flex;
           align-items: center;
           gap: 4px;
-          width: auto;
 
           .button-text {
             font-weight: 600;
@@ -93,11 +201,104 @@ export const Wrapper = styled.div<IProps>`
         }
       }
 
-      .resources-empty {
-        font-size: ${theme.fonts.base};
-        color: ${theme.colors.bastille}99;
-        margin: 40px 0;
-        text-align: center;
+      .resources-folder-heading {
+        font-size: ${theme.fonts.lg};
+        font-weight: 600;
+        color: ${theme.colors.bastille};
+        margin: 0 0 12px 0;
+      }
+
+      .resources-folders {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+
+        .resource-folder {
+          display: flex;
+          align-items: center;
+          gap: 14px;
+          padding: 16px 18px;
+          border: 1px solid ${theme.colors.alto};
+          border-radius: 10px;
+          background: ${theme.colors.white};
+          cursor: pointer;
+          text-align: left;
+          transition: border-color 0.15s ease, background-color 0.15s ease;
+
+          &:hover {
+            border-color: ${theme.colors.bastille}40;
+            background-color: ${theme.colors.bastille}05;
+          }
+
+          .resource-folder-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+
+            & > svg {
+              width: 22px;
+              height: 22px;
+            }
+
+            &.files {
+              background-color: ${theme.colors.bastille}0F;
+              color: ${theme.colors.bastille};
+            }
+
+            &.websites {
+              background-color: ${theme.colors.bastille}0F;
+              color: ${theme.colors.bastille};
+            }
+          }
+
+          .resource-folder-body {
+            flex: 1;
+            min-width: 0;
+
+            .resource-folder-title {
+              font-size: ${theme.fonts.base};
+              font-weight: 600;
+              color: ${theme.colors.bastille};
+              margin: 0;
+            }
+
+            .resource-folder-meta {
+              font-size: ${theme.fonts.xs};
+              color: ${theme.colors.bastille}99;
+              margin: 2px 0 0 0;
+            }
+          }
+
+          .resource-folder-action {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 6px 12px;
+            border: 1px solid transparent;
+            background: transparent;
+            border-radius: 8px;
+            font-size: ${theme.fonts.sm};
+            font-weight: 600;
+            color: ${theme.colors.bastille};
+            cursor: pointer;
+            transition: background-color 0.15s ease, border-color 0.15s ease;
+            flex-shrink: 0;
+
+            & > svg {
+              width: 16px;
+              height: 16px;
+            }
+
+            &:hover {
+              border-color: ${theme.colors.bastille}40;
+              background-color: ${theme.colors.white};
+            }
+          }
+        }
       }
 
       .resources-empty-state {
@@ -153,7 +354,10 @@ export const Wrapper = styled.div<IProps>`
         gap: 8px;
 
         .resource-item {
-          padding: 14px 16px;
+          display: flex;
+          align-items: flex-start;
+          gap: 12px;
+          padding: 12px 14px;
           border-radius: 8px;
           border: 1px solid ${theme.colors.alto};
           cursor: pointer;
@@ -178,6 +382,36 @@ export const Wrapper = styled.div<IProps>`
               border-color: ${theme.colors.alto};
               background-color: transparent;
             }
+          }
+
+          .resource-item-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: ${theme.colors.bastille}0F;
+            color: ${theme.colors.bastille};
+            flex-shrink: 0;
+            overflow: hidden;
+
+            & > svg {
+              width: 18px;
+              height: 18px;
+            }
+
+            .resource-item-favicon {
+              width: 20px;
+              height: 20px;
+              object-fit: contain;
+              border-radius: 4px;
+            }
+          }
+
+          .resource-item-body {
+            flex: 1;
+            min-width: 0;
           }
 
           .resource-item-top {
@@ -211,11 +445,20 @@ export const Wrapper = styled.div<IProps>`
             display: flex;
             align-items: center;
             gap: 12px;
-            margin-top: 6px;
+            margin-top: 4px;
+            flex-wrap: wrap;
 
             & > span {
               font-size: ${theme.fonts.xs};
               color: ${theme.colors.saltBox};
+            }
+
+            .resource-item-uri {
+              max-width: 100%;
+              white-space: nowrap;
+              overflow: hidden;
+              text-overflow: ellipsis;
+              font-family: monospace;
             }
           }
         }
@@ -374,6 +617,12 @@ export const Wrapper = styled.div<IProps>`
                 }
               }
             }
+          }
+
+          .panel-crawl-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
           }
 
           .panel-size-hint {
@@ -573,6 +822,40 @@ export const Wrapper = styled.div<IProps>`
           flex-direction: column;
           gap: 20px;
 
+          .panel-parent-back {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 10px;
+            background: transparent;
+            border: 1px solid ${theme.colors.alto};
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: ${theme.fonts.sm};
+            font-weight: 500;
+            color: ${theme.colors.bastille};
+            align-self: flex-start;
+            max-width: 100%;
+            transition: background-color 0.15s ease, border-color 0.15s ease;
+
+            & > svg {
+              width: 16px;
+              height: 16px;
+              flex-shrink: 0;
+            }
+
+            & > span {
+              white-space: nowrap;
+              overflow: hidden;
+              text-overflow: ellipsis;
+            }
+
+            &:hover {
+              background-color: ${theme.colors.bastille}05;
+              border-color: ${theme.colors.bastille}40;
+            }
+          }
+
           .panel-info-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -624,6 +907,41 @@ export const Wrapper = styled.div<IProps>`
               margin: 0;
               line-height: 1.5;
               word-break: break-all;
+            }
+
+            .panel-children {
+              display: flex;
+              flex-direction: column;
+              gap: 4px;
+
+              .panel-child-row {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 8px;
+                padding: 8px 10px;
+                border: 1px solid ${theme.colors.alto};
+                border-radius: 6px;
+                background: ${theme.colors.white};
+                cursor: pointer;
+                text-align: left;
+                transition: border-color 0.15s ease, background-color 0.15s ease;
+
+                .panel-child-title {
+                  flex: 1;
+                  min-width: 0;
+                  font-size: ${theme.fonts.sm};
+                  color: ${theme.colors.bastille};
+                  white-space: nowrap;
+                  overflow: hidden;
+                  text-overflow: ellipsis;
+                }
+
+                &:hover {
+                  border-color: ${theme.colors.bastille}40;
+                  background-color: ${theme.colors.bastille}05;
+                }
+              }
             }
 
             .MuiButtonBase-root {

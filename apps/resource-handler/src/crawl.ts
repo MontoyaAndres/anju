@@ -13,6 +13,11 @@ export interface CrawlDiscoverOptions {
   maxDepth: number;
 }
 
+export interface CrawlDiscoverResult {
+  pages: DiscoveredPage[];
+  seed: WebSeo | null;
+}
+
 export interface WebSeo {
   url: string;
   canonicalUrl?: string;
@@ -359,10 +364,10 @@ const renderWithPlaywright = async (
 
 export const crawlDiscover = async (
   options: CrawlDiscoverOptions
-): Promise<DiscoveredPage[]> => {
+): Promise<CrawlDiscoverResult> => {
   const cheerio = await import('cheerio');
   const startUrl = normalizeUrl(options.url);
-  if (!startUrl) return [];
+  if (!startUrl) return { pages: [], seed: null };
   const origin = new URL(startUrl).origin;
 
   const visited = new Set<string>();
@@ -370,6 +375,7 @@ export const crawlDiscover = async (
     { url: startUrl, depth: 0 }
   ];
   const pages: DiscoveredPage[] = [];
+  let seed: WebSeo | null = null;
 
   while (queue.length > 0 && pages.length < options.maxPages) {
     const { url, depth } = queue.shift()!;
@@ -389,6 +395,15 @@ export const crawlDiscover = async (
         $ = cheerio.load(playwright.html);
         text = extractFullText($);
       }
+    }
+
+    if (depth === 0 && !seed) {
+      seed = buildSeo(
+        $,
+        fetched.finalUrl,
+        fetched.status,
+        fetched.contentType
+      );
     }
 
     const titleAttr =
@@ -411,7 +426,7 @@ export const crawlDiscover = async (
     }
   }
 
-  return pages;
+  return { pages, seed };
 };
 
 export const crawlPage = async (
