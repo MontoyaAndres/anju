@@ -68,6 +68,12 @@ import type { Separator, ChunkMetadata, PreparedChunk } from './chunking';
 import { isEmbeddableMimeType } from './embeddable';
 import { sleep, isRateLimitError, withRateLimitRetry } from './retry';
 import type { RateLimitRetryOptions } from './retry';
+import { processQueueBatch } from './processQueueBatch';
+import type {
+  QueueBatchLike,
+  QueueMessageLike,
+  ProcessQueueBatchHandlers
+} from './processQueueBatch';
 import type {
   ExtractedDocument,
   ExtractedDocumentMetadata,
@@ -118,7 +124,8 @@ export const utils = {
   isEmbeddableMimeType,
   sleep,
   isRateLimitError,
-  withRateLimitRetry
+  withRateLimitRetry,
+  processQueueBatch
 };
 
 export type {
@@ -137,5 +144,8 @@ export type {
   ExtractedDocument,
   ExtractedDocumentMetadata,
   ExtractedDocumentSource,
-  RateLimitRetryOptions
+  RateLimitRetryOptions,
+  QueueBatchLike,
+  QueueMessageLike,
+  ProcessQueueBatchHandlers
 };

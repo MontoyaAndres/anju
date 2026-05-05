@@ -3,7 +3,7 @@ import { and, eq, sql } from 'drizzle-orm';
 import { utils } from '@anju/utils';
 import { db } from '@anju/db';
 
-import { enqueueIndex } from '../../utils';
+import { enqueueIndex, enqueueCrawlDiscover } from '../../utils';
 
 // types
 import { AppEnv } from '../../types';
@@ -282,6 +282,7 @@ const createResource = async (c: Context<AppEnv>) => {
         title: currentValues.title,
         uri: currentValues.uri,
         type: currentValues.type,
+        sourceType: currentValues.sourceType,
         status: utils.constants.STATUS_PENDING,
         description: currentValues.description ?? null,
         mimeType: currentValues.mimeType,
@@ -293,6 +294,7 @@ const createResource = async (c: Context<AppEnv>) => {
         annotations: currentValues.annotations ?? null,
         icons: currentValues.icons ?? null,
         metadata: currentValues.metadata ?? null,
+        crawlConfig: currentValues.crawlConfig ?? null,
         artifactId: currentArtifactByProject.id
       })
       .returning();
@@ -307,7 +309,13 @@ const createResource = async (c: Context<AppEnv>) => {
     return artifactResource[0];
   });
 
-  await enqueueIndex(c.env, result.id);
+  if (
+    currentValues.sourceType === utils.constants.RESOURCE_SOURCE_TYPE_WEBSITE
+  ) {
+    await enqueueCrawlDiscover(c.env, result.id);
+  } else {
+    await enqueueIndex(c.env, result.id);
+  }
 
   return c.json(result);
 };
@@ -375,11 +383,12 @@ const updateResource = async (c: Context<AppEnv>) => {
         title: currentValues.title,
         uri: currentValues.uri,
         type: currentValues.type,
+        sourceType: currentValues.sourceType,
         status: utils.constants.STATUS_PENDING,
         description: currentValues.description || null,
         mimeType: currentValues.mimeType,
         content: currentValues.content || null,
-        size: currentValues.size,
+        size: currentValues.size ?? null,
         encoding: currentValues.encoding || null,
         annotations: currentValues.annotations || null,
         icons: currentValues.icons || null,
@@ -472,6 +481,13 @@ const removeResource = async (c: Context<AppEnv>) => {
       throw new Error('Artifact not found for the project');
     }
 
+    const [{ count: childCount }] = await tx
+      .select({ count: sql<number>`count(*)::int` })
+      .from(db.schema.artifactResource)
+      .where(
+        eq(db.schema.artifactResource.parentResourceId, currentValues.resourceId)
+      );
+
     const deleteResource = await tx
       .delete(db.schema.artifactResource)
       .where(
@@ -486,10 +502,12 @@ const removeResource = async (c: Context<AppEnv>) => {
       throw new Error('Resource not found');
     }
 
+    const removedCount = 1 + Number(childCount || 0);
+
     await tx
       .update(db.schema.artifact)
       .set({
-        artifactResourceCount: sql`(${db.schema.artifact.artifactResourceCount}::int - 1)::int`
+        artifactResourceCount: sql`(${db.schema.artifact.artifactResourceCount}::int - ${removedCount})::int`
       })
       .where(eq(db.schema.artifact.id, currentArtifactByProject.id));
   });

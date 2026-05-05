@@ -5,6 +5,7 @@ import { utils as dbUtils } from '@anju/db';
 import { extractDocuments } from './extract.js';
 import { handleGmailSend } from './gmailSend.js';
 import { handleTelegramSend } from './telegramSend.js';
+import { crawlDiscover, crawlPage } from './crawl.js';
 
 const readBody = (req: http.IncomingMessage): Promise<Buffer> =>
   new Promise((resolve, reject) => {
@@ -46,6 +47,58 @@ const handleExtract = async (
   sendJson(res, 200, { documents });
 };
 
+const parseJsonBody = async <T>(req: http.IncomingMessage): Promise<T> => {
+  const buffer = await readBody(req);
+  return JSON.parse(buffer.toString('utf8') || '{}') as T;
+};
+
+const handleCrawlDiscover = async (
+  req: http.IncomingMessage,
+  res: http.ServerResponse
+): Promise<void> => {
+  const body = await parseJsonBody<{
+    url?: string;
+    maxPages?: number;
+    maxDepth?: number;
+  }>(req);
+  if (!body.url) {
+    sendJson(res, 400, { error: 'missing url' });
+    return;
+  }
+  const pages = await crawlDiscover({
+    url: body.url,
+    maxPages: Math.min(
+      body.maxPages ?? utils.constants.CRAWL_DEFAULT_MAX_PAGES,
+      utils.constants.CRAWL_MAX_PAGES_LIMIT
+    ),
+    maxDepth: Math.min(
+      body.maxDepth ?? utils.constants.CRAWL_DEFAULT_MAX_DEPTH,
+      utils.constants.CRAWL_MAX_DEPTH_LIMIT
+    )
+  });
+  sendJson(res, 200, { pages });
+};
+
+const handleCrawlPage = async (
+  req: http.IncomingMessage,
+  res: http.ServerResponse
+): Promise<void> => {
+  const body = await parseJsonBody<{
+    url?: string;
+    renderer?: 'cheerio' | 'playwright';
+  }>(req);
+  if (!body.url) {
+    sendJson(res, 400, { error: 'missing url' });
+    return;
+  }
+  const result = await crawlPage(body.url, body.renderer);
+  if (!result) {
+    sendJson(res, 422, { error: 'failed to extract page' });
+    return;
+  }
+  sendJson(res, 200, result);
+};
+
 const server = http.createServer(async (req, res) => {
   try {
     if (req.method === 'GET' && req.url === '/health') {
@@ -56,6 +109,16 @@ const server = http.createServer(async (req, res) => {
 
     if (req.method === 'POST' && req.url === '/extract') {
       await handleExtract(req, res);
+      return;
+    }
+
+    if (req.method === 'POST' && req.url === '/crawl/discover') {
+      await handleCrawlDiscover(req, res);
+      return;
+    }
+
+    if (req.method === 'POST' && req.url === '/crawl/page') {
+      await handleCrawlPage(req, res);
       return;
     }
 

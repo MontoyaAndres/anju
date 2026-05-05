@@ -11,8 +11,10 @@
   "dependencies": {
     "@anju/db": "*",
     "@anju/utils": "*",
+    "cheerio": "^1.0.0",
     "fflate": "^0.8.2",
     "mammoth": "^1.12.0",
+    "playwright": "^1.49.0",
     "unpdf": "^1.6.0",
     "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
   },

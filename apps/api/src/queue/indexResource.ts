@@ -1,10 +1,11 @@
 import type { ExecutionContext, MessageBatch } from '@cloudflare/workers-types';
-import { db, utils as dbUtils } from '@anju/db';
+import { db } from '@anju/db';
 import { ExtractedDocument, utils } from '@anju/utils';
 import { eq } from 'drizzle-orm';
 import { getResourceHandler } from '@anju/containers';
 
 import { reindexResourceChunks } from '../utils';
+import { markResourceFailed, reportQueueError } from './shared';
 
 import type { Bindings } from '../types';
 
@@ -56,16 +57,12 @@ const indexOne = async (env: Bindings, resourceId: string): Promise<void> => {
 
     if (!response.ok) {
       const detail = await response.text().catch(() => '');
-      const { refId } = await dbUtils.handleError(
-        { env, request: { method: 'QUEUE', path: '/indexResource' } },
-        new Error(detail || `status ${response.status}`),
-        {
-          service: utils.constants.SERVICE_NAME_API,
-          metadata: { resourceId, status: response.status }
-        }
-      );
+      await reportQueueError(env, '/indexResource', new Error(detail || `status ${response.status}`), {
+        resourceId,
+        status: response.status
+      });
       throw new Error(
-        `resource-handler /extract failed (${response.status}) for ${resourceId} (refId: ${refId})`
+        `resource-handler /extract failed (${response.status}) for ${resourceId}`
       );
     }
 
@@ -93,56 +90,19 @@ const indexOne = async (env: Bindings, resourceId: string): Promise<void> => {
     .where(eq(db.schema.artifactResource.id, resource.id));
 };
 
-const markResourceFailed = async (
-  env: Bindings,
-  resourceId: string
-): Promise<void> => {
-  try {
-    const dbInstance = db.create({ env });
-    await dbInstance
-      .update(db.schema.artifactResource)
-      .set({ status: utils.constants.STATUS_FAILED })
-      .where(eq(db.schema.artifactResource.id, resourceId));
-  } catch {
-    // status update is best-effort; original error is already logged
-  }
-};
-
-const isRateLimitError = (error: unknown): boolean => {
-  const status = (error as { status?: unknown })?.status;
-  return status === 429;
-};
-
 export const handleIndexBatch = async (
   batch: MessageBatch<IndexJob>,
   env: Bindings,
   _ctx: ExecutionContext
 ): Promise<void> => {
-  for (const message of batch.messages) {
-    const { resourceId } = message.body;
-    try {
-      await indexOne(env, resourceId);
-      message.ack();
-    } catch (error) {
-      await dbUtils.handleError(
-        {
-          env,
-          request: { method: 'QUEUE', path: '/indexResource' }
-        },
-        error,
-        {
-          service: utils.constants.SERVICE_NAME_API,
-          metadata: { resourceId, queue: batch.queue }
-        }
-      );
+  await utils.processQueueBatch(batch, {
+    process: async ({ resourceId }) => indexOne(env, resourceId),
+    onError: async (error, { resourceId }, queueName) => {
+      await reportQueueError(env, '/indexResource', error, {
+        resourceId,
+        queue: queueName
+      });
       await markResourceFailed(env, resourceId);
-      if (isRateLimitError(error)) {
-        message.retry({
-          delaySeconds: utils.constants.RATE_LIMIT_BACKOFF_SECONDS
-        });
-      } else {
-        message.retry();
-      }
     }
-  }
+  });
 };

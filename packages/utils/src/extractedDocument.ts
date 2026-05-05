@@ -32,6 +32,28 @@ export interface ExtractedDocumentMetadata {
     appProps?: Record<string, string>;
     notes?: string;
   };
+  web?: {
+    url: string;
+    canonicalUrl?: string;
+    title?: string;
+    description?: string;
+    siteName?: string;
+    author?: string;
+    keywords?: string[];
+    language?: string;
+    publishedAt?: string;
+    modifiedAt?: string;
+    openGraph?: Record<string, string>;
+    twitter?: Record<string, string>;
+    jsonLd?: unknown[];
+    headings?: { tag: string; text: string }[];
+    images?: { src: string; alt?: string }[];
+    links?: { url: string; text?: string }[];
+    favicon?: string;
+    httpStatus?: number;
+    contentType?: string;
+    renderer: 'cheerio' | 'playwright';
+  };
 }
 
 export interface ExtractedDocument {

@@ -1,5 +1,5 @@
 import type { Bindings } from '../types';
-import type { IndexJob } from '../queue';
+import type { IndexJob, CrawlDiscoverJob } from '../queue';
 
 export const enqueueIndex = async (
   env: Bindings,
@@ -17,4 +17,14 @@ export const enqueueIndex = async (
   await env.INDEX_QUEUE.sendBatch(
     ids.map(id => ({ body: { resourceId: id } satisfies IndexJob }))
   );
+};
+
+export const enqueueCrawlDiscover = async (
+  env: Bindings,
+  resourceId: string
+): Promise<void> => {
+  if (!env.CRAWL_DISCOVER_QUEUE) return;
+  await env.CRAWL_DISCOVER_QUEUE.send({
+    resourceId
+  } satisfies CrawlDiscoverJob);
 };

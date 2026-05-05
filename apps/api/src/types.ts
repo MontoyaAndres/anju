@@ -2,7 +2,7 @@ import type { Hyperdrive, Queue, R2Bucket } from '@cloudflare/workers-types';
 import type { ResourceHandler } from '@anju/containers';
 
 import type { Auth } from './utils';
-import type { IndexJob } from './queue';
+import type { IndexJob, CrawlDiscoverJob, PageJob } from './queue';
 
 export type Variables = {
   user: Auth['$Infer']['Session']['user'];
@@ -13,6 +13,8 @@ export type Bindings = {
   HYPERDRIVE: Hyperdrive;
   STORAGE_BUCKET: R2Bucket;
   INDEX_QUEUE: Queue<IndexJob>;
+  CRAWL_DISCOVER_QUEUE: Queue<CrawlDiscoverJob>;
+  CRAWL_PAGE_QUEUE: Queue<PageJob>;
   RESOURCE_HANDLER: DurableObjectNamespace<ResourceHandler>;
   RESOURCE_HANDLER_PORT: string;
   DATABASE_URL?: string;

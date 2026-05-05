@@ -117,12 +117,30 @@ const ARTIFACT_GET_PROMPT = z.object({
   organizationId: z.uuid()
 });
 
+const CRAWL_CONFIG = z.object({
+  maxPages: z
+    .number()
+    .int()
+    .min(1)
+    .max(constants.CRAWL_MAX_PAGES_LIMIT)
+    .default(constants.CRAWL_DEFAULT_MAX_PAGES),
+  maxDepth: z
+    .number()
+    .int()
+    .min(0)
+    .max(constants.CRAWL_MAX_DEPTH_LIMIT)
+    .default(constants.CRAWL_DEFAULT_MAX_DEPTH)
+});
+
 const ARTIFACT_CREATE_RESOURCE = z.object({
   title: z.string().min(3).max(200),
   uri: z.string(),
   type: z
     .enum(constants.RESOURCE_TYPES)
     .default(constants.RESOURCE_TYPE_STATIC),
+  sourceType: z
+    .enum(constants.RESOURCE_SOURCE_TYPES)
+    .default(constants.RESOURCE_SOURCE_TYPE_FILE),
   description: z.string().max(1000).optional(),
   mimeType: z.enum(constants.MIMETYPES, {
     message: 'Unsupported mime type'
@@ -134,7 +152,8 @@ const ARTIFACT_CREATE_RESOURCE = z.object({
     .min(0)
     .max(constants.MAX_FILE_SIZE, {
       message: `File size exceeds the ${constants.MAX_FILE_SIZE / (1024 * 1024)}MB limit`
-    }),
+    })
+    .optional(),
   encoding: z.string().max(50).optional(),
   fileKey: z.string().optional(),
   fileName: z.string().optional(),
@@ -156,6 +175,7 @@ const ARTIFACT_CREATE_RESOURCE = z.object({
     )
     .optional(),
   metadata: z.record(z.string(), z.any()).optional(),
+  crawlConfig: CRAWL_CONFIG.optional(),
   projectId: z.uuid(),
   userId: z.uuid(),
   organizationId: z.uuid()
@@ -168,6 +188,9 @@ const ARTIFACT_UPDATE_RESOURCE = z.object({
   type: z
     .enum(constants.RESOURCE_TYPES)
     .default(constants.RESOURCE_TYPE_STATIC),
+  sourceType: z
+    .enum(constants.RESOURCE_SOURCE_TYPES)
+    .default(constants.RESOURCE_SOURCE_TYPE_FILE),
   description: z.string().max(1000).optional(),
   mimeType: z.enum(constants.MIMETYPES, {
     message: 'Unsupported mime type'
@@ -179,7 +202,8 @@ const ARTIFACT_UPDATE_RESOURCE = z.object({
     .min(0)
     .max(constants.MAX_FILE_SIZE, {
       message: `File size exceeds the ${constants.MAX_FILE_SIZE / (1024 * 1024)}MB limit`
-    }),
+    })
+    .optional(),
   encoding: z.string().max(50).optional(),
   fileKey: z.string().optional(),
   fileName: z.string().optional(),

@@ -1,6 +1,18 @@
 FROM node:24-alpine
 WORKDIR /repo
 
+# Chromium + dependencies for playwright in alpine
+RUN apk add --no-cache \
+    chromium \
+    nss \
+    freetype \
+    harfbuzz \
+    ca-certificates \
+    ttf-freefont \
+    font-noto-emoji
+ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
+ENV PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium-browser
+
 # Workspace skeleton — every workspace package.json is needed for npm install
 COPY package.json package-lock.json ./
 COPY packages/tsconfig packages/tsconfig

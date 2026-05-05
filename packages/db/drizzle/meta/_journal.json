@@ -211,6 +211,20 @@
       "when": 1777733255316,
       "tag": "0029_aromatic_mad_thinker",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1777934587056,
+      "tag": "0030_unique_charles_xavier",
+      "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1777935349716,
+      "tag": "0031_left_tarot",
+      "breakpoints": true
     }
   ]
 }

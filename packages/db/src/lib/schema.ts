@@ -7,7 +7,8 @@ import {
   integer,
   primaryKey,
   boolean,
-  halfvec
+  halfvec,
+  type AnyPgColumn
 } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 import { v7 as uuid } from 'uuid';
@@ -490,33 +491,49 @@ export const artifactCredential = pgTable('artifact_credential', {
     .$onUpdate(() => new Date())
 });
 
-export const artifactResource = pgTable('artifact_resource', {
-  id: text('id')
-    .primaryKey()
-    .$defaultFn(() => uuid()),
-  title: text('title').notNull(),
-  uri: text('uri').notNull(),
-  type: text('type').notNull().default(utils.constants.RESOURCE_TYPE_STATIC),
-  status: text('status').notNull().default(utils.constants.STATUS_COMPLETED),
-  description: text('description'),
-  mimeType: text('mime_type').notNull(),
-  content: text('content'),
-  size: integer('size'),
-  encoding: text('encoding'),
-  fileKey: text('file_key'),
-  fileName: text('file_name'),
-  annotations: json('annotations'),
-  icons: json('icons'),
-  metadata: json('metadata'),
-  artifactId: text('artifact_id')
-    .notNull()
-    .references(() => artifact.id, { onDelete: 'cascade' }),
-  createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),
-  updatedAt: timestamp('updated_at', { mode: 'date' })
-    .notNull()
-    .defaultNow()
-    .$onUpdate(() => new Date())
-});
+export const artifactResource = pgTable(
+  'artifact_resource',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => uuid()),
+    title: text('title').notNull(),
+    uri: text('uri').notNull(),
+    type: text('type').notNull().default(utils.constants.RESOURCE_TYPE_STATIC),
+    sourceType: text('source_type')
+      .notNull()
+      .default(utils.constants.RESOURCE_SOURCE_TYPE_FILE),
+    status: text('status').notNull().default(utils.constants.STATUS_COMPLETED),
+    description: text('description'),
+    mimeType: text('mime_type').notNull(),
+    content: text('content'),
+    size: integer('size'),
+    encoding: text('encoding'),
+    fileKey: text('file_key'),
+    fileName: text('file_name'),
+    annotations: json('annotations'),
+    icons: json('icons'),
+    metadata: json('metadata'),
+    crawlConfig: json('crawl_config'),
+    parentResourceId: text('parent_resource_id').references(
+      (): AnyPgColumn => artifactResource.id,
+      { onDelete: 'cascade' }
+    ),
+    childResourceCount: integer('child_resource_count').notNull().default(0),
+    artifactId: text('artifact_id')
+      .notNull()
+      .references(() => artifact.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { mode: 'date' })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date())
+  },
+  table => [
+    index('artifact_resource_parent_idx').on(table.parentResourceId),
+    index('artifact_resource_artifact_idx').on(table.artifactId)
+  ]
+);
 
 export const artifactResourceChunk = pgTable(
   'artifact_resource_chunk',
@@ -763,6 +780,14 @@ export const artifactResourceRelations = relations(
     artifact: one(artifact, {
       fields: [artifactResource.artifactId],
       references: [artifact.id]
+    }),
+    parent: one(artifactResource, {
+      fields: [artifactResource.parentResourceId],
+      references: [artifactResource.id],
+      relationName: 'resource_children'
+    }),
+    children: many(artifactResource, {
+      relationName: 'resource_children'
     }),
     chunks: many(artifactResourceChunk)
   })

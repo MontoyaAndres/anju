@@ -1,0 +1,1 @@
+ALTER TABLE "artifact_resource" ALTER COLUMN "source_type" SET DEFAULT 'FILE';

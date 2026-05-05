@@ -14,12 +14,16 @@ import {
 } from './controllers';
 import { UserMiddleware } from './middleware';
 import { createAuth } from './utils';
-import { handleIndexBatch } from './queue';
+import {
+  handleIndexBatch,
+  handleCrawlDiscoverBatch,
+  handleCrawlPageBatch
+} from './queue';
 
 // types
 import type { AppEnv, Bindings } from './types';
 import type { ExecutionContext, MessageBatch } from '@cloudflare/workers-types';
-import type { IndexJob } from './queue';
+import type { IndexJob, CrawlDiscoverJob, PageJob } from './queue';
 
 const app = new Hono<AppEnv>();
 
@@ -247,8 +251,24 @@ export { ResourceHandler } from '@anju/containers';
 export default {
   fetch: app.fetch,
   queue: (
-    batch: MessageBatch<IndexJob>,
+    batch: MessageBatch<IndexJob | CrawlDiscoverJob | PageJob>,
     env: Bindings,
     ctx: ExecutionContext
-  ) => handleIndexBatch(batch, env, ctx)
+  ) => {
+    if (batch.queue.startsWith('anju-crawl-discover')) {
+      return handleCrawlDiscoverBatch(
+        batch as MessageBatch<CrawlDiscoverJob>,
+        env,
+        ctx
+      );
+    }
+    if (batch.queue.startsWith('anju-crawl-page')) {
+      return handleCrawlPageBatch(
+        batch as MessageBatch<PageJob>,
+        env,
+        ctx
+      );
+    }
+    return handleIndexBatch(batch as MessageBatch<IndexJob>, env, ctx);
+  }
 };

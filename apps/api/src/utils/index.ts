@@ -9,7 +9,7 @@ import {
   reindexResourceChunks
 } from './embedding';
 import { markdownToTelegramHtml } from './telegramFormat';
-import { enqueueIndex } from './queue';
+import { enqueueIndex, enqueueCrawlDiscover } from './queue';
 
 export {
   createAuth,
@@ -21,7 +21,8 @@ export {
   generateEmbeddings,
   reindexResourceChunks,
   markdownToTelegramHtml,
-  enqueueIndex
+  enqueueIndex,
+  enqueueCrawlDiscover
 };
 
 export type { McpClientHandle } from './mcpClient';
