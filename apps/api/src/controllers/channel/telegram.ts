@@ -2,7 +2,7 @@ import { Context } from 'hono';
 import { eq } from 'drizzle-orm';
 import { db, utils as dbUtils } from '@anju/db';
 import { utils } from '@anju/utils';
-import type { TelegramSendRequest } from '@anju/utils';
+import type { ChannelNotifier, TelegramSendRequest } from '@anju/utils';
 import { getResourceHandler } from '@anju/containers';
 
 import { runChannelTurn } from './runner';
@@ -122,6 +122,12 @@ export const handleTelegramWebhook = async (c: Context<AppEnv>) => {
 
   await sendChatAction(credentials.botToken, message.chat.id, 'typing');
 
+  const notifier = createTelegramNotifier(
+    credentials.botToken,
+    message.chat.id,
+    message.message_id
+  );
+
   let replyText: string;
   let attachments: ChannelAttachment[] = [];
   try {
@@ -139,7 +145,8 @@ export const handleTelegramWebhook = async (c: Context<AppEnv>) => {
       externalMessageId: String(message.message_id),
       userText: cleanText,
       promptId: promptMatch?.promptId || null,
-      promptArgs: promptMatch?.args || undefined
+      promptArgs: promptMatch?.args || undefined,
+      notifier
     });
     replyText = result.assistantText;
     attachments = result.attachments;
@@ -283,6 +290,38 @@ const sendTelegramAttachment = async (
     );
   }
 };
+
+const createTelegramNotifier = (
+  botToken: string,
+  chatId: number,
+  replyToMessageId: number
+): ChannelNotifier => ({
+  toolStarted: async ({ toolName }) => {
+    const message = utils.getToolStatusMessage(toolName);
+    if (!message) return;
+    await fetch(
+      `${utils.constants.TELEGRAM_API_BASE}/bot${botToken}/sendMessage`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: chatId,
+          text: `<i>${escapeTelegramHtml(message)}</i>`,
+          parse_mode: 'HTML',
+          link_preview_options: { is_disabled: true },
+          reply_to_message_id: replyToMessageId,
+          disable_notification: true
+        })
+      }
+    ).catch(() => undefined);
+  }
+});
+
+const escapeTelegramHtml = (text: string): string =>
+  text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
 
 const sendChatAction = async (
   botToken: string,

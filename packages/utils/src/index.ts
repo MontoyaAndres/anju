@@ -79,6 +79,11 @@ import type {
   ExtractedDocumentMetadata,
   ExtractedDocumentSource
 } from './extractedDocument';
+import { getToolStatusMessage } from './channelNotifier';
+import type {
+  ChannelNotifier,
+  ToolStatusEvent
+} from './channelNotifier';
 
 export const utils = {
   Schema,
@@ -125,7 +130,8 @@ export const utils = {
   sleep,
   isRateLimitError,
   withRateLimitRetry,
-  processQueueBatch
+  processQueueBatch,
+  getToolStatusMessage
 };
 
 export type {
@@ -147,5 +153,7 @@ export type {
   RateLimitRetryOptions,
   QueueBatchLike,
   QueueMessageLike,
-  ProcessQueueBatchHandlers
+  ProcessQueueBatchHandlers,
+  ChannelNotifier,
+  ToolStatusEvent
 };

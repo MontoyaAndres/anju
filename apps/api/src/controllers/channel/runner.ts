@@ -2,6 +2,7 @@ import { Context } from 'hono';
 import { eq, sql, and, InferSelectModel } from 'drizzle-orm';
 import { db } from '@anju/db';
 import { utils } from '@anju/utils';
+import type { ChannelNotifier } from '@anju/utils';
 
 import { createMcpClient, getLlmAdapter } from '../../utils';
 
@@ -29,6 +30,7 @@ interface RunOptions {
   messageMetadata?: Record<string, unknown>;
   promptId?: string | null;
   promptArgs?: Record<string, string>;
+  notifier?: ChannelNotifier;
 }
 
 interface RunResult {
@@ -269,6 +271,11 @@ export const runChannelTurn = async (
       });
 
       for (const call of completion.assistant.toolCalls) {
+        if (options.notifier && utils.getToolStatusMessage(call.name)) {
+          await options.notifier
+            .toolStarted({ toolName: call.name, arguments: call.arguments })
+            .catch(() => undefined);
+        }
         const toolResult = await executeToolCall(
           mcp.client,
           call,
