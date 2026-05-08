@@ -504,6 +504,9 @@ export const artifactResource = pgTable(
       .notNull()
       .default(utils.constants.RESOURCE_SOURCE_TYPE_FILE),
     status: text('status').notNull().default(utils.constants.STATUS_COMPLETED),
+    showSource: text('show_source')
+      .notNull()
+      .default(utils.constants.STATUS_ACTIVE),
     description: text('description'),
     mimeType: text('mime_type').notNull(),
     content: text('content'),

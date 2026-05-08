@@ -1,0 +1,1 @@
+ALTER TABLE "artifact_resource" ADD COLUMN "show_source" text DEFAULT 'ACTIVE' NOT NULL;

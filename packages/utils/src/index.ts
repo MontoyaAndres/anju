@@ -84,6 +84,18 @@ import type {
   ChannelNotifier,
   ToolStatusEvent
 } from './channelNotifier';
+import {
+  isResourceSourceEnabled,
+  safeHostname,
+  buildResourceDownloadUrl,
+  formatSourcesAsMarkdown,
+  formatSourcesAsButtons
+} from './sources';
+import type {
+  Source,
+  ResourceUrlContext,
+  SourceButton
+} from './sources';
 
 export const utils = {
   Schema,
@@ -131,7 +143,12 @@ export const utils = {
   isRateLimitError,
   withRateLimitRetry,
   processQueueBatch,
-  getToolStatusMessage
+  getToolStatusMessage,
+  isResourceSourceEnabled,
+  safeHostname,
+  buildResourceDownloadUrl,
+  formatSourcesAsMarkdown,
+  formatSourcesAsButtons
 };
 
 export type {
@@ -155,5 +172,8 @@ export type {
   QueueMessageLike,
   ProcessQueueBatchHandlers,
   ChannelNotifier,
-  ToolStatusEvent
+  ToolStatusEvent,
+  Source,
+  ResourceUrlContext,
+  SourceButton
 };

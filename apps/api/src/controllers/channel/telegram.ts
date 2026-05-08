@@ -2,7 +2,11 @@ import { Context } from 'hono';
 import { eq } from 'drizzle-orm';
 import { db, utils as dbUtils } from '@anju/db';
 import { utils } from '@anju/utils';
-import type { ChannelNotifier, TelegramSendRequest } from '@anju/utils';
+import type {
+  ChannelNotifier,
+  SourceButton,
+  TelegramSendRequest
+} from '@anju/utils';
 import { getResourceHandler } from '@anju/containers';
 
 import { runChannelTurn } from './runner';
@@ -130,6 +134,7 @@ export const handleTelegramWebhook = async (c: Context<AppEnv>) => {
 
   let replyText: string;
   let attachments: ChannelAttachment[] = [];
+  let sourceButtons: SourceButton[] = [];
   try {
     const result = await runChannelTurn(c, {
       channelId: channelRow.id,
@@ -150,6 +155,7 @@ export const handleTelegramWebhook = async (c: Context<AppEnv>) => {
     });
     replyText = result.assistantText;
     attachments = result.attachments;
+    sourceButtons = result.sourceButtons;
   } catch (error: any) {
     const { refId } = await dbUtils.handleError(c, error, {
       service: utils.constants.SERVICE_NAME_API,
@@ -165,12 +171,24 @@ export const handleTelegramWebhook = async (c: Context<AppEnv>) => {
     replyText = `Sorry, something went wrong while processing your message (ref: ${refId}). The team has been notified.`;
   }
 
-  for (const chunk of chunkMessage(replyText)) {
+  const chunks = chunkMessage(replyText);
+  const replyMarkup =
+    sourceButtons.length > 0
+      ? {
+          inline_keyboard: sourceButtons.map(button => [
+            { text: button.text, url: button.url }
+          ])
+        }
+      : undefined;
+
+  for (let i = 0; i < chunks.length; i++) {
+    const isLast = i === chunks.length - 1;
     await sendTelegramMessage(
       credentials.botToken,
       message.chat.id,
       message.message_id,
-      chunk
+      chunks[i],
+      isLast ? replyMarkup : undefined
     );
   }
 
@@ -198,11 +216,16 @@ export const handleTelegramWebhook = async (c: Context<AppEnv>) => {
   return c.json({ ok: true });
 };
 
+interface TelegramReplyMarkup {
+  inline_keyboard: Array<Array<{ text: string; url: string }>>;
+}
+
 const sendTelegramMessage = async (
   botToken: string,
   chatId: number,
   replyToMessageId: number,
-  markdown: string
+  markdown: string,
+  replyMarkup?: TelegramReplyMarkup
 ) => {
   const html = markdownToTelegramHtml(markdown);
   const send = async (body: Record<string, unknown>) =>
@@ -217,14 +240,16 @@ const sendTelegramMessage = async (
     text: html,
     parse_mode: 'HTML',
     link_preview_options: { is_disabled: true },
-    reply_to_message_id: replyToMessageId
+    reply_to_message_id: replyToMessageId,
+    ...(replyMarkup && { reply_markup: replyMarkup })
   });
 
   if (!response.ok) {
     await send({
       chat_id: chatId,
       text: markdown,
-      reply_to_message_id: replyToMessageId
+      reply_to_message_id: replyToMessageId,
+      ...(replyMarkup && { reply_markup: replyMarkup })
     });
   }
 };

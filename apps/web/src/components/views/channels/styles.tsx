@@ -744,6 +744,92 @@ export const Wrapper = styled.div<IProps>`
               }
             }
 
+            .panel-message-sources {
+              display: flex;
+              flex-direction: column;
+              gap: 6px;
+              margin-top: 8px;
+              padding-top: 8px;
+              border-top: 1px dashed ${theme.colors.alto};
+
+              .panel-message-sources-label {
+                font-size: ${theme.fonts.xs};
+                font-weight: 600;
+                text-transform: uppercase;
+                letter-spacing: 0.04em;
+                color: ${theme.colors.saltBox};
+                margin: 0;
+              }
+
+              .panel-source-pills {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 6px;
+              }
+
+              .panel-source-pill {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                max-width: 240px;
+                padding: 4px 10px 4px 4px;
+                border: 1px solid ${theme.colors.alto};
+                border-radius: 999px;
+                background-color: ${theme.colors.white};
+                text-decoration: none;
+                color: ${theme.colors.bastille};
+                font-size: ${theme.fonts.xs};
+                line-height: 1.2;
+                cursor: pointer;
+                transition:
+                  border-color 0.15s ease,
+                  background-color 0.15s ease;
+
+                &:hover {
+                  border-color: ${theme.colors.bastille}80;
+                  background-color: ${theme.colors.bastille}08;
+                }
+
+                .panel-source-pill-number {
+                  display: inline-flex;
+                  align-items: center;
+                  justify-content: center;
+                  min-width: 20px;
+                  height: 20px;
+                  padding: 0 6px;
+                  border-radius: 999px;
+                  background-color: ${theme.colors.bastille};
+                  color: ${theme.colors.white};
+                  font-size: 11px;
+                  font-weight: 600;
+                  flex-shrink: 0;
+                }
+
+                .panel-source-pill-icon {
+                  display: inline-flex;
+                  align-items: center;
+                  justify-content: center;
+                  flex-shrink: 0;
+
+                  & > svg {
+                    width: 12px;
+                    height: 12px;
+                    color: ${theme.colors.saltBox};
+                  }
+                }
+
+                .panel-source-pill-label {
+                  font-size: ${theme.fonts.xs};
+                  font-weight: 500;
+                  white-space: nowrap;
+                  overflow: hidden;
+                  text-overflow: ellipsis;
+                  min-width: 0;
+                }
+              }
+            }
+
+
             .panel-message-stats {
               font-size: ${theme.fonts.xs};
               color: ${theme.colors.saltBox};

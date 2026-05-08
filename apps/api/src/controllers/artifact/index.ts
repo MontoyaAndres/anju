@@ -1118,6 +1118,47 @@ const downloadResourceFile = async (c: Context<AppEnv>) => {
   });
 };
 
+const updateResourceShowSource = async (c: Context<AppEnv>) => {
+  const body = await c.req.json();
+  const currentValues =
+    await utils.Schema.ARTIFACT_UPDATE_RESOURCE_SHOW_SOURCE.parseAsync({
+      ...body,
+      resourceId: c.req.param('resourceId'),
+      projectId: c.req.param('projectId'),
+      userId: c.get('user').id,
+      organizationId: c.req.param('organizationId')
+    });
+
+  const dbInstance = db.create(c);
+
+  const [currentArtifactByProject] = await dbInstance
+    .select()
+    .from(db.schema.artifact)
+    .where(eq(db.schema.artifact.projectId, currentValues.projectId))
+    .limit(1);
+
+  if (!currentArtifactByProject) {
+    throw new Error('Artifact not found for the project');
+  }
+
+  const [updated] = await dbInstance
+    .update(db.schema.artifactResource)
+    .set({ showSource: currentValues.showSource })
+    .where(
+      and(
+        eq(db.schema.artifactResource.id, currentValues.resourceId),
+        eq(db.schema.artifactResource.artifactId, currentArtifactByProject.id)
+      )
+    )
+    .returning();
+
+  if (!updated) {
+    throw new Error('Resource not found');
+  }
+
+  return c.json(updated);
+};
+
 const upsertLlm = async (c: Context<AppEnv>) => {
   const body = await c.req.json();
   const currentValues = await utils.Schema.ARTIFACT_UPSERT_LLM.parseAsync({
@@ -1224,6 +1265,7 @@ export const ArtifactController = {
   listResources,
   uploadResourceFile,
   downloadResourceFile,
+  updateResourceShowSource,
   createTool,
   updateTool,
   removeTool,

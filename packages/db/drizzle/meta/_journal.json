@@ -225,6 +225,13 @@
       "when": 1777935349716,
       "tag": "0031_left_tarot",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1778276403375,
+      "tag": "0032_rapid_warbird",
+      "breakpoints": true
     }
   ]
 }

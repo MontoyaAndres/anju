@@ -407,6 +407,14 @@ const CHANNEL_UPDATE = z.object({
   organizationId: z.uuid()
 });
 
+const ARTIFACT_UPDATE_RESOURCE_SHOW_SOURCE = z.object({
+  resourceId: z.uuid(),
+  showSource: z.enum(constants.CHANNEL_STATUS),
+  projectId: z.uuid(),
+  userId: z.uuid(),
+  organizationId: z.uuid()
+});
+
 const CHANNEL_GET = z.object({
   projectId: z.uuid(),
   userId: z.uuid(),
@@ -519,5 +527,6 @@ export const Schema = {
   CHANNEL_GET,
   CHANNEL_REMOVE,
   CHANNEL_LIST_CONVERSATIONS,
-  CHANNEL_LIST_MESSAGES
+  CHANNEL_LIST_MESSAGES,
+  ARTIFACT_UPDATE_RESOURCE_SHOW_SOURCE
 };

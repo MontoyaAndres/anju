@@ -2,12 +2,18 @@ import { Context } from 'hono';
 import { eq, sql, and, InferSelectModel } from 'drizzle-orm';
 import { db } from '@anju/db';
 import { utils } from '@anju/utils';
-import type { ChannelNotifier } from '@anju/utils';
 
+import { collectSources } from './sources';
+import { extractToolText } from './toolText';
 import { createMcpClient, getLlmAdapter } from '../../utils';
 
 import type { LlmMessage, LlmToolCall, LlmToolDefinition } from '../../utils';
 import type { AppEnv } from '../../types';
+import type {
+  ChannelNotifier,
+  Source,
+  SourceButton
+} from '@anju/utils';
 import { Client } from '@modelcontextprotocol/sdk/client';
 
 type ArtifactResourceRow = InferSelectModel<typeof db.schema.artifactResource>;
@@ -39,6 +45,9 @@ interface RunResult {
   userMessageId: string;
   assistantMessageId: string;
   attachments: ChannelAttachment[];
+  sources: Source[];
+  sourcesFooter: string | null;
+  sourceButtons: SourceButton[];
 }
 
 export const runChannelTurn = async (
@@ -70,6 +79,17 @@ export const runChannelTurn = async (
     .limit(1);
 
   if (!artifactRow) throw new Error('Artifact not found for channel');
+
+  const [projectRow] = await dbInstance
+    .select({
+      id: db.schema.project.id,
+      organizationId: db.schema.project.organizationId
+    })
+    .from(db.schema.project)
+    .where(eq(db.schema.project.id, artifactRow.projectId))
+    .limit(1);
+
+  if (!projectRow) throw new Error('Project not found for channel');
 
   const [llmRow] = await dbInstance
     .select()
@@ -133,6 +153,7 @@ export const runChannelTurn = async (
     .from(db.schema.artifactResource)
     .where(eq(db.schema.artifactResource.artifactId, artifactRow.id));
   const artifactResourceByUri = new Map(artifactResources.map(r => [r.uri, r]));
+  const artifactResourceById = new Map(artifactResources.map(r => [r.id, r]));
   const artifactResourceIdByUri = new Map<string, string>(
     artifactResources.map(r => [r.uri, r.id])
   );
@@ -296,6 +317,28 @@ export const runChannelTurn = async (
     await mcp.close().catch(() => undefined);
   }
 
+  const sources = await collectSources(
+    dbInstance,
+    usageEvents,
+    artifactResourceByUri,
+    artifactResourceById
+  );
+
+  let sourcesFooter: string | null = null;
+  let sourceButtons: SourceButton[] = [];
+  if (sources.length > 0) {
+    const apiUrl = utils.getEnv(c, 'NEXT_PUBLIC_API_URL') || '';
+    if (apiUrl) {
+      const ctx = {
+        apiUrl,
+        organizationId: projectRow.organizationId,
+        projectId: projectRow.id
+      };
+      sourcesFooter = utils.formatSourcesAsMarkdown(sources, ctx);
+      sourceButtons = utils.formatSourcesAsButtons(sources, ctx);
+    }
+  }
+
   const [assistantMessage] = await dbInstance
     .insert(db.schema.channelMessage)
     .values({
@@ -305,7 +348,8 @@ export const runChannelTurn = async (
       participantId: participant.id,
       tokensIn: totalTokensIn,
       tokensOut: totalTokensOut,
-      latencyMs: totalLatency
+      latencyMs: totalLatency,
+      metadata: sources.length > 0 ? { sources } : null
     })
     .returning();
   assistantMessageId = assistantMessage.id;
@@ -346,7 +390,10 @@ export const runChannelTurn = async (
     conversationId: conversation.id,
     userMessageId: userMessage.id,
     assistantMessageId,
-    attachments
+    attachments,
+    sources,
+    sourcesFooter,
+    sourceButtons
   };
 };
 
@@ -540,13 +587,4 @@ const executeToolCall = async (
     });
     return `Error calling tool ${call.name}: ${error?.message || error}`;
   }
-};
-
-const extractToolText = (result: any): string => {
-  const content = result?.content;
-  if (!Array.isArray(content)) return JSON.stringify(result);
-  const texts = content
-    .filter(c => c?.type === 'text' && typeof c.text === 'string')
-    .map(c => c.text);
-  return texts.join('\n') || JSON.stringify(result);
 };

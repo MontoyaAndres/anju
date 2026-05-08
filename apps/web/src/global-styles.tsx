@@ -41,6 +41,37 @@ export const globalStyles = (
       a {
         text-decoration: none;
       }
+
+      .panel-source-tooltip {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        max-width: 320px;
+        padding: 4px 2px;
+      }
+
+      .panel-source-tooltip-title {
+        font-size: 13px;
+        font-weight: 600;
+        line-height: 1.3;
+        word-break: break-word;
+      }
+
+      .panel-source-tooltip-meta {
+        font-size: 11px;
+        opacity: 0.85;
+      }
+
+      .panel-source-tooltip-excerpt {
+        margin-top: 4px;
+        font-size: 11px;
+        line-height: 1.4;
+        opacity: 0.9;
+        display: -webkit-box;
+        -webkit-line-clamp: 4;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
     `}
   />
 );

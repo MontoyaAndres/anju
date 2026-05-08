@@ -909,6 +909,35 @@ export const Wrapper = styled.div<IProps>`
               word-break: break-all;
             }
 
+            .panel-toggle-row {
+              display: flex;
+              align-items: center;
+              justify-content: space-between;
+              padding: 12px;
+              border: 1px solid ${theme.colors.alto};
+              border-radius: 8px;
+              gap: 12px;
+
+              .panel-toggle-label {
+                font-size: ${theme.fonts.sm};
+                font-weight: 600;
+                color: ${theme.colors.bastille};
+                margin: 0;
+              }
+
+              .panel-toggle-hint {
+                font-size: ${theme.fonts.xs};
+                color: ${theme.colors.saltBox};
+                margin: 2px 0 0 0;
+                line-height: 1.4;
+              }
+
+              .MuiSwitch-root .MuiButtonBase-root {
+                padding: 9px;
+                border-radius: 50%;
+              }
+            }
+
             .panel-children {
               display: flex;
               flex-direction: column;

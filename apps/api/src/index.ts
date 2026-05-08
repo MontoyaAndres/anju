@@ -153,6 +153,11 @@ app
     UserMiddleware.verify,
     ArtifactController.downloadResourceFile
   )
+  .put(
+    '/organization/:organizationId/project/:projectId/artifact/resource/:resourceId/show-source',
+    UserMiddleware.verify,
+    ArtifactController.updateResourceShowSource
+  )
 
   // Artifact Tool controller
   .get(

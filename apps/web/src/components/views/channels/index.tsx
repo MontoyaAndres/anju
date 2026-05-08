@@ -4,6 +4,7 @@ import { UI } from '@anju/ui';
 import { utils } from '@anju/utils';
 import IconButton from '@mui/material/IconButton';
 import Switch from '@mui/material/Switch';
+import Tooltip from '@mui/material/Tooltip';
 import {
   Add,
   Close,
@@ -24,6 +25,8 @@ import {
 } from '@mui/icons-material';
 
 import { Wrapper, UsageModalOverlay } from './styles';
+
+import type { Source } from '@anju/utils';
 
 const SlackIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" {...props}>
@@ -108,6 +111,7 @@ interface Message {
   tokensOut: number | null;
   latencyMs: number | null;
   createdAt: string;
+  metadata: { sources?: Source[] } | null;
   participant: { displayName: string | null; externalUserId: string } | null;
   usages: MessageUsage[];
 }
@@ -904,7 +908,9 @@ export const Channels = () => {
                         </div>
                         <p className="panel-conversation-meta">
                           <span>{conv.messageCount} messages</span>
-                          <span>{utils.formatRelative(conv.lastMessageAt)}</span>
+                          <span>
+                            {utils.formatRelative(conv.lastMessageAt)}
+                          </span>
                         </p>
                       </div>
                     ))}
@@ -925,12 +931,12 @@ export const Channels = () => {
                   const attachments = collectResourceAttachments(
                     msg.usages || []
                   );
-                  const messageIndex = messages.findIndex(
-                    m => m.id === msg.id
-                  );
+                  const messageIndex = messages.findIndex(m => m.id === msg.id);
                   let userMessageForTurn: Message | null = null;
                   for (let k = messageIndex + 1; k < messages.length; k++) {
-                    if (messages[k].role === utils.constants.ROLE_MESSAGE_USER) {
+                    if (
+                      messages[k].role === utils.constants.ROLE_MESSAGE_USER
+                    ) {
                       userMessageForTurn = messages[k];
                       break;
                     }
@@ -984,6 +990,96 @@ export const Channels = () => {
                           ))}
                         </div>
                       )}
+                      {msg.metadata?.sources &&
+                        msg.metadata.sources.length > 0 && (
+                          <div className="panel-message-sources">
+                            <p className="panel-message-sources-label">
+                              Sources
+                            </p>
+                            <div className="panel-source-pills">
+                              {msg.metadata.sources.map(
+                                (source, sourceIndex) => {
+                                  const isFile =
+                                    source.sourceType ===
+                                    utils.constants.RESOURCE_SOURCE_TYPE_FILE;
+                                  const apiUrl =
+                                    process.env.NEXT_PUBLIC_API_URL || '';
+                                  const href = isFile
+                                    ? utils.buildResourceDownloadUrl(
+                                        { apiUrl, organizationId, projectId },
+                                        source.resourceId,
+                                        source.pageNumber
+                                      )
+                                    : source.uri;
+                                  const label = isFile
+                                    ? source.fileName || source.title
+                                    : source.title;
+                                  const domain = !isFile
+                                    ? utils.safeHostname(source.uri)
+                                    : null;
+                                  const tooltip = (
+                                    <div className="panel-source-tooltip">
+                                      <span className="panel-source-tooltip-title">
+                                        {label}
+                                      </span>
+                                      {isFile && source.pageNumber && (
+                                        <span className="panel-source-tooltip-meta">
+                                          Page {source.pageNumber}
+                                        </span>
+                                      )}
+                                      {isFile && source.mimeType && (
+                                        <span className="panel-source-tooltip-meta">
+                                          {source.mimeType}
+                                        </span>
+                                      )}
+                                      {!isFile && domain && (
+                                        <span className="panel-source-tooltip-meta">
+                                          {domain}
+                                        </span>
+                                      )}
+                                      {source.excerpt && (
+                                        <span className="panel-source-tooltip-excerpt">
+                                          {source.excerpt}
+                                        </span>
+                                      )}
+                                    </div>
+                                  );
+                                  return (
+                                    <Tooltip
+                                      key={`${source.resourceId}-${source.pageNumber ?? ''}-${sourceIndex}`}
+                                      title={tooltip}
+                                      placement="top"
+                                      arrow
+                                    >
+                                      <a
+                                        className="panel-source-pill"
+                                        href={href}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                      >
+                                        <span className="panel-source-pill-number">
+                                          {sourceIndex + 1}
+                                        </span>
+                                        <span className="panel-source-pill-icon">
+                                          {isFile ? (
+                                            resourceAttachmentIcon(
+                                              source.mimeType
+                                            )
+                                          ) : (
+                                            <OpenInNew />
+                                          )}
+                                        </span>
+                                        <span className="panel-source-pill-label">
+                                          {label}
+                                        </span>
+                                      </a>
+                                    </Tooltip>
+                                  );
+                                }
+                              )}
+                            </div>
+                          </div>
+                        )}
                       {(msg.tokensIn || msg.tokensOut || msg.latencyMs) && (
                         <p className="panel-message-stats">
                           {msg.tokensIn != null && (
@@ -1081,9 +1177,7 @@ export const Channels = () => {
             >
               <div className="usage-modal-header">
                 <div className="usage-modal-header-text">
-                  <p className="usage-modal-kind">
-                    {viewingUsage.usage.kind}
-                  </p>
+                  <p className="usage-modal-kind">{viewingUsage.usage.kind}</p>
                   <h2 className="usage-modal-title">
                     {usageLabel(viewingUsage.usage)}
                   </h2>
@@ -1093,10 +1187,7 @@ export const Channels = () => {
                     </p>
                   )}
                 </div>
-                <IconButton
-                  size="small"
-                  onClick={() => setViewingUsage(null)}
-                >
+                <IconButton size="small" onClick={() => setViewingUsage(null)}>
                   <Close />
                 </IconButton>
               </div>

@@ -3,6 +3,7 @@ import { useRouter } from 'next/router';
 import { UI } from '@anju/ui';
 import { utils } from '@anju/utils';
 import IconButton from '@mui/material/IconButton';
+import Switch from '@mui/material/Switch';
 import {
   Add,
   Close,
@@ -33,6 +34,7 @@ interface Resource {
   type: string;
   sourceType: string;
   status: string;
+  showSource: string;
   description: string | null;
   mimeType: (typeof utils.constants.MIMETYPES)[0];
   content: string | null;
@@ -108,6 +110,8 @@ export const Resources = () => {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [deleteAlert, setDeleteAlert] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [sourceVisibilityUpdating, setSourceVisibilityUpdating] =
+    useState(false);
   const [contentMode, setContentMode] = useState<'text' | 'file'>('file');
   const [file, setFile] = useState<File | null>(null);
   const [filePreviewUrl, setFilePreviewUrl] = useState<string | null>(null);
@@ -616,6 +620,40 @@ export const Resources = () => {
     setSelectedResource(null);
     setIsEditing(false);
     setAddingType(null);
+  };
+
+  const handleShowSourceToggle = async () => {
+    if (!selectedResource || sourceVisibilityUpdating) return;
+    const enabled = utils.isResourceSourceEnabled(selectedResource);
+    const next = enabled
+      ? utils.constants.STATUS_DISABLED
+      : utils.constants.STATUS_ACTIVE;
+    setSourceVisibilityUpdating(true);
+    try {
+      const data = await utils.fetcher({
+        url: `${apiBase}/${selectedResource.id}/show-source`,
+        config: {
+          method: 'PUT',
+          credentials: 'include',
+          body: JSON.stringify({ showSource: next })
+        }
+      });
+      if (data && !data.error) {
+        setSelectedResource(data);
+        fetchResources();
+        snackbar.success(
+          next === utils.constants.STATUS_ACTIVE
+            ? 'Sources enabled'
+            : 'Sources hidden'
+        );
+      } else {
+        snackbar.error(data?.error || 'Failed to update source visibility');
+      }
+    } catch {
+      snackbar.error('Failed to update source visibility');
+    } finally {
+      setSourceVisibilityUpdating(false);
+    }
   };
 
   const handleUpdate = async () => {
@@ -1723,6 +1761,35 @@ export const Resources = () => {
                   <h3 className="panel-section-label">URI</h3>
                   <p className="panel-section-text">{selectedResource.uri}</p>
                 </div>
+                {!(
+                  selectedResource.sourceType ===
+                    utils.constants.RESOURCE_SOURCE_TYPE_WEBSITE &&
+                  !selectedResource.parentResourceId
+                ) && (
+                  <div className="panel-section">
+                    <h3 className="panel-section-label">Sources</h3>
+                    <div className="panel-toggle-row">
+                      <div>
+                        <p className="panel-toggle-label">
+                          {utils.isResourceSourceEnabled(selectedResource)
+                            ? 'Cite this resource in replies'
+                            : 'Hidden from citations'}
+                        </p>
+                        <p className="panel-toggle-hint">
+                          When enabled, the agent will reference this resource
+                          as a source in answers that use it.
+                        </p>
+                      </div>
+                      <Switch
+                        checked={utils.isResourceSourceEnabled(
+                          selectedResource
+                        )}
+                        disabled={sourceVisibilityUpdating}
+                        onChange={handleShowSourceToggle}
+                      />
+                    </div>
+                  </div>
+                )}
                 {selectedResource.description && (
                   <div className="panel-section">
                     <h3 className="panel-section-label">Description</h3>
