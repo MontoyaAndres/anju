@@ -18,6 +18,69 @@ import { Client } from '@modelcontextprotocol/sdk/client';
 
 type ArtifactResourceRow = InferSelectModel<typeof db.schema.artifactResource>;
 
+interface ResolvedLlm {
+  row: {
+    provider: string;
+    model: string;
+    baseUrl: string | null;
+    systemPrompt: string | null;
+    config: unknown;
+  };
+  apiKey: string;
+  llmId: string | null;
+  llmName: string | null;
+}
+
+const resolveChannelLlm = async (
+  c: Context<AppEnv>,
+  dbInstance: ReturnType<typeof db.create>,
+  llmId: string | null
+): Promise<ResolvedLlm> => {
+  if (llmId) {
+    const [llmRow] = await dbInstance
+      .select()
+      .from(db.schema.organizationLlm)
+      .where(eq(db.schema.organizationLlm.id, llmId))
+      .limit(1);
+
+    if (!llmRow) throw new Error('LLM not found for channel');
+
+    const encryptionKey = utils.getCredentialEncryptionKey(c);
+    return {
+      row: {
+        provider: llmRow.provider,
+        model: llmRow.model,
+        baseUrl: llmRow.baseUrl,
+        systemPrompt: llmRow.systemPrompt,
+        config: llmRow.config
+      },
+      apiKey: utils.decryptString(llmRow.apiKey, encryptionKey),
+      llmId: llmRow.id,
+      llmName: llmRow.name
+    };
+  }
+
+  const apiKey = utils.getEnv(c, 'EMBEDDING_API_KEY');
+  if (!apiKey) {
+    throw new Error(
+      'No LLM configured for this channel and EMBEDDING_API_KEY is not set'
+    );
+  }
+
+  return {
+    row: {
+      provider: utils.constants.DEFAULT_LLM_PROVIDER,
+      model: utils.constants.DEFAULT_LLM_MODEL,
+      baseUrl: null,
+      systemPrompt: utils.constants.DEFAULT_LLM_SYSTEM_PROMPT,
+      config: null
+    },
+    apiKey,
+    llmId: null,
+    llmName: null
+  };
+};
+
 export interface ChannelAttachment {
   resource: ArtifactResourceRow;
   caption?: string;
@@ -91,16 +154,9 @@ export const runChannelTurn = async (
 
   if (!projectRow) throw new Error('Project not found for channel');
 
-  const [llmRow] = await dbInstance
-    .select()
-    .from(db.schema.artifactLlm)
-    .where(eq(db.schema.artifactLlm.artifactId, artifactRow.id))
-    .limit(1);
-
-  if (!llmRow) throw new Error('LLM is not configured for this MCP');
-
-  const encryptionKey = utils.getCredentialEncryptionKey(c);
-  const apiKeyPlain = utils.decryptString(llmRow.apiKey, encryptionKey);
+  const llmConfig = await resolveChannelLlm(c, dbInstance, channelRow.llmId);
+  const llmRow = llmConfig.row;
+  const apiKeyPlain = llmConfig.apiKey;
 
   const [conversation, participant] = await Promise.all([
     upsertConversation(
@@ -349,7 +405,15 @@ export const runChannelTurn = async (
       tokensIn: totalTokensIn,
       tokensOut: totalTokensOut,
       latencyMs: totalLatency,
-      metadata: sources.length > 0 ? { sources } : null
+      metadata: {
+        ...(sources.length > 0 ? { sources } : {}),
+        llm: {
+          provider: llmRow.provider,
+          model: llmRow.model,
+          id: llmConfig.llmId,
+          name: llmConfig.llmName
+        }
+      }
     })
     .returning();
   assistantMessageId = assistantMessage.id;

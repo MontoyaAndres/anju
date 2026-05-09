@@ -7,6 +7,7 @@ import {
   UserController,
   ArtifactController,
   OrganizationController,
+  OrganizationLlmController,
   ProjectController,
   OAuthController,
   CatalogController,
@@ -196,16 +197,26 @@ app
   // Tool catalog controller
   .get('/catalog/tools', UserMiddleware.verify, CatalogController.listGroups)
 
-  // Artifact LLM controller
+  // Organization LLM controller
   .get(
-    '/organization/:organizationId/project/:projectId/artifact/llm',
+    '/organization/:organizationId/llm',
     UserMiddleware.verify,
-    ArtifactController.getLlm
+    OrganizationLlmController.list
+  )
+  .post(
+    '/organization/:organizationId/llm',
+    UserMiddleware.verify,
+    OrganizationLlmController.create
   )
   .put(
-    '/organization/:organizationId/project/:projectId/artifact/llm',
+    '/organization/:organizationId/llm/:llmId',
     UserMiddleware.verify,
-    ArtifactController.upsertLlm
+    OrganizationLlmController.update
+  )
+  .delete(
+    '/organization/:organizationId/llm/:llmId',
+    UserMiddleware.verify,
+    OrganizationLlmController.remove
   )
 
   // Channel controller

@@ -364,26 +364,49 @@ const BUSINESS_QUERY = z.object({
   hash: z.string().length(8).min(8).max(8)
 });
 
-const ARTIFACT_UPSERT_LLM = z.object({
+const ORGANIZATION_LIST_LLM = z.object({
+  userId: z.uuid(),
+  organizationId: z.uuid()
+});
+
+const ORGANIZATION_CREATE_LLM = z.object({
+  name: z.string().min(1).max(200),
   provider: z.enum(constants.LLM_PROVIDERS),
   model: z.string().min(1).max(200),
   baseUrl: z.url().optional().or(z.literal('')),
   apiKey: z.string().min(1).max(500),
   systemPrompt: z.string().max(10000).optional(),
   config: z.record(z.string(), z.any()).optional(),
-  projectId: z.uuid(),
   userId: z.uuid(),
   organizationId: z.uuid()
 });
 
-const ARTIFACT_GET_LLM = z.object({
-  projectId: z.uuid(),
+const ORGANIZATION_UPDATE_LLM = z.object({
+  llmId: z.uuid(),
+  name: z.string().min(1).max(200).optional(),
+  provider: z.enum(constants.LLM_PROVIDERS).optional(),
+  model: z.string().min(1).max(200).optional(),
+  baseUrl: z.url().optional().or(z.literal('')).nullable(),
+  apiKey: z.string().min(1).max(500).optional(),
+  systemPrompt: z.string().max(10000).optional().nullable(),
+  config: z.record(z.string(), z.any()).optional().nullable(),
   userId: z.uuid(),
   organizationId: z.uuid()
 });
 
-const ARTIFACT_UPSERT_LLM_VIEW = ARTIFACT_UPSERT_LLM.omit({
-  projectId: true,
+const ORGANIZATION_REMOVE_LLM = z.object({
+  llmId: z.uuid(),
+  userId: z.uuid(),
+  organizationId: z.uuid()
+});
+
+const ORGANIZATION_CREATE_LLM_VIEW = ORGANIZATION_CREATE_LLM.omit({
+  userId: true,
+  organizationId: true
+});
+
+const ORGANIZATION_UPDATE_LLM_VIEW = ORGANIZATION_UPDATE_LLM.omit({
+  llmId: true,
   userId: true,
   organizationId: true
 });
@@ -392,6 +415,7 @@ const CHANNEL_CREATE = z.object({
   platform: z.enum(constants.CHANNEL_PLATFORMS),
   config: z.record(z.string(), z.any()).optional(),
   credentials: z.record(z.string(), z.string()),
+  llmId: z.uuid().nullable().optional(),
   projectId: z.uuid(),
   userId: z.uuid(),
   organizationId: z.uuid()
@@ -402,6 +426,7 @@ const CHANNEL_UPDATE = z.object({
   status: z.enum(constants.CHANNEL_STATUS).optional(),
   config: z.record(z.string(), z.any()).optional(),
   credentials: z.record(z.string(), z.string()).optional(),
+  llmId: z.uuid().nullable().optional(),
   projectId: z.uuid(),
   userId: z.uuid(),
   organizationId: z.uuid()
@@ -517,9 +542,12 @@ export const Schema = {
   ARTIFACT_GET_CREDENTIAL,
   ARTIFACT_REMOVE_CREDENTIAL,
   BUSINESS_QUERY,
-  ARTIFACT_UPSERT_LLM,
-  ARTIFACT_UPSERT_LLM_VIEW,
-  ARTIFACT_GET_LLM,
+  ORGANIZATION_LIST_LLM,
+  ORGANIZATION_CREATE_LLM,
+  ORGANIZATION_CREATE_LLM_VIEW,
+  ORGANIZATION_UPDATE_LLM,
+  ORGANIZATION_UPDATE_LLM_VIEW,
+  ORGANIZATION_REMOVE_LLM,
   CHANNEL_CREATE,
   CHANNEL_CREATE_VIEW,
   CHANNEL_UPDATE,

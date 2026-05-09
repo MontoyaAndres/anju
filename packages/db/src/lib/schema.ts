@@ -203,26 +203,32 @@ export const artifact = pgTable('artifact', {
     .$onUpdate(() => new Date())
 });
 
-export const artifactLlm = pgTable('artifact_llm', {
-  id: text('id')
-    .primaryKey()
-    .$defaultFn(() => uuid()),
-  provider: text('provider').notNull(),
-  model: text('model').notNull(),
-  baseUrl: text('base_url'),
-  apiKey: text('api_key').notNull(),
-  systemPrompt: text('system_prompt'),
-  config: json('config'),
-  artifactId: text('artifact_id')
-    .notNull()
-    .unique()
-    .references(() => artifact.id, { onDelete: 'cascade' }),
-  createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),
-  updatedAt: timestamp('updated_at', { mode: 'date' })
-    .notNull()
-    .defaultNow()
-    .$onUpdate(() => new Date())
-});
+export const organizationLlm = pgTable(
+  'organization_llm',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => uuid()),
+    name: text('name').notNull(),
+    provider: text('provider').notNull(),
+    model: text('model').notNull(),
+    baseUrl: text('base_url'),
+    apiKey: text('api_key').notNull(),
+    systemPrompt: text('system_prompt'),
+    config: json('config'),
+    organizationId: text('organization_id')
+      .notNull()
+      .references(() => organization.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { mode: 'date' })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date())
+  },
+  table => [
+    index('organization_llm_organizationId_idx').on(table.organizationId)
+  ]
+);
 
 export const channel = pgTable(
   'channel',
@@ -241,13 +247,19 @@ export const channel = pgTable(
     artifactId: text('artifact_id')
       .notNull()
       .references(() => artifact.id, { onDelete: 'cascade' }),
+    llmId: text('llm_id').references(() => organizationLlm.id, {
+      onDelete: 'restrict'
+    }),
     createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { mode: 'date' })
       .notNull()
       .defaultNow()
       .$onUpdate(() => new Date())
   },
-  table => [index('channel_artifactId_idx').on(table.artifactId)]
+  table => [
+    index('channel_artifactId_idx').on(table.artifactId),
+    index('channel_llmId_idx').on(table.llmId)
+  ]
 );
 
 export const channelConversation = pgTable(
@@ -597,7 +609,8 @@ export const organizationRelations = relations(
       references: [user.id]
     }),
     projects: many(project),
-    organizationUsers: many(organizationUser)
+    organizationUsers: many(organizationUser),
+    organizationLlms: many(organizationLlm)
   })
 );
 
@@ -648,24 +661,28 @@ export const artifactRelations = relations(artifact, ({ one, many }) => ({
   artifactResources: many(artifactResource),
   artifactTools: many(artifactTool),
   artifactCredentials: many(artifactCredential),
-  artifactLlm: one(artifactLlm, {
-    fields: [artifact.id],
-    references: [artifactLlm.artifactId]
-  }),
   channels: many(channel)
 }));
 
-export const artifactLlmRelations = relations(artifactLlm, ({ one }) => ({
-  artifact: one(artifact, {
-    fields: [artifactLlm.artifactId],
-    references: [artifact.id]
+export const organizationLlmRelations = relations(
+  organizationLlm,
+  ({ one, many }) => ({
+    organization: one(organization, {
+      fields: [organizationLlm.organizationId],
+      references: [organization.id]
+    }),
+    channels: many(channel)
   })
-}));
+);
 
 export const channelRelations = relations(channel, ({ one, many }) => ({
   artifact: one(artifact, {
     fields: [channel.artifactId],
     references: [artifact.id]
+  }),
+  llm: one(organizationLlm, {
+    fields: [channel.llmId],
+    references: [organizationLlm.id]
   }),
   conversations: many(channelConversation),
   participants: many(channelParticipant)

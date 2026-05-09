@@ -10,7 +10,6 @@ import {
   Close,
   DeleteOutline,
   ArrowBack,
-  ContentCopy,
   ForumOutlined,
   Telegram,
   WhatsApp,
@@ -56,10 +55,17 @@ interface Channel {
   conversationCount: number;
   messageCount: number;
   artifactId: string;
+  llmId: string | null;
   hasCredentials: boolean;
-  webhookUrl?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+interface OrganizationLlm {
+  id: string;
+  name: string;
+  provider: string;
+  model: string;
 }
 
 interface Conversation {
@@ -281,8 +287,12 @@ export const Channels = () => {
 
   const [createValues, setCreateValues] = useState({
     platform: utils.constants.CHANNEL_PLATFORM_TELEGRAM as string,
-    botToken: ''
+    botToken: '',
+    llmId: utils.constants.LLM_SYSTEM_DEFAULT as string
   });
+  const [llms, setLlms] = useState<OrganizationLlm[]>([]);
+  const [editingLlmId, setEditingLlmId] = useState<string | null>(null);
+  const [savingLlm, setSavingLlm] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [statusUpdating, setStatusUpdating] = useState(false);
@@ -395,9 +405,64 @@ export const Channels = () => {
     setIsCreating(true);
     setCreateValues({
       platform: utils.constants.CHANNEL_PLATFORM_TELEGRAM,
-      botToken: ''
+      botToken: '',
+      llmId: utils.constants.LLM_SYSTEM_DEFAULT
     });
     setErrors({});
+  };
+
+  const fetchLlms = async (signal?: AbortSignal) => {
+    if (!organizationId) return;
+    try {
+      const data = await utils.fetcher({
+        url: `/organization/${organizationId}/llm`,
+        config: { credentials: 'include', signal }
+      });
+      if (signal?.aborted) return;
+      if (Array.isArray(data)) setLlms(data);
+    } catch {
+      // ignore
+    }
+  };
+
+  useEffect(() => {
+    if (!organizationId) return;
+    const controller = new AbortController();
+    fetchLlms(controller.signal);
+    return () => controller.abort();
+  }, [organizationId]);
+
+  const handleChannelLlmChange = async (channelId: string, llmId: string) => {
+    if (savingLlm) return;
+    setSavingLlm(true);
+    setEditingLlmId(channelId);
+    try {
+      const data = await utils.fetcher({
+        url: `${apiBase}/${channelId}`,
+        config: {
+          method: 'PUT',
+          credentials: 'include',
+          body: JSON.stringify({ llmId: llmId || null })
+        }
+      });
+      if (data && !data.error) {
+        const next = llmId || null;
+        setSelectedChannel(prev =>
+          prev && prev.id === channelId ? { ...prev, llmId: next } : prev
+        );
+        setChannels(prev =>
+          prev.map(c => (c.id === channelId ? { ...c, llmId: next } : c))
+        );
+        snackbar.success('Model updated');
+      } else {
+        snackbar.error(data?.error?.message || 'Failed to update model');
+      }
+    } catch {
+      snackbar.error('Failed to update model');
+    } finally {
+      setSavingLlm(false);
+      setEditingLlmId(null);
+    }
   };
 
   const handleCreateSubmit = async () => {
@@ -409,9 +474,13 @@ export const Channels = () => {
       return;
     }
 
-    const body = {
+    const body: Record<string, unknown> = {
       platform: createValues.platform,
-      credentials: { botToken: createValues.botToken.trim() }
+      credentials: { botToken: createValues.botToken.trim() },
+      llmId:
+        createValues.llmId === utils.constants.LLM_SYSTEM_DEFAULT
+          ? null
+          : createValues.llmId
     };
 
     setSubmitting(true);
@@ -502,14 +571,6 @@ export const Channels = () => {
     } finally {
       setSubmitting(false);
     }
-  };
-
-  const handleCopyWebhook = () => {
-    if (!selectedChannel?.webhookUrl) return;
-    navigator.clipboard
-      .writeText(selectedChannel.webhookUrl)
-      .then(() => snackbar.success('Webhook URL copied'))
-      .catch(() => snackbar.error('Failed to copy'));
   };
 
   const handleOpenResource = (resourceId: string) => {
@@ -722,6 +783,29 @@ export const Channels = () => {
                   </div>
                 </div>
 
+                <UI.Select
+                  label="Language model"
+                  name="llmId"
+                  value={createValues.llmId}
+                  disabled={submitting}
+                  helperText={
+                    llms.length === 0
+                      ? 'No LLMs configured for this organization — the system default will be used. Add one in Settings.'
+                      : 'Pick the model this channel will use, or leave the system default.'
+                  }
+                  options={[
+                    {
+                      label: 'System default',
+                      value: utils.constants.LLM_SYSTEM_DEFAULT
+                    },
+                    ...llms.map(llm => ({ label: llm.name, value: llm.id }))
+                  ]}
+                  onChange={e => {
+                    const value = e.target.value as string;
+                    setCreateValues(prev => ({ ...prev, llmId: value }));
+                  }}
+                />
+
                 {createValues.platform ===
                   utils.constants.CHANNEL_PLATFORM_TELEGRAM && (
                   <UI.Input
@@ -816,6 +900,47 @@ export const Channels = () => {
                 </div>
 
                 <div className="panel-section">
+                  <p className="panel-section-label">Language model</p>
+                  <UI.Select
+                    label=""
+                    name="channelLlmId"
+                    value={
+                      selectedChannel.llmId ||
+                      utils.constants.LLM_SYSTEM_DEFAULT
+                    }
+                    disabled={savingLlm && editingLlmId === selectedChannel.id}
+                    helperText={
+                      llms.length === 0
+                        ? 'No LLMs configured. Add one in Settings to switch from the system default.'
+                        : 'Change which language model this channel uses.'
+                    }
+                    options={[
+                      {
+                        label: 'System default',
+                        value: utils.constants.LLM_SYSTEM_DEFAULT
+                      },
+                      ...llms.map(llm => ({
+                        label: llm.name,
+                        value: llm.id
+                      }))
+                    ]}
+                    onChange={e => {
+                      const value = e.target.value as string;
+                      const current =
+                        selectedChannel.llmId ||
+                        utils.constants.LLM_SYSTEM_DEFAULT;
+                      if (current === value) return;
+                      handleChannelLlmChange(
+                        selectedChannel.id,
+                        value === utils.constants.LLM_SYSTEM_DEFAULT
+                          ? ''
+                          : value
+                      );
+                    }}
+                  />
+                </div>
+
+                <div className="panel-section">
                   <p className="panel-section-label">Activity</p>
                   <div className="panel-stats">
                     <div className="panel-stat">
@@ -832,20 +957,6 @@ export const Channels = () => {
                     </div>
                   </div>
                 </div>
-
-                {selectedChannel.webhookUrl && (
-                  <div className="panel-section">
-                    <p className="panel-section-label">Webhook</p>
-                    <div className="panel-webhook-row">
-                      <div className="panel-webhook-url">
-                        {selectedChannel.webhookUrl}
-                      </div>
-                      <IconButton size="small" onClick={handleCopyWebhook}>
-                        <ContentCopy />
-                      </IconButton>
-                    </div>
-                  </div>
-                )}
 
                 <div className="panel-danger-zone">
                   <p className="panel-danger-label">Danger zone</p>

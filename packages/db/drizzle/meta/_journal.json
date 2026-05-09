@@ -232,6 +232,20 @@
       "when": 1778276403375,
       "tag": "0032_rapid_warbird",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1778343671237,
+      "tag": "0033_burly_prima",
+      "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1778351930230,
+      "tag": "0034_minor_meltdown",
+      "breakpoints": true
     }
   ]
 }

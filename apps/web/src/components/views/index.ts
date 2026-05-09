@@ -4,6 +4,7 @@ import { Prompts } from './prompts';
 import { Resources } from './resources';
 import { Channels } from './channels';
 import { Organization } from './organization';
+import { Settings } from './settings';
 
 export const Views = {
   Auth,
@@ -11,5 +12,6 @@ export const Views = {
   Prompts,
   Resources,
   Channels,
-  Organization
+  Organization,
+  Settings
 };

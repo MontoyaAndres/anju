@@ -425,25 +425,6 @@ export const Wrapper = styled.div<IProps>`
           }
         }
 
-        .panel-webhook-row {
-          display: flex;
-          align-items: stretch;
-          gap: 8px;
-
-          .panel-webhook-url {
-            flex: 1;
-            font-family: monospace;
-            font-size: ${theme.fonts.xs};
-            color: ${theme.colors.bastille}CC;
-            background-color: ${theme.colors.bastille}05;
-            border: 1px solid ${theme.colors.alto};
-            border-radius: 6px;
-            padding: 8px 10px;
-            overflow-x: auto;
-            white-space: nowrap;
-          }
-        }
-
         .panel-toggle-row {
           display: flex;
           align-items: center;

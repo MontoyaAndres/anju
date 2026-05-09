@@ -99,21 +99,14 @@ const LANGUAGES = [LANGUAGE_EN, LANGUAGE_ES];
 const MIMETYPE_TEXT = 'text/plain' as 'text/plain';
 const MIMETYPE_TEXT_CSV = 'text/csv' as 'text/csv';
 const MIMETYPE_TEXT_HTML = 'text/html' as 'text/html';
-const MIMETYPE_VIDEO_MP4 = 'video/mp4' as 'video/mp4';
 const MIMETYPE_IMAGE_PNG = 'image/png' as 'image/png';
 const MIMETYPE_IMAGE_GIF = 'image/gif' as 'image/gif';
-const MIMETYPE_AUDIO_MP3 = 'audio/mpeg' as 'audio/mpeg';
 const MIMETYPE_IMAGE_JPEG = 'image/jpeg' as 'image/jpeg';
 const MIMETYPE_IMAGE_WEBP = 'image/webp' as 'image/webp';
 const MIMETYPE_APPLICATION_PDF = 'application/pdf' as 'application/pdf';
-const MIMETYPE_APPLICATION_ZIP = 'application/zip' as 'application/zip';
-const MIMETYPE_APPLICATION_RAR =
-  'application/x-rar-compressed' as 'application/x-rar-compressed';
 const MIMETYPE_APPLICATION_JSON = 'application/json' as 'application/json';
 const MIMETYPE_APPLICATION_MSWORD =
   'application/msword' as 'application/msword';
-const MIMETYPE_APPLICATION_ZIP_WINDOWS =
-  'application/x-zip-compressed' as 'application/x-zip-compressed';
 const MIMETYPE_APPLICATION_VND_MS_EXCEL =
   'application/vnd.ms-excel' as 'application/vnd.ms-excel';
 const MIMETYPE_APPLICATION_VND_OPENXMLFORMATS_OFFICEDOCUMENT_SPREADSHEETML_SHEET =
@@ -162,18 +155,13 @@ const MIMETYPES = [
   MIMETYPE_TEXT,
   MIMETYPE_TEXT_CSV,
   MIMETYPE_TEXT_HTML,
-  MIMETYPE_VIDEO_MP4,
   MIMETYPE_IMAGE_PNG,
   MIMETYPE_IMAGE_GIF,
-  MIMETYPE_AUDIO_MP3,
   MIMETYPE_IMAGE_JPEG,
   MIMETYPE_IMAGE_WEBP,
   MIMETYPE_APPLICATION_PDF,
-  MIMETYPE_APPLICATION_ZIP,
-  MIMETYPE_APPLICATION_RAR,
   MIMETYPE_APPLICATION_JSON,
   MIMETYPE_APPLICATION_MSWORD,
-  MIMETYPE_APPLICATION_ZIP_WINDOWS,
   MIMETYPE_APPLICATION_VND_MS_EXCEL,
   MIMETYPE_APPLICATION_VND_OPENXMLFORMATS_OFFICEDOCUMENT_SPREADSHEETML_SHEET,
   MIMETYPE_APPLICATION_VND_OPENXMLFORMATS_OFFICEDOCUMENT_WORDPROCESSINGML_DOCUMENT,
@@ -292,6 +280,58 @@ const LLM_PROVIDERS = [
   LLM_PROVIDER_GOOGLE
 ];
 
+const DEFAULT_LLM_PROVIDER = LLM_PROVIDER_GOOGLE;
+const DEFAULT_LLM_MODEL = 'gemini-3.1-flash-lite';
+const DEFAULT_LLM_SYSTEM_PROMPT =
+  'You are a helpful assistant. Answer the user using the tools and resources provided to you whenever they are relevant, and prefer that information over your prior knowledge. Cite the resources you used when applicable. Be concise and accurate. If you cannot find a clear answer in the available context, say so honestly instead of guessing.';
+
+const LLM_CATALOG: ReadonlyArray<{
+  provider:
+    | typeof LLM_PROVIDER_GOOGLE
+    | typeof LLM_PROVIDER_OPENAI
+    | typeof LLM_PROVIDER_ANTHROPIC;
+  model: string;
+  label: string;
+}> = [
+  {
+    provider: LLM_PROVIDER_GOOGLE,
+    model: 'gemini-3-flash-preview',
+    label: 'Gemini 3 Flash'
+  },
+  {
+    provider: LLM_PROVIDER_GOOGLE,
+    model: 'gemini-3.1-pro-preview',
+    label: 'Gemini 3.1 Pro'
+  },
+  {
+    provider: LLM_PROVIDER_OPENAI,
+    model: 'gpt-4o-mini',
+    label: 'GPT-4o mini'
+  },
+  {
+    provider: LLM_PROVIDER_OPENAI,
+    model: 'gpt-4o',
+    label: 'GPT-4o'
+  },
+  {
+    provider: LLM_PROVIDER_ANTHROPIC,
+    model: 'claude-haiku-4-5',
+    label: 'Claude Haiku 4.5'
+  },
+  {
+    provider: LLM_PROVIDER_ANTHROPIC,
+    model: 'claude-sonnet-4-6',
+    label: 'Claude Sonnet 4.6'
+  },
+  {
+    provider: LLM_PROVIDER_ANTHROPIC,
+    model: 'claude-opus-4.7',
+    label: 'Claude Sonnet 4.7'
+  }
+];
+
+const LLM_SYSTEM_DEFAULT = 'SYSTEM_DEFAULT';
+
 const MAX_TOOL_LOOPS = 8;
 
 const TELEGRAM_SECRET_HEADER = 'x-telegram-bot-api-secret-token';
@@ -368,18 +408,13 @@ export const constants = {
   MIMETYPE_TEXT,
   MIMETYPE_TEXT_CSV,
   MIMETYPE_TEXT_HTML,
-  MIMETYPE_VIDEO_MP4,
   MIMETYPE_IMAGE_PNG,
   MIMETYPE_IMAGE_GIF,
-  MIMETYPE_AUDIO_MP3,
   MIMETYPE_IMAGE_JPEG,
   MIMETYPE_IMAGE_WEBP,
   MIMETYPE_APPLICATION_PDF,
-  MIMETYPE_APPLICATION_ZIP,
-  MIMETYPE_APPLICATION_RAR,
   MIMETYPE_APPLICATION_JSON,
   MIMETYPE_APPLICATION_MSWORD,
-  MIMETYPE_APPLICATION_ZIP_WINDOWS,
   MIMETYPE_APPLICATION_VND_MS_EXCEL,
   MIMETYPE_APPLICATION_VND_OPENXMLFORMATS_OFFICEDOCUMENT_SPREADSHEETML_SHEET,
   MIMETYPE_APPLICATION_VND_OPENXMLFORMATS_OFFICEDOCUMENT_WORDPROCESSINGML_DOCUMENT,
@@ -452,6 +487,11 @@ export const constants = {
   LLM_PROVIDER_OPENAI_COMPATIBLE,
   LLM_PROVIDER_GOOGLE,
   LLM_PROVIDERS,
+  DEFAULT_LLM_PROVIDER,
+  DEFAULT_LLM_MODEL,
+  DEFAULT_LLM_SYSTEM_PROMPT,
+  LLM_CATALOG,
+  LLM_SYSTEM_DEFAULT,
   MAX_TOOL_LOOPS,
   TELEGRAM_SECRET_HEADER,
   TELEGRAM_API_BASE,

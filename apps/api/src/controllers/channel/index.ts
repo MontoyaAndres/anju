@@ -91,6 +91,24 @@ const create = async (c: Context<AppEnv>) => {
 
     if (!artifactRow) throw new Error('Artifact not found for the project');
 
+    if (currentValues.llmId) {
+      const [llmRow] = await tx
+        .select({ id: db.schema.organizationLlm.id })
+        .from(db.schema.organizationLlm)
+        .where(
+          and(
+            eq(db.schema.organizationLlm.id, currentValues.llmId),
+            eq(
+              db.schema.organizationLlm.organizationId,
+              currentValues.organizationId
+            )
+          )
+        )
+        .limit(1);
+
+      if (!llmRow) throw new Error('LLM not found for the organization');
+    }
+
     const [channelRow] = await tx
       .insert(db.schema.channel)
       .values({
@@ -100,7 +118,8 @@ const create = async (c: Context<AppEnv>) => {
         metadata: platformMetadata,
         credentials: encryptedCredentials,
         webhookSecret: hashedSecret,
-        artifactId: artifactRow.id
+        artifactId: artifactRow.id,
+        llmId: currentValues.llmId || null
       })
       .returning();
 
@@ -137,10 +156,7 @@ const create = async (c: Context<AppEnv>) => {
   });
 
   const { credentials: _c, webhookSecret: _w, ...safe } = result;
-  return c.json({
-    ...safe,
-    webhookUrl: buildWebhookUrl(c, result.id, result.platform)
-  });
+  return c.json(safe);
 };
 
 const update = async (c: Context<AppEnv>) => {
@@ -164,6 +180,29 @@ const update = async (c: Context<AppEnv>) => {
       JSON.stringify(currentValues.credentials),
       encryptionKey
     );
+  }
+
+  if (currentValues.llmId !== undefined) {
+    if (currentValues.llmId === null) {
+      updates.llmId = null;
+    } else {
+      const [llmRow] = await dbInstance
+        .select({ id: db.schema.organizationLlm.id })
+        .from(db.schema.organizationLlm)
+        .where(
+          and(
+            eq(db.schema.organizationLlm.id, currentValues.llmId),
+            eq(
+              db.schema.organizationLlm.organizationId,
+              currentValues.organizationId
+            )
+          )
+        )
+        .limit(1);
+
+      if (!llmRow) throw new Error('LLM not found for the organization');
+      updates.llmId = currentValues.llmId;
+    }
   }
 
   const [updated] = await dbInstance
@@ -269,15 +308,6 @@ const webhook = async (c: Context<AppEnv>) => {
     return handleTelegramWebhook(c);
   }
   return c.json({ error: `Unsupported platform: ${platform}` }, 400);
-};
-
-const buildWebhookUrl = (
-  c: Context<AppEnv>,
-  channelId: string,
-  platform: string
-) => {
-  const apiUrl = utils.getEnv(c, 'NEXT_PUBLIC_API_URL');
-  return `${apiUrl}/channel/${channelId}/webhook/${platform}`;
 };
 
 export const ChannelController = {

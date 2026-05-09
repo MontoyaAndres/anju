@@ -122,10 +122,34 @@ const HomeLayout = ({ page }: { page: HomePage }) => {
   const router = useRouter();
   const { pathname, query } = router;
 
-  const projectBase = `/organization/${query.id}/project/${query.projectId}`;
   const currentOrgId = typeof query.id === 'string' ? query.id : null;
   const currentProjectId =
     typeof query.projectId === 'string' ? query.projectId : null;
+
+  const lastProjectIdRef = useRef<string | null>(null);
+  if (currentProjectId) lastProjectIdRef.current = currentProjectId;
+
+  const fallbackProjectId =
+    currentProjectId ||
+    lastProjectIdRef.current ||
+    organizations?.find(o => o.id === currentOrgId)?.projects?.[0]?.id ||
+    null;
+
+  const projectBase = fallbackProjectId
+    ? `/organization/${currentOrgId}/project/${fallbackProjectId}`
+    : null;
+
+  const goToProjectSection = (section: string) => {
+    if (!projectBase) return;
+    setMobileMenuClicked(false);
+    router.push(`${projectBase}/${section}`);
+  };
+
+  useEffect(() => {
+    if (currentOrgId && !currentProjectId && organizations === null) {
+      loadOrganizations();
+    }
+  }, [currentOrgId, currentProjectId, organizations]);
 
   useEffect(() => {
     if (!accountClicked) return;
@@ -309,6 +333,12 @@ const HomeLayout = ({ page }: { page: HomePage }) => {
     setAccountClicked(false);
     setMobileMenuClicked(false);
     window.open(DOCS_URL, '_blank', 'noopener,noreferrer');
+  };
+
+  const handleSettingsClicked = () => {
+    setAccountClicked(false);
+    setMobileMenuClicked(false);
+    if (currentOrgId) router.push(`/organization/${currentOrgId}/settings`);
   };
 
   const loadOrganizations = async () => {
@@ -518,10 +548,7 @@ const HomeLayout = ({ page }: { page: HomePage }) => {
                       ? 'active'
                       : ''
                   }
-                  onClick={() => {
-                    setMobileMenuClicked(false);
-                    router.push(`${projectBase}/prompts`);
-                  }}
+                  onClick={() => goToProjectSection('prompts')}
                 >
                   {pathname ===
                   '/organization/[id]/project/[projectId]/prompts' ? (
@@ -539,10 +566,7 @@ const HomeLayout = ({ page }: { page: HomePage }) => {
                       ? 'active'
                       : ''
                   }
-                  onClick={() => {
-                    setMobileMenuClicked(false);
-                    router.push(`${projectBase}/resources`);
-                  }}
+                  onClick={() => goToProjectSection('resources')}
                 >
                   {pathname ===
                   '/organization/[id]/project/[projectId]/resources' ? (
@@ -559,10 +583,7 @@ const HomeLayout = ({ page }: { page: HomePage }) => {
                       ? 'active'
                       : ''
                   }
-                  onClick={() => {
-                    setMobileMenuClicked(false);
-                    router.push(`${projectBase}/tools`);
-                  }}
+                  onClick={() => goToProjectSection('tools')}
                 >
                   {pathname ===
                   '/organization/[id]/project/[projectId]/tools' ? (
@@ -580,10 +601,7 @@ const HomeLayout = ({ page }: { page: HomePage }) => {
                       ? 'active'
                       : ''
                   }
-                  onClick={() => {
-                    setMobileMenuClicked(false);
-                    router.push(`${projectBase}/channels`);
-                  }}
+                  onClick={() => goToProjectSection('channels')}
                 >
                   {pathname ===
                   '/organization/[id]/project/[projectId]/channels' ? (
@@ -599,7 +617,7 @@ const HomeLayout = ({ page }: { page: HomePage }) => {
                   <AccountCircleOutlined />
                   <span className="button-text">Account</span>
                 </UI.Button>
-                <UI.Button fullWidth>
+                <UI.Button fullWidth onClick={handleSettingsClicked}>
                   <SettingsOutlined />
                   <span className="button-text">Settings</span>
                 </UI.Button>
@@ -660,7 +678,7 @@ const HomeLayout = ({ page }: { page: HomePage }) => {
                   ? 'active'
                   : ''
               }
-              onClick={() => router.push(`${projectBase}/prompts`)}
+              onClick={() => goToProjectSection('prompts')}
             >
               {pathname === '/organization/[id]/project/[projectId]/prompts' ? (
                 <EmojiObjects />
@@ -676,7 +694,7 @@ const HomeLayout = ({ page }: { page: HomePage }) => {
                   ? 'active'
                   : ''
               }
-              onClick={() => router.push(`${projectBase}/resources`)}
+              onClick={() => goToProjectSection('resources')}
             >
               {pathname ===
               '/organization/[id]/project/[projectId]/resources' ? (
@@ -693,7 +711,7 @@ const HomeLayout = ({ page }: { page: HomePage }) => {
                   ? 'active'
                   : ''
               }
-              onClick={() => router.push(`${projectBase}/tools`)}
+              onClick={() => goToProjectSection('tools')}
             >
               {pathname === '/organization/[id]/project/[projectId]/tools' ? (
                 <Settings />
@@ -709,7 +727,7 @@ const HomeLayout = ({ page }: { page: HomePage }) => {
                   ? 'active'
                   : ''
               }
-              onClick={() => router.push(`${projectBase}/channels`)}
+              onClick={() => goToProjectSection('channels')}
             >
               {pathname ===
               '/organization/[id]/project/[projectId]/channels' ? (
@@ -770,7 +788,18 @@ const HomeLayout = ({ page }: { page: HomePage }) => {
               <AccountCircleOutlined />
               <p className="account-menu-item-text">Account</p>
             </div>
-            <div className="account-menu-item" role="menuitem" tabIndex={0}>
+            <div
+              className="account-menu-item"
+              role="menuitem"
+              tabIndex={0}
+              onClick={handleSettingsClicked}
+              onKeyDown={e => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  handleSettingsClicked();
+                }
+              }}
+            >
               <SettingsOutlined />
               <p className="account-menu-item-text">Settings</p>
             </div>

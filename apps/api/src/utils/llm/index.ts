@@ -2,6 +2,7 @@ import { utils } from '@anju/utils';
 
 import { openAiAdapter } from './openai';
 import { anthropicAdapter } from './anthropic';
+import { geminiAdapter } from './gemini';
 
 import type { LlmAdapter } from './types';
 
@@ -10,10 +11,13 @@ export const getLlmAdapter = (provider: string): LlmAdapter => {
     return anthropicAdapter;
   }
 
+  if (provider === utils.constants.LLM_PROVIDER_GOOGLE) {
+    return geminiAdapter;
+  }
+
   if (
     provider === utils.constants.LLM_PROVIDER_OPENAI ||
-    provider === utils.constants.LLM_PROVIDER_OPENAI_COMPATIBLE ||
-    provider === utils.constants.LLM_PROVIDER_GOOGLE
+    provider === utils.constants.LLM_PROVIDER_OPENAI_COMPATIBLE
   ) {
     return openAiAdapter;
   }
