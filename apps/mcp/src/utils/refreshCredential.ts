@@ -16,50 +16,23 @@ interface RefreshableCredential {
   needsReauth?: boolean;
 }
 
-const REAUTH_ERROR_CODES = new Set(['invalid_grant', 'invalid_token']);
-
-const markCredentialNeedsReauth = async (
-  ctx: Context<AppEnv>,
-  credential: RefreshableCredential,
-  reason: string
-): Promise<void> => {
-  const dbInstance = db.create(ctx);
-  const existingMetadata =
-    credential.metadata && typeof credential.metadata === 'object'
-      ? (credential.metadata as Record<string, unknown>)
-      : {};
-  const nextMetadata = {
-    ...existingMetadata,
-    needsReauth: true,
-    reauthReason: reason,
-    reauthAt: new Date().toISOString()
-  };
-  await dbInstance
-    .update(db.schema.artifactCredential)
-    .set({ metadata: nextMetadata })
-    .where(eq(db.schema.artifactCredential.id, credential.id));
-};
-
-const TOKEN_URLS: Record<string, string> = {
-  'google-gmail': 'https://oauth2.googleapis.com/token',
-  'microsoft-outlook':
-    'https://login.microsoftonline.com/common/oauth2/v2.0/token',
-  slack: 'https://slack.com/api/oauth.v2.access'
-};
-
 const ENV_NAMES: Record<
   string,
   { clientIdEnv: string; clientSecretEnv: string }
 > = {
-  'google-gmail': {
+  [utils.constants.OAUTH_PROVIDER_GOOGLE_GMAIL]: {
     clientIdEnv: 'GOOGLE_CLIENT_ID',
     clientSecretEnv: 'GOOGLE_CLIENT_SECRET'
   },
-  'microsoft-outlook': {
+  [utils.constants.OAUTH_PROVIDER_GOOGLE_DRIVE]: {
+    clientIdEnv: 'GOOGLE_CLIENT_ID',
+    clientSecretEnv: 'GOOGLE_CLIENT_SECRET'
+  },
+  [utils.constants.OAUTH_PROVIDER_MICROSOFT_OUTLOOK]: {
     clientIdEnv: 'MICROSOFT_CLIENT_ID',
     clientSecretEnv: 'MICROSOFT_CLIENT_SECRET'
   },
-  slack: {
+  [utils.constants.OAUTH_PROVIDER_SLACK]: {
     clientIdEnv: 'SLACK_CLIENT_ID',
     clientSecretEnv: 'SLACK_CLIENT_SECRET'
   }
@@ -84,7 +57,9 @@ export const refreshCredentialIfNeeded = async (
     credential.metadata && typeof credential.metadata === 'object'
       ? (credential.metadata as Record<string, unknown>)
       : null;
-  const alreadyNeedsReauth = existingMetadata?.needsReauth === true;
+  const alreadyNeedsReauth = utils.isCredentialNeedingReauth(
+    credential.metadata
+  );
   const decrypted: RefreshableCredential = {
     ...credential,
     accessToken: accessTokenPlain,
@@ -99,7 +74,7 @@ export const refreshCredentialIfNeeded = async (
     return decrypted;
   }
 
-  const tokenUrl = TOKEN_URLS[credential.provider];
+  const tokenUrl = utils.constants.OAUTH_TOKEN_URLS[credential.provider];
   const envConfig = ENV_NAMES[credential.provider];
   if (!tokenUrl || !envConfig) return decrypted;
 
@@ -107,77 +82,52 @@ export const refreshCredentialIfNeeded = async (
   const clientSecret = utils.getEnv(ctx, envConfig.clientSecretEnv);
   if (!clientId || !clientSecret) return decrypted;
 
+  let refreshed;
   try {
-    const response = await fetch(tokenUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        client_id: clientId,
-        client_secret: clientSecret,
-        grant_type: 'refresh_token',
-        refresh_token: refreshTokenPlain
-      })
+    refreshed = await utils.refreshOAuthToken({
+      tokenUrl,
+      clientId,
+      clientSecret,
+      refreshToken: refreshTokenPlain
     });
-    if (!response.ok) {
-      const errorBody = await response.text();
-      let errorCode: string | undefined;
-      try {
-        errorCode = (JSON.parse(errorBody) as { error?: string })?.error;
-      } catch {
-        errorCode = undefined;
-      }
-      if (errorCode && REAUTH_ERROR_CODES.has(errorCode)) {
-        await markCredentialNeedsReauth(ctx, credential, errorCode);
-        return { ...decrypted, needsReauth: true };
-      }
-      return decrypted;
-    }
-
-    const tokens: {
-      access_token?: string;
-      refresh_token?: string;
-      expires_in?: number;
-      scope?: string;
-    } = await response.json();
-    if (!tokens.access_token) return decrypted;
-
-    const nextAccessToken = tokens.access_token;
-    const nextRefreshToken = tokens.refresh_token || refreshTokenPlain;
-    const nextExpiresAt = tokens.expires_in
-      ? new Date(Date.now() + tokens.expires_in * 1000)
-      : null;
-    const nextScopes = tokens.scope || credential.scopes;
-
-    const dbInstance = db.create(ctx);
-
-    let cleanedMetadata: Record<string, unknown> | null = null;
-    if (existingMetadata) {
-      const next: Record<string, unknown> = { ...existingMetadata };
-      delete next.needsReauth;
-      delete next.reauthReason;
-      delete next.reauthAt;
-      cleanedMetadata = Object.keys(next).length > 0 ? next : null;
-    }
-
-    await dbInstance
-      .update(db.schema.artifactCredential)
-      .set({
-        accessToken: utils.encryptString(nextAccessToken, encryptionKey),
-        refreshToken: utils.encryptString(nextRefreshToken, encryptionKey),
-        expiresAt: nextExpiresAt,
-        scopes: nextScopes,
-        metadata: cleanedMetadata
-      })
-      .where(eq(db.schema.artifactCredential.id, credential.id));
-
-    return {
-      ...credential,
-      accessToken: nextAccessToken,
-      refreshToken: nextRefreshToken,
-      expiresAt: nextExpiresAt,
-      scopes: nextScopes
-    };
   } catch (err) {
+    if (err instanceof utils.OAuthReauthRequiredError) {
+      const dbInstance = db.create(ctx);
+      await dbInstance
+        .update(db.schema.artifactCredential)
+        .set({
+          metadata: utils.buildReauthMetadata(existingMetadata, err.code)
+        })
+        .where(eq(db.schema.artifactCredential.id, credential.id));
+      return { ...decrypted, needsReauth: true };
+    }
     return decrypted;
   }
+
+  const nextAccessToken = refreshed.accessToken;
+  const nextRefreshToken = refreshed.refreshToken || refreshTokenPlain;
+  const nextExpiresAt = refreshed.expiresIn
+    ? new Date(Date.now() + refreshed.expiresIn * 1000)
+    : null;
+  const nextScopes = refreshed.scope || credential.scopes;
+
+  const dbInstance = db.create(ctx);
+  await dbInstance
+    .update(db.schema.artifactCredential)
+    .set({
+      accessToken: utils.encryptString(nextAccessToken, encryptionKey),
+      refreshToken: utils.encryptString(nextRefreshToken, encryptionKey),
+      expiresAt: nextExpiresAt,
+      scopes: nextScopes,
+      metadata: utils.clearReauthMetadata(existingMetadata)
+    })
+    .where(eq(db.schema.artifactCredential.id, credential.id));
+
+  return {
+    ...credential,
+    accessToken: nextAccessToken,
+    refreshToken: nextRefreshToken,
+    expiresAt: nextExpiresAt,
+    scopes: nextScopes
+  };
 };

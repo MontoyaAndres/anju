@@ -9,7 +9,21 @@ import {
   reindexResourceChunks
 } from './embedding';
 import { markdownToTelegramHtml } from './telegramFormat';
-import { enqueueIndex, enqueueCrawlDiscover } from './queue';
+import {
+  enqueueIndex,
+  enqueueCrawlDiscover,
+  enqueueGdriveDiscover,
+  enqueueGdriveFile
+} from './queue';
+import {
+  getDriveAccessToken,
+  getDriveFile,
+  listDriveFolderChildren,
+  downloadDriveFile,
+  driveUri,
+  isFolderMime,
+  buildDriveResourceMetadata
+} from './googleDrive';
 
 export {
   createAuth,
@@ -22,7 +36,16 @@ export {
   reindexResourceChunks,
   markdownToTelegramHtml,
   enqueueIndex,
-  enqueueCrawlDiscover
+  enqueueCrawlDiscover,
+  enqueueGdriveDiscover,
+  enqueueGdriveFile,
+  getDriveAccessToken,
+  getDriveFile,
+  listDriveFolderChildren,
+  downloadDriveFile,
+  driveUri,
+  isFolderMime,
+  buildDriveResourceMetadata
 };
 
 export type { McpClientHandle } from './mcpClient';

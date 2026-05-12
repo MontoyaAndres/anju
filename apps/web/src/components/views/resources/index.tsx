@@ -20,12 +20,24 @@ import {
   LanguageOutlined,
   ViewListOutlined,
   GridViewOutlined,
-  Search
+  Search,
+  Sync,
+  PictureAsPdfOutlined,
+  DescriptionOutlined,
+  TableChartOutlined,
+  SlideshowOutlined,
+  ImageOutlined,
+  TextSnippetOutlined,
+  InsertDriveFileOutlined,
+  AudiotrackOutlined,
+  VideoFileOutlined
 } from '@mui/icons-material';
 import Checkbox from '@mui/material/Checkbox';
 import FormControlLabel from '@mui/material/FormControlLabel';
 
 import { Wrapper } from './styles';
+
+import type { GoogleDriveItem } from '@anju/ui';
 
 interface Resource {
   id: string;
@@ -54,8 +66,41 @@ interface Resource {
 }
 
 type ViewMode = 'sources' | 'all';
-type FolderId = 'files' | 'websites' | null;
+type FolderId = 'files' | 'websites' | 'gdrive' | null;
 type AddingType = 'file' | 'website' | null;
+
+const isFolderResource = (resource: {
+  sourceType: string;
+  parentResourceId: string | null;
+}): boolean => {
+  if (
+    resource.sourceType ===
+    utils.constants.RESOURCE_SOURCE_TYPE_GOOGLE_DRIVE_FOLDER
+  ) {
+    return true;
+  }
+  if (
+    resource.sourceType === utils.constants.RESOURCE_SOURCE_TYPE_WEBSITE &&
+    !resource.parentResourceId
+  ) {
+    return true;
+  }
+  return false;
+};
+
+const isGoogleDriveResource = (resource: {
+  sourceType: string;
+  metadata: Record<string, unknown> | null;
+}): boolean => {
+  if (
+    resource.sourceType ===
+    utils.constants.RESOURCE_SOURCE_TYPE_GOOGLE_DRIVE_FOLDER
+  ) {
+    return true;
+  }
+  const meta = resource.metadata as { driveFileId?: string } | null;
+  return !!meta?.driveFileId;
+};
 
 const ResourceFavicon = ({ favicon }: { favicon: string | null }) => {
   const [errored, setErrored] = useState(false);
@@ -68,6 +113,57 @@ const ResourceFavicon = ({ favicon }: { favicon: string | null }) => {
       onError={() => setErrored(true)}
     />
   );
+};
+
+const ResourceIconLink = ({ src }: { src: string }) => {
+  const [errored, setErrored] = useState(false);
+  if (errored) return <InsertDriveFileOutlined />;
+  return (
+    <img
+      src={src}
+      alt=""
+      className="resource-item-iconlink"
+      onError={() => setErrored(true)}
+    />
+  );
+};
+
+const getMimeIcon = (mimeType: string) => {
+  const mime = mimeType || '';
+  if (mime.startsWith('image/')) return <ImageOutlined />;
+  if (mime.startsWith('audio/')) return <AudiotrackOutlined />;
+  if (mime.startsWith('video/')) return <VideoFileOutlined />;
+  if (mime === 'application/pdf') return <PictureAsPdfOutlined />;
+  if (mime.includes('word') || mime.includes('document'))
+    return <DescriptionOutlined />;
+  if (mime.includes('sheet') || mime.includes('excel') || mime.includes('csv'))
+    return <TableChartOutlined />;
+  if (
+    mime.includes('presentation') ||
+    mime.includes('powerpoint') ||
+    mime.includes('slide')
+  )
+    return <SlideshowOutlined />;
+  if (mime.startsWith('text/')) return <TextSnippetOutlined />;
+  return <InsertDriveFileOutlined />;
+};
+
+const getResourceIcon = (resource: {
+  sourceType: string;
+  mimeType: string;
+  metadata: Record<string, unknown> | null;
+}) => {
+  if (
+    resource.sourceType ===
+    utils.constants.RESOURCE_SOURCE_TYPE_GOOGLE_DRIVE_FOLDER
+  ) {
+    return <FolderOpenOutlined />;
+  }
+  const meta = resource.metadata as { iconLink?: string } | null;
+  if (meta?.iconLink) {
+    return <ResourceIconLink src={meta.iconLink} />;
+  }
+  return getMimeIcon(resource.mimeType);
 };
 
 const INITIAL_FILE_VALUES = {
@@ -135,14 +231,41 @@ export const Resources = () => {
     r => r.status === utils.constants.STATUS_PENDING
   );
   const apiBase = `/organization/${organizationId}/project/${projectId}/artifact/resource`;
+  const gdriveApiBase = `/organization/${organizationId}/project/${projectId}/artifact/google-drive`;
   const isCreating = addingType !== null;
+
+  const [gdriveOpen, setGdriveOpen] = useState(false);
+  const [gdriveToken, setGdriveToken] = useState<string | null>(null);
+  const [gdriveLoadingToken, setGdriveLoadingToken] = useState(false);
+  const [gdriveSelected, setGdriveSelected] = useState<
+    Map<string, GoogleDriveItem>
+  >(new Map());
+  const [gdriveImporting, setGdriveImporting] = useState(false);
+  const [gdriveSyncingId, setGdriveSyncingId] = useState<string | null>(null);
 
   const fileResources = useMemo(
     () =>
       resources.filter(
-        r => r.sourceType === utils.constants.RESOURCE_SOURCE_TYPE_FILE
+        r =>
+          r.sourceType === utils.constants.RESOURCE_SOURCE_TYPE_FILE &&
+          !isGoogleDriveResource(r)
       ),
     [resources]
+  );
+
+  const gdriveTopResources = useMemo(
+    () =>
+      resources.filter(r => !r.parentResourceId && isGoogleDriveResource(r)),
+    [resources]
+  );
+
+  const gdriveChildrenTotal = useMemo(
+    () =>
+      gdriveTopResources.reduce(
+        (total, r) => total + (r.childResourceCount ?? 0),
+        0
+      ),
+    [gdriveTopResources]
   );
 
   const websiteParents = useMemo(
@@ -170,16 +293,45 @@ export const Resources = () => {
   const [loadingChildrenIds, setLoadingChildrenIds] = useState<Set<string>>(
     new Set()
   );
+  const [folderPath, setFolderPath] = useState<string[]>([]);
+  const currentFolderId = folderPath[folderPath.length - 1] || null;
+
+  const findResourceById = (id: string): Resource | undefined => {
+    const top = resources.find(r => r.id === id);
+    if (top) return top;
+    for (const list of Object.values(childrenByParent)) {
+      const found = list.find(r => r.id === id);
+      if (found) return found;
+    }
+    return undefined;
+  };
+
+  const computeAncestry = (resourceId: string): string[] => {
+    const chain: string[] = [];
+    const seen = new Set<string>();
+    let cursor: Resource | undefined = findResourceById(resourceId);
+    while (cursor && !seen.has(cursor.id)) {
+      seen.add(cursor.id);
+      chain.unshift(cursor.id);
+      if (!cursor.parentResourceId) break;
+      cursor = findResourceById(cursor.parentResourceId);
+    }
+    return chain;
+  };
 
   const filteredList = useMemo(() => {
     const q = search.trim().toLowerCase();
     let list: Resource[];
-    if (view === 'all') {
+    if (currentFolderId) {
+      list = childrenByParent[currentFolderId] || [];
+    } else if (view === 'all') {
       list = resources.filter(r => !r.parentResourceId);
     } else if (folder === 'files') {
       list = fileResources;
     } else if (folder === 'websites') {
       list = websiteParents;
+    } else if (folder === 'gdrive') {
+      list = gdriveTopResources;
     } else {
       list = [];
     }
@@ -190,7 +342,17 @@ export const Resources = () => {
         r.uri.toLowerCase().includes(q) ||
         (r.description || '').toLowerCase().includes(q)
     );
-  }, [view, folder, fileResources, websiteParents, resources, search]);
+  }, [
+    view,
+    folder,
+    currentFolderId,
+    childrenByParent,
+    fileResources,
+    websiteParents,
+    gdriveTopResources,
+    resources,
+    search
+  ]);
 
   const getFavicon = (resource: Resource): string | null => {
     const seo = (resource.metadata as { seo?: { favicon?: string } } | null)
@@ -274,13 +436,23 @@ export const Resources = () => {
     return () => controller.abort();
   }, [organizationId, projectId]);
 
-  const openParentId =
-    selectedResource?.parentResourceId ||
-    (selectedResource?.sourceType ===
-      utils.constants.RESOURCE_SOURCE_TYPE_WEBSITE &&
-    !selectedResource?.parentResourceId
-      ? selectedResource.id
-      : null);
+  const openParentId = (() => {
+    if (!selectedResource) return null;
+    if (
+      selectedResource.sourceType ===
+      utils.constants.RESOURCE_SOURCE_TYPE_GOOGLE_DRIVE_FOLDER
+    ) {
+      return selectedResource.id;
+    }
+    if (
+      selectedResource.sourceType ===
+        utils.constants.RESOURCE_SOURCE_TYPE_WEBSITE &&
+      !selectedResource.parentResourceId
+    ) {
+      return selectedResource.id;
+    }
+    return selectedResource.parentResourceId || null;
+  })();
 
   useEffect(() => {
     if (!openParentId) return;
@@ -290,12 +462,22 @@ export const Resources = () => {
     return () => controller.abort();
   }, [openParentId]);
 
+  useEffect(() => {
+    if (!currentFolderId) return;
+    if (childrenByParent[currentFolderId]) return;
+    const controller = new AbortController();
+    fetchChildren(currentFolderId, controller.signal);
+    return () => controller.abort();
+  }, [currentFolderId]);
+
+  useEffect(() => {
+    setFolderPath([]);
+  }, [folder, view]);
+
   const openParentRecord = openParentId
     ? resources.find(r => r.id === openParentId)
     : null;
-  const openChildren = openParentId
-    ? childrenByParent[openParentId] || []
-    : [];
+  const openChildren = openParentId ? childrenByParent[openParentId] || [] : [];
   const openParentPending =
     openParentRecord?.status === utils.constants.STATUS_PENDING;
   const openChildrenPending = openChildren.some(
@@ -323,21 +505,31 @@ export const Resources = () => {
     const requestedId = router.query.selected;
     if (typeof requestedId !== 'string' || !resources.length) return;
     const match = resources.find(r => r.id === requestedId);
-    if (match && selectedResource?.id !== match.id) {
-      setSelectedResource(match);
-      setIsEditing(false);
-      setAddingType(null);
-      if (
-        match.sourceType === utils.constants.RESOURCE_SOURCE_TYPE_WEBSITE &&
-        view === 'sources'
+    if (!match) return;
+    if (view === 'sources') {
+      if (isGoogleDriveResource(match)) {
+        setFolder('gdrive');
+      } else if (
+        match.sourceType === utils.constants.RESOURCE_SOURCE_TYPE_WEBSITE
       ) {
         setFolder('websites');
       } else if (
-        match.sourceType === utils.constants.RESOURCE_SOURCE_TYPE_FILE &&
-        view === 'sources'
+        match.sourceType === utils.constants.RESOURCE_SOURCE_TYPE_FILE
       ) {
         setFolder('files');
       }
+    }
+    if (isFolderResource(match)) {
+      setFolderPath(computeAncestry(match.id));
+      setSelectedResource(null);
+      setIsEditing(false);
+      setAddingType(null);
+      return;
+    }
+    if (selectedResource?.id !== match.id) {
+      setSelectedResource(match);
+      setIsEditing(false);
+      setAddingType(null);
     }
   }, [router.query.selected, resources]);
 
@@ -382,6 +574,13 @@ export const Resources = () => {
   }, [selectedResource?.id, selectedResource?.fileKey, apiBase]);
 
   const handleSelect = (resource: Resource) => {
+    if (isFolderResource(resource)) {
+      setFolderPath(computeAncestry(resource.id));
+      setSelectedResource(null);
+      setIsEditing(false);
+      setAddingType(null);
+      return;
+    }
     setSelectedResource(resource);
     setIsEditing(false);
     setAddingType(null);
@@ -898,28 +1097,161 @@ export const Resources = () => {
     });
   };
 
+  const startGoogleDriveConnect = async () => {
+    try {
+      const data = await utils.fetcher({
+        url: `/oauth/${utils.constants.OAUTH_PROVIDER_GOOGLE_DRIVE}/authorize?organizationId=${organizationId}&projectId=${projectId}`,
+        config: { credentials: 'include' }
+      });
+      if (data?.url) {
+        window.location.href = data.url;
+      } else {
+        snackbar.error('Unable to start Google Drive connection');
+      }
+    } catch {
+      snackbar.error('Unable to start Google Drive connection');
+    }
+  };
+
+  const handleOpenGoogleDrive = async () => {
+    if (gdriveLoadingToken) return;
+    setGdriveLoadingToken(true);
+    try {
+      const data = await utils.fetcher({
+        url: `${gdriveApiBase}/token`,
+        config: { credentials: 'include' }
+      });
+      if (data?.error) {
+        snackbar.error('Connect Google Drive to import files');
+        await startGoogleDriveConnect();
+        return;
+      }
+      if (data?.accessToken) {
+        setGdriveToken(data.accessToken);
+        setGdriveSelected(new Map());
+        setGdriveOpen(true);
+      } else {
+        await startGoogleDriveConnect();
+      }
+    } catch {
+      snackbar.error('Failed to open Google Drive');
+    } finally {
+      setGdriveLoadingToken(false);
+    }
+  };
+
+  const handleGoogleDriveImport = async () => {
+    if (gdriveImporting || gdriveSelected.size === 0) return;
+    setGdriveImporting(true);
+    try {
+      const items = Array.from(gdriveSelected.values()).map(item => ({
+        fileId: item.fileId,
+        name: item.name,
+        mimeType: item.mimeType,
+        isFolder: item.isFolder,
+        iconLink: item.iconLink,
+        webViewLink: item.webViewLink,
+        modifiedTime: item.modifiedTime,
+        size: item.size
+      }));
+      const data = await utils.fetcher({
+        url: gdriveApiBase,
+        config: {
+          method: 'POST',
+          credentials: 'include',
+          body: JSON.stringify({ items })
+        }
+      });
+      if (data && !data.error) {
+        setGdriveOpen(false);
+        setGdriveSelected(new Map());
+        setFolder('gdrive');
+        fetchResources();
+        const count = items.length;
+        snackbar.success(
+          `Importing ${count} item${count === 1 ? '' : 's'} from Google Drive`
+        );
+      } else {
+        snackbar.error(data?.error || 'Failed to import from Google Drive');
+      }
+    } catch {
+      snackbar.error('Failed to import from Google Drive');
+    } finally {
+      setGdriveImporting(false);
+    }
+  };
+
+  const handleGoogleDriveSync = async () => {
+    if (gdriveSyncingId) return;
+    const currentFolder = currentFolderId
+      ? findResourceById(currentFolderId)
+      : null;
+    const targets =
+      currentFolder && isGoogleDriveResource(currentFolder)
+        ? [currentFolder]
+        : gdriveTopResources;
+    if (targets.length === 0) {
+      snackbar.error('Nothing to sync');
+      return;
+    }
+    setGdriveSyncingId(currentFolder?.id ?? '__all__');
+    try {
+      const results = await Promise.allSettled(
+        targets.map(t =>
+          utils.fetcher({
+            url: `${gdriveApiBase}/${t.id}/sync`,
+            config: { method: 'POST', credentials: 'include' }
+          })
+        )
+      );
+      fetchResources();
+      if (currentFolderId) fetchChildren(currentFolderId);
+      const failed = results.filter(
+        r =>
+          r.status === 'rejected' ||
+          (r.status === 'fulfilled' && r.value?.error)
+      ).length;
+      if (failed > 0) {
+        snackbar.error(
+          `Sync failed for ${failed} item${failed === 1 ? '' : 's'}`
+        );
+      } else {
+        snackbar.success('Sync started');
+      }
+    } finally {
+      setGdriveSyncingId(null);
+    }
+  };
+
   const renderFolderHome = () => (
     <div className="resources-folders">
       <div
         className="resource-folder"
         role="button"
         tabIndex={0}
-        onClick={() => setFolder('files')}
+        onClick={() => setFolder('gdrive')}
         onKeyDown={e => {
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();
-            setFolder('files');
+            setFolder('gdrive');
           }
         }}
       >
-        <div className="resource-folder-icon files">
-          <FolderOpenOutlined />
+        <div className="resource-folder-icon gdrive">
+          <img src="/GOOGLE_DRIVE.svg" alt="" />
         </div>
         <div className="resource-folder-body">
-          <p className="resource-folder-title">My folder</p>
+          <p className="resource-folder-title">Google Drive</p>
           <p className="resource-folder-meta">
-            {fileResources.length} item
-            {fileResources.length === 1 ? '' : 's'}
+            {gdriveTopResources.length} item
+            {gdriveTopResources.length === 1 ? '' : 's'}
+            {gdriveChildrenTotal > 0 && (
+              <>
+                {' · '}
+                {gdriveChildrenTotal} document
+                {gdriveChildrenTotal === 1 ? '' : 's'}
+              </>
+            )}
           </p>
         </div>
         <button
@@ -927,11 +1259,12 @@ export const Resources = () => {
           className="resource-folder-action"
           onClick={e => {
             e.stopPropagation();
-            startCreate('file');
+            handleOpenGoogleDrive();
           }}
+          disabled={gdriveLoadingToken}
         >
           <Add />
-          Add files
+          {gdriveLoadingToken ? 'Loading…' : 'Add from Drive'}
         </button>
       </div>
       <div
@@ -975,6 +1308,40 @@ export const Resources = () => {
           Add website
         </button>
       </div>
+      <div
+        className="resource-folder"
+        role="button"
+        tabIndex={0}
+        onClick={() => setFolder('files')}
+        onKeyDown={e => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            setFolder('files');
+          }
+        }}
+      >
+        <div className="resource-folder-icon files">
+          <FolderOpenOutlined />
+        </div>
+        <div className="resource-folder-body">
+          <p className="resource-folder-title">My folder</p>
+          <p className="resource-folder-meta">
+            {fileResources.length} item
+            {fileResources.length === 1 ? '' : 's'}
+          </p>
+        </div>
+        <button
+          type="button"
+          className="resource-folder-action"
+          onClick={e => {
+            e.stopPropagation();
+            startCreate('file');
+          }}
+        >
+          <Add />
+          Add files
+        </button>
+      </div>
     </div>
   );
 
@@ -1004,16 +1371,19 @@ export const Resources = () => {
           {isWebsite ? (
             <ResourceFavicon favicon={getFavicon(resource)} />
           ) : (
-            <FolderOpenOutlined />
+            getResourceIcon(resource)
           )}
         </div>
         <div className="resource-item-body">
           <div className="resource-item-top">
-            <p className="resource-item-title">{resource.title}</p>
-            <UI.Status status={resource.status} />
-            <span className="resource-item-type">
-              {isWebsite ? 'Website' : resource.mimeType}
-            </span>
+            <div className="resource-item-top-between">
+              <p className="resource-item-title">{resource.title}</p>
+              <UI.Status status={resource.status} />
+            </div>
+            <UI.TruncatedText
+              text={isWebsite ? 'Website' : resource.mimeType}
+              className="resource-item-type"
+            />
           </div>
           <div className="resource-item-meta">
             <span className="resource-item-uri">{resource.uri}</span>
@@ -1037,9 +1407,10 @@ export const Resources = () => {
       ? 'My folder'
       : folder === 'websites'
         ? 'Websites'
-        : '';
-  const folderEmptyLabel =
-    folder === 'websites' ? 'Add website' : 'Add files';
+        : folder === 'gdrive'
+          ? 'Google Drive'
+          : '';
+  const folderEmptyLabel = folder === 'websites' ? 'Add website' : 'Add files';
   const folderEmptyType: 'file' | 'website' =
     folder === 'websites' ? 'website' : 'file';
 
@@ -1083,11 +1454,18 @@ export const Resources = () => {
         </div>
         {(view === 'all' || folder !== null) && (
           <div className="resources-toolbar">
-            {view === 'sources' && folder !== null && (
+            {(folderPath.length > 0 ||
+              (view === 'sources' && folder !== null)) && (
               <button
                 type="button"
                 className="resources-back"
-                onClick={() => setFolder(null)}
+                onClick={() => {
+                  if (folderPath.length > 0) {
+                    setFolderPath(prev => prev.slice(0, -1));
+                  } else {
+                    setFolder(null);
+                  }
+                }}
               >
                 <ArrowBack />
                 Back
@@ -1102,78 +1480,187 @@ export const Resources = () => {
                 onChange={e => setSearch(e.target.value)}
               />
             </div>
-            {view === 'sources' && folder === 'files' && (
+            {view === 'sources' &&
+              folder === 'files' &&
+              folderPath.length === 0 && (
+                <UI.Button
+                  variant="contained"
+                  size="small"
+                  onClick={() => startCreate('file')}
+                >
+                  <Add />
+                  <span className="button-text">Add files</span>
+                </UI.Button>
+              )}
+            {view === 'sources' &&
+              folder === 'websites' &&
+              folderPath.length === 0 && (
+                <UI.Button
+                  variant="contained"
+                  size="small"
+                  onClick={() => startCreate('website')}
+                >
+                  <Add />
+                  <span className="button-text">Add website</span>
+                </UI.Button>
+              )}
+            {view === 'sources' &&
+              folder === 'gdrive' &&
+              folderPath.length === 0 && (
+                <UI.Button
+                  variant="contained"
+                  size="small"
+                  onClick={handleOpenGoogleDrive}
+                  disabled={gdriveLoadingToken}
+                >
+                  <Add />
+                  <span className="button-text">
+                    {gdriveLoadingToken ? 'Loading…' : 'Add from Drive'}
+                  </span>
+                </UI.Button>
+              )}
+            {folder === 'gdrive' && (
               <UI.Button
-                variant="contained"
+                variant="outlined"
                 size="small"
-                onClick={() => startCreate('file')}
+                onClick={handleGoogleDriveSync}
+                disabled={gdriveSyncingId !== null}
               >
-                <Add />
-                <span className="button-text">Add files</span>
-              </UI.Button>
-            )}
-            {view === 'sources' && folder === 'websites' && (
-              <UI.Button
-                variant="contained"
-                size="small"
-                onClick={() => startCreate('website')}
-              >
-                <Add />
-                <span className="button-text">Add website</span>
+                <Sync />
+                <span className="button-text">
+                  {gdriveSyncingId !== null ? 'Syncing…' : 'Sync'}
+                </span>
               </UI.Button>
             )}
           </div>
         )}
-        {view === 'sources' && folder !== null && (
+        {view === 'sources' && folder !== null && folderPath.length === 0 && (
           <h2 className="resources-folder-heading">{folderTitle}</h2>
+        )}
+        {folderPath.length > 0 && (
+          <div className="resources-breadcrumbs">
+            <UI.Breadcrumbs
+              items={[
+                ...(view === 'sources' && folder !== null
+                  ? [
+                      {
+                        label: folderTitle,
+                        onClick: () => setFolderPath([])
+                      }
+                    ]
+                  : []),
+                ...folderPath.map((id, idx) => {
+                  const r = findResourceById(id);
+                  return {
+                    label: r?.title ?? '…',
+                    onClick:
+                      idx < folderPath.length - 1
+                        ? () => setFolderPath(prev => prev.slice(0, idx + 1))
+                        : undefined
+                  };
+                })
+              ]}
+            />
+          </div>
         )}
         {view === 'sources' && folder === null && renderFolderHome()}
         {(view === 'all' || folder !== null) && (
           <>
-            {status === 'pending' && filteredList.length === 0 && (
-              <div className="resources-items">
-                {Array.from({ length: 3 }).map((_, i) => (
-                  <div key={i} className="resource-item resource-item-skeleton">
-                    <UI.Skeleton variant="rounded" width={32} height={32} />
-                    <div className="resource-item-body">
-                      <UI.Skeleton variant="text" width="45%" height={18} />
-                      <UI.Skeleton variant="text" width="80%" height={12} />
+            {(() => {
+              const listLoading = currentFolderId
+                ? loadingChildrenIds.has(currentFolderId) &&
+                  !childrenByParent[currentFolderId]
+                : status === 'pending';
+              if (!listLoading || filteredList.length > 0) return null;
+              const skeletonCount = currentFolderId
+                ? Math.min(
+                    findResourceById(currentFolderId)?.childResourceCount ?? 3,
+                    6
+                  ) || 3
+                : 3;
+              return (
+                <div className="resources-items">
+                  {Array.from({ length: skeletonCount }).map((_, i) => (
+                    <div
+                      key={i}
+                      className="resource-item resource-item-skeleton"
+                    >
+                      <UI.Skeleton variant="rounded" width={32} height={32} />
+                      <div className="resource-item-body">
+                        <UI.Skeleton variant="text" width="45%" height={18} />
+                        <UI.Skeleton variant="text" width="80%" height={12} />
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
-            {status !== 'pending' && filteredList.length === 0 && (
-              <div className="resources-empty-state">
-                {folder === 'websites' ? (
-                  <LanguageOutlined />
-                ) : (
+                  ))}
+                </div>
+              );
+            })()}
+            {(() => {
+              const listLoading = currentFolderId
+                ? loadingChildrenIds.has(currentFolderId) &&
+                  !childrenByParent[currentFolderId]
+                : status === 'pending';
+              if (listLoading || filteredList.length > 0) return null;
+              return folderPath.length > 0 ? (
+                <div className="resources-empty-state">
                   <FolderOpenOutlined />
-                )}
-                <h3>
-                  {view === 'all'
-                    ? 'No resources yet'
-                    : folder === 'websites'
-                      ? 'No websites yet'
-                      : 'No files yet'}
-                </h3>
-                <p>
-                  {folder === 'websites'
-                    ? 'Add a URL to crawl and index its pages.'
-                    : 'Upload files or paste text content for this MCP server to serve.'}
-                </p>
-                {view === 'sources' && (
-                  <UI.Button
-                    variant="contained"
-                    size="small"
-                    onClick={() => startCreate(folderEmptyType)}
-                  >
-                    <Add />
-                    <span className="button-text">{folderEmptyLabel}</span>
-                  </UI.Button>
-                )}
-              </div>
-            )}
+                  <h3>This folder is empty</h3>
+                </div>
+              ) : (
+                <div className="resources-empty-state">
+                  {folder === 'websites' ? (
+                    <LanguageOutlined />
+                  ) : folder === 'gdrive' ? (
+                    <img
+                      src="/GOOGLE_DRIVE.svg"
+                      alt=""
+                      className="resources-empty-icon-img"
+                    />
+                  ) : (
+                    <FolderOpenOutlined />
+                  )}
+                  <h3>
+                    {view === 'all'
+                      ? 'No resources yet'
+                      : folder === 'websites'
+                        ? 'No websites yet'
+                        : folder === 'gdrive'
+                          ? 'No Google Drive items yet'
+                          : 'No files yet'}
+                  </h3>
+                  <p>
+                    {folder === 'websites'
+                      ? 'Add a URL to crawl and index its pages.'
+                      : folder === 'gdrive'
+                        ? 'Pick files or folders from Google Drive to import and keep in sync.'
+                        : 'Upload files or paste text content for this MCP server to serve.'}
+                  </p>
+                  {view === 'sources' &&
+                    (folder === 'gdrive' ? (
+                      <UI.Button
+                        variant="contained"
+                        size="small"
+                        onClick={handleOpenGoogleDrive}
+                        disabled={gdriveLoadingToken}
+                      >
+                        <Add />
+                        <span className="button-text">
+                          {gdriveLoadingToken ? 'Loading…' : 'Add from Drive'}
+                        </span>
+                      </UI.Button>
+                    ) : (
+                      <UI.Button
+                        variant="contained"
+                        size="small"
+                        onClick={() => startCreate(folderEmptyType)}
+                      >
+                        <Add />
+                        <span className="button-text">{folderEmptyLabel}</span>
+                      </UI.Button>
+                    ))}
+                </div>
+              );
+            })()}
             <div className="resources-items">
               {filteredList.map(renderResourceRow)}
             </div>
@@ -1307,6 +1794,7 @@ export const Resources = () => {
                   <UI.Button
                     variant="contained"
                     size="small"
+                    className="small"
                     disabled={submitting}
                     onClick={isCreating ? handleCreateSubmit : handleUpdate}
                   >
@@ -1698,23 +2186,34 @@ export const Resources = () => {
               </div>
             ) : selectedResource ? (
               <div className="panel-view">
-                {selectedResource.parentResourceId &&
-                  (() => {
-                    const parent = resources.find(
-                      r => r.id === selectedResource.parentResourceId
-                    );
-                    if (!parent) return null;
-                    return (
-                      <button
-                        type="button"
-                        className="panel-parent-back"
-                        onClick={() => handleSelect(parent)}
-                      >
-                        <ArrowBack />
-                        <span>Back to {parent.title}</span>
-                      </button>
-                    );
-                  })()}
+                {(() => {
+                  const chain: Resource[] = [];
+                  const seen = new Set<string>();
+                  let cursor: Resource | undefined = selectedResource;
+                  while (cursor && !seen.has(cursor.id)) {
+                    seen.add(cursor.id);
+                    chain.unshift(cursor);
+                    if (!cursor.parentResourceId) break;
+                    const parentId = cursor.parentResourceId;
+                    cursor =
+                      resources.find(r => r.id === parentId) ??
+                      Object.values(childrenByParent)
+                        .flat()
+                        .find(r => r.id === parentId);
+                  }
+                  if (chain.length < 2) return null;
+                  return (
+                    <UI.Breadcrumbs
+                      items={chain.map((item, idx) => ({
+                        label: item.title,
+                        onClick:
+                          idx < chain.length - 1
+                            ? () => handleSelect(item)
+                            : undefined
+                      }))}
+                    />
+                  );
+                })()}
                 <div className="panel-info-grid">
                   <div className="panel-info-item">
                     <span className="panel-info-label">Source</span>
@@ -1751,9 +2250,10 @@ export const Resources = () => {
                   {selectedResource.fileName && (
                     <div className="panel-info-item">
                       <span className="panel-info-label">File name</span>
-                      <span className="panel-info-value">
-                        {selectedResource.fileName}
-                      </span>
+                      <UI.TruncatedText
+                        text={selectedResource.fileName}
+                        className="panel-info-value"
+                      />
                     </div>
                   )}
                 </div>
@@ -1761,35 +2261,27 @@ export const Resources = () => {
                   <h3 className="panel-section-label">URI</h3>
                   <p className="panel-section-text">{selectedResource.uri}</p>
                 </div>
-                {!(
-                  selectedResource.sourceType ===
-                    utils.constants.RESOURCE_SOURCE_TYPE_WEBSITE &&
-                  !selectedResource.parentResourceId
-                ) && (
-                  <div className="panel-section">
-                    <h3 className="panel-section-label">Sources</h3>
-                    <div className="panel-toggle-row">
-                      <div>
-                        <p className="panel-toggle-label">
-                          {utils.isResourceSourceEnabled(selectedResource)
-                            ? 'Cite this resource in replies'
-                            : 'Hidden from citations'}
-                        </p>
-                        <p className="panel-toggle-hint">
-                          When enabled, the agent will reference this resource
-                          as a source in answers that use it.
-                        </p>
-                      </div>
-                      <Switch
-                        checked={utils.isResourceSourceEnabled(
-                          selectedResource
-                        )}
-                        disabled={sourceVisibilityUpdating}
-                        onChange={handleShowSourceToggle}
-                      />
+                <div className="panel-section">
+                  <h3 className="panel-section-label">Sources</h3>
+                  <div className="panel-toggle-row">
+                    <div>
+                      <p className="panel-toggle-label">
+                        {utils.isResourceSourceEnabled(selectedResource)
+                          ? 'Cite this resource in replies'
+                          : 'Hidden from citations'}
+                      </p>
+                      <p className="panel-toggle-hint">
+                        When enabled, the agent will reference this resource as
+                        a source in answers that use it.
+                      </p>
                     </div>
+                    <Switch
+                      checked={utils.isResourceSourceEnabled(selectedResource)}
+                      disabled={sourceVisibilityUpdating}
+                      onChange={handleShowSourceToggle}
+                    />
                   </div>
-                )}
+                </div>
                 {selectedResource.description && (
                   <div className="panel-section">
                     <h3 className="panel-section-label">Description</h3>
@@ -1798,74 +2290,6 @@ export const Resources = () => {
                     </p>
                   </div>
                 )}
-                {selectedResource.sourceType ===
-                  utils.constants.RESOURCE_SOURCE_TYPE_WEBSITE &&
-                  selectedResource.crawlConfig && (
-                    <div className="panel-section">
-                      <h3 className="panel-section-label">Crawl config</h3>
-                      <p className="panel-section-text">
-                        Max pages:{' '}
-                        {selectedResource.crawlConfig.maxPages ??
-                          utils.constants.CRAWL_DEFAULT_MAX_PAGES}{' '}
-                        · Max depth:{' '}
-                        {selectedResource.crawlConfig.maxDepth ??
-                          utils.constants.CRAWL_DEFAULT_MAX_DEPTH}
-                      </p>
-                    </div>
-                  )}
-                {selectedResource.sourceType ===
-                  utils.constants.RESOURCE_SOURCE_TYPE_WEBSITE &&
-                  !selectedResource.parentResourceId &&
-                  (() => {
-                    const children = childrenByParent[selectedResource.id];
-                    const isLoading =
-                      children === undefined &&
-                      loadingChildrenIds.has(selectedResource.id);
-                    const expectedCount =
-                      selectedResource.childResourceCount ?? 0;
-                    if (
-                      !isLoading &&
-                      (!children || children.length === 0) &&
-                      expectedCount === 0
-                    )
-                      return null;
-                    return (
-                      <div className="panel-section">
-                        <h3 className="panel-section-label">
-                          Pages ({children?.length ?? expectedCount})
-                        </h3>
-                        {isLoading && !children ? (
-                          <div className="panel-children">
-                            {Array.from({ length: Math.min(expectedCount, 3) || 1 }).map(
-                              (_, i) => (
-                                <UI.Skeleton
-                                  key={i}
-                                  variant="rounded"
-                                  height={36}
-                                />
-                              )
-                            )}
-                          </div>
-                        ) : (
-                          <div className="panel-children">
-                            {(children || []).map(child => (
-                              <button
-                                type="button"
-                                key={child.id}
-                                className="panel-child-row"
-                                onClick={() => handleSelect(child)}
-                              >
-                                <span className="panel-child-title">
-                                  {child.title}
-                                </span>
-                                <UI.Status status={child.status} />
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })()}
                 {selectedResource.fileKey && (
                   <div className="panel-section">
                     <h3 className="panel-section-label">File</h3>
@@ -1945,6 +2369,55 @@ export const Resources = () => {
         onConfirm={handleDeleteConfirm}
         onCancel={() => setDeleteAlert(false)}
       />
+      <UI.Modal
+        open={gdriveOpen}
+        title="Import from Google Drive"
+        width={820}
+        onClose={() => {
+          if (gdriveImporting) return;
+          setGdriveOpen(false);
+          setGdriveSelected(new Map());
+        }}
+        footer={
+          <>
+            <UI.Button
+              size="small"
+              className="small"
+              disabled={gdriveImporting}
+              onClick={() => {
+                setGdriveOpen(false);
+                setGdriveSelected(new Map());
+              }}
+            >
+              Cancel
+            </UI.Button>
+            <UI.Button
+              variant="contained"
+              size="small"
+              className="small"
+              disabled={gdriveImporting || gdriveSelected.size === 0}
+              onClick={handleGoogleDriveImport}
+            >
+              {gdriveImporting
+                ? 'Importing…'
+                : gdriveSelected.size === 0
+                  ? 'Add selected'
+                  : `Add selected (${gdriveSelected.size})`}
+            </UI.Button>
+          </>
+        }
+      >
+        <UI.GoogleDriveBrowser
+          accessToken={gdriveToken}
+          selected={gdriveSelected}
+          onSelectionChange={setGdriveSelected}
+          onTokenExpired={() => {
+            setGdriveToken(null);
+            setGdriveOpen(false);
+            startGoogleDriveConnect();
+          }}
+        />
+      </UI.Modal>
     </Wrapper>
   );
 };

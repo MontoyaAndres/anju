@@ -11,20 +11,29 @@ import {
   ProjectController,
   OAuthController,
   CatalogController,
-  ChannelController
+  ChannelController,
+  GoogleDriveController
 } from './controllers';
 import { UserMiddleware } from './middleware';
 import { createAuth } from './utils';
 import {
   handleIndexBatch,
   handleCrawlDiscoverBatch,
-  handleCrawlPageBatch
+  handleCrawlPageBatch,
+  handleGdriveDiscoverBatch,
+  handleGdriveFileBatch
 } from './queue';
 
 // types
 import type { AppEnv, Bindings } from './types';
 import type { ExecutionContext, MessageBatch } from '@cloudflare/workers-types';
-import type { IndexJob, CrawlDiscoverJob, PageJob } from './queue';
+import type {
+  IndexJob,
+  CrawlDiscoverJob,
+  PageJob,
+  GdriveDiscoverJob,
+  GdriveFileJob
+} from './queue';
 
 const app = new Hono<AppEnv>();
 
@@ -160,6 +169,23 @@ app
     ArtifactController.updateResourceShowSource
   )
 
+  // Google Drive artifact controller
+  .get(
+    '/organization/:organizationId/project/:projectId/artifact/google-drive/token',
+    UserMiddleware.verify,
+    GoogleDriveController.token
+  )
+  .post(
+    '/organization/:organizationId/project/:projectId/artifact/google-drive',
+    UserMiddleware.verify,
+    GoogleDriveController.create
+  )
+  .post(
+    '/organization/:organizationId/project/:projectId/artifact/google-drive/:resourceId/sync',
+    UserMiddleware.verify,
+    GoogleDriveController.sync
+  )
+
   // Artifact Tool controller
   .get(
     '/organization/:organizationId/project/:projectId/artifact/tool',
@@ -267,7 +293,13 @@ export { ResourceHandler } from '@anju/containers';
 export default {
   fetch: app.fetch,
   queue: (
-    batch: MessageBatch<IndexJob | CrawlDiscoverJob | PageJob>,
+    batch: MessageBatch<
+      | IndexJob
+      | CrawlDiscoverJob
+      | PageJob
+      | GdriveDiscoverJob
+      | GdriveFileJob
+    >,
     env: Bindings,
     ctx: ExecutionContext
   ) => {
@@ -281,6 +313,20 @@ export default {
     if (batch.queue.startsWith('anju-crawl-page')) {
       return handleCrawlPageBatch(
         batch as MessageBatch<PageJob>,
+        env,
+        ctx
+      );
+    }
+    if (batch.queue.startsWith('anju-gdrive-discover')) {
+      return handleGdriveDiscoverBatch(
+        batch as MessageBatch<GdriveDiscoverJob>,
+        env,
+        ctx
+      );
+    }
+    if (batch.queue.startsWith('anju-gdrive-file')) {
+      return handleGdriveFileBatch(
+        batch as MessageBatch<GdriveFileJob>,
         env,
         ctx
       );

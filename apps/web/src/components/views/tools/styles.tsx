@@ -208,7 +208,6 @@ export const Wrapper = styled.div`
         width: 36px;
         height: 36px;
         border-radius: 8px;
-        background-color: ${theme.colors.bastille}0A;
         color: ${theme.colors.bastille};
         display: flex;
         align-items: center;
@@ -340,11 +339,6 @@ export const Wrapper = styled.div`
         width: 44px;
         height: 44px;
         border-radius: 12px;
-        background: linear-gradient(
-          135deg,
-          ${theme.colors.white} 0%,
-          ${theme.colors.bastille}06 100%
-        );
         border: 1px solid ${theme.colors.alto};
         color: ${theme.colors.bastille};
         font-size: ${theme.fonts.lg};
@@ -579,13 +573,18 @@ export const Wrapper = styled.div`
         border-color: ${theme.colors.bastille}60;
         transform: translateY(-1px);
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+
+        .tools-catalog-group-icon {
+          border-color: ${theme.colors.bastille}30;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+        }
       }
 
       .tools-catalog-group-icon {
         width: 44px;
         height: 44px;
         border-radius: 10px;
-        background-color: ${theme.colors.bastille}0A;
+        border: 1px solid ${theme.colors.alto};
         color: ${theme.colors.bastille};
         display: flex;
         align-items: center;

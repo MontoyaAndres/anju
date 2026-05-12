@@ -191,6 +191,34 @@ const ARTIFACT_UPDATE_WEBSITE = ARTIFACT_UPDATE_WEBSITE_VIEW.extend({
   organizationId: z.uuid()
 });
 
+const GOOGLE_DRIVE_ITEM = z.object({
+  fileId: z.string(),
+  name: z.string(),
+  mimeType: z.string(),
+  isFolder: z.boolean().default(false),
+  iconLink: z.string().optional(),
+  webViewLink: z.string().optional(),
+  modifiedTime: z.string().optional(),
+  size: z.coerce.number().int().optional()
+});
+
+const ARTIFACT_CREATE_GOOGLE_DRIVE_VIEW = z.object({
+  items: z.array(GOOGLE_DRIVE_ITEM)
+});
+
+const ARTIFACT_CREATE_GOOGLE_DRIVE = ARTIFACT_CREATE_GOOGLE_DRIVE_VIEW.extend({
+  projectId: z.uuid(),
+  userId: z.uuid(),
+  organizationId: z.uuid()
+});
+
+const ARTIFACT_SYNC_GOOGLE_DRIVE = z.object({
+  resourceId: z.uuid(),
+  projectId: z.uuid(),
+  userId: z.uuid(),
+  organizationId: z.uuid()
+});
+
 const ARTIFACT_CREATE_RESOURCE = z.object({
   title: z.string().min(3).max(200),
   uri: z.string(),
@@ -529,6 +557,9 @@ export const Schema = {
   ARTIFACT_CREATE_WEBSITE_VIEW,
   ARTIFACT_UPDATE_WEBSITE,
   ARTIFACT_UPDATE_WEBSITE_VIEW,
+  ARTIFACT_CREATE_GOOGLE_DRIVE,
+  ARTIFACT_CREATE_GOOGLE_DRIVE_VIEW,
+  ARTIFACT_SYNC_GOOGLE_DRIVE,
   ARTIFACT_UPDATE_RESOURCE,
   ARTIFACT_UPDATE_RESOURCE_VIEW,
   ARTIFACT_GET_RESOURCE,

@@ -183,7 +183,7 @@ export const Wrapper = styled.div<IProps>`
             display: flex;
             align-items: center;
             justify-content: center;
-            background-color: ${theme.colors.bastille}08;
+            border: 1px solid ${theme.colors.alto};
             flex-shrink: 0;
 
             & > svg {
@@ -345,7 +345,9 @@ export const Wrapper = styled.div<IProps>`
           color: ${theme.colors.saltBox};
           cursor: pointer;
           border-bottom: 2px solid transparent;
-          transition: color 0.15s ease, border-color 0.15s ease;
+          transition:
+            color 0.15s ease,
+            border-color 0.15s ease;
 
           &:hover {
             color: ${theme.colors.bastille};
@@ -554,7 +556,9 @@ export const Wrapper = styled.div<IProps>`
             border-radius: 8px;
             padding: 12px;
             cursor: pointer;
-            transition: border-color 0.15s ease, background-color 0.15s ease;
+            transition:
+              border-color 0.15s ease,
+              background-color 0.15s ease;
 
             &:hover {
               border-color: ${theme.colors.bastille}40;
@@ -810,7 +814,6 @@ export const Wrapper = styled.div<IProps>`
               }
             }
 
-
             .panel-message-stats {
               font-size: ${theme.fonts.xs};
               color: ${theme.colors.saltBox};
@@ -930,7 +933,6 @@ export const Wrapper = styled.div<IProps>`
         }
       }
     }
-
   `}
 `;
 

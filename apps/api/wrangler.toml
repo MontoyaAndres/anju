@@ -44,6 +44,12 @@ queue = "anju-crawl-discover-development"
 [[env.development.queues.producers]]
 binding = "CRAWL_PAGE_QUEUE"
 queue = "anju-crawl-page-development"
+[[env.development.queues.producers]]
+binding = "GDRIVE_DISCOVER_QUEUE"
+queue = "anju-gdrive-discover-development"
+[[env.development.queues.producers]]
+binding = "GDRIVE_FILE_QUEUE"
+queue = "anju-gdrive-file-development"
 [[env.development.queues.consumers]]
 queue = "anju-index-development"
 max_batch_size = 1
@@ -65,6 +71,20 @@ max_batch_timeout = 5
 max_concurrency = 5
 max_retries = 3
 dead_letter_queue = "anju-crawl-page-dlq-development"
+[[env.development.queues.consumers]]
+queue = "anju-gdrive-discover-development"
+max_batch_size = 1
+max_batch_timeout = 5
+max_concurrency = 2
+max_retries = 3
+dead_letter_queue = "anju-gdrive-discover-dlq-development"
+[[env.development.queues.consumers]]
+queue = "anju-gdrive-file-development"
+max_batch_size = 1
+max_batch_timeout = 5
+max_concurrency = 5
+max_retries = 3
+dead_letter_queue = "anju-gdrive-file-dlq-development"
 [[env.development.containers]]
 class_name = "ResourceHandler"
 image = "../resource-handler/Dockerfile"
@@ -109,6 +129,12 @@ queue = "anju-crawl-discover-production"
 [[env.production.queues.producers]]
 binding = "CRAWL_PAGE_QUEUE"
 queue = "anju-crawl-page-production"
+[[env.production.queues.producers]]
+binding = "GDRIVE_DISCOVER_QUEUE"
+queue = "anju-gdrive-discover-production"
+[[env.production.queues.producers]]
+binding = "GDRIVE_FILE_QUEUE"
+queue = "anju-gdrive-file-production"
 [[env.production.queues.consumers]]
 queue = "anju-index-production"
 max_batch_size = 1
@@ -130,6 +156,20 @@ max_batch_timeout = 5
 max_concurrency = 5
 max_retries = 3
 dead_letter_queue = "anju-crawl-page-dlq-production"
+[[env.production.queues.consumers]]
+queue = "anju-gdrive-discover-production"
+max_batch_size = 1
+max_batch_timeout = 5
+max_concurrency = 2
+max_retries = 3
+dead_letter_queue = "anju-gdrive-discover-dlq-production"
+[[env.production.queues.consumers]]
+queue = "anju-gdrive-file-production"
+max_batch_size = 1
+max_batch_timeout = 5
+max_concurrency = 5
+max_retries = 3
+dead_letter_queue = "anju-gdrive-file-dlq-production"
 [[env.production.containers]]
 class_name = "ResourceHandler"
 image = "../resource-handler/Dockerfile"

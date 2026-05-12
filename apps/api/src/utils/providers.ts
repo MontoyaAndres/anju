@@ -1,3 +1,5 @@
+import { utils } from '@anju/utils';
+
 export interface OAuthProviderConfig {
   authUrl: string;
   tokenUrl: string;
@@ -7,9 +9,9 @@ export interface OAuthProviderConfig {
 }
 
 export const providers: Record<string, OAuthProviderConfig> = {
-  'google-gmail': {
-    authUrl: 'https://accounts.google.com/o/oauth2/v2/auth',
-    tokenUrl: 'https://oauth2.googleapis.com/token',
+  [utils.constants.OAUTH_PROVIDER_GOOGLE_GMAIL]: {
+    authUrl: utils.constants.GOOGLE_OAUTH_AUTH_URL,
+    tokenUrl: utils.constants.GOOGLE_OAUTH_TOKEN_URL,
     clientIdEnv: 'GOOGLE_CLIENT_ID',
     clientSecretEnv: 'GOOGLE_CLIENT_SECRET',
     defaultScopes: [
@@ -20,9 +22,19 @@ export const providers: Record<string, OAuthProviderConfig> = {
       'https://www.googleapis.com/auth/gmail.labels'
     ]
   },
-  'microsoft-outlook': {
-    authUrl: 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize',
-    tokenUrl: 'https://login.microsoftonline.com/common/oauth2/v2.0/token',
+  [utils.constants.OAUTH_PROVIDER_GOOGLE_DRIVE]: {
+    authUrl: utils.constants.GOOGLE_OAUTH_AUTH_URL,
+    tokenUrl: utils.constants.GOOGLE_OAUTH_TOKEN_URL,
+    clientIdEnv: 'GOOGLE_CLIENT_ID',
+    clientSecretEnv: 'GOOGLE_CLIENT_SECRET',
+    defaultScopes: [
+      'https://www.googleapis.com/auth/drive.readonly',
+      'https://www.googleapis.com/auth/drive.metadata.readonly'
+    ]
+  },
+  [utils.constants.OAUTH_PROVIDER_MICROSOFT_OUTLOOK]: {
+    authUrl: utils.constants.MICROSOFT_OAUTH_AUTH_URL,
+    tokenUrl: utils.constants.MICROSOFT_OAUTH_TOKEN_URL,
     clientIdEnv: 'MICROSOFT_CLIENT_ID',
     clientSecretEnv: 'MICROSOFT_CLIENT_SECRET',
     defaultScopes: [
@@ -30,9 +42,9 @@ export const providers: Record<string, OAuthProviderConfig> = {
       'offline_access'
     ]
   },
-  slack: {
-    authUrl: 'https://slack.com/oauth/v2/authorize',
-    tokenUrl: 'https://slack.com/api/oauth.v2.access',
+  [utils.constants.OAUTH_PROVIDER_SLACK]: {
+    authUrl: utils.constants.SLACK_OAUTH_AUTH_URL,
+    tokenUrl: utils.constants.SLACK_OAUTH_TOKEN_URL,
     clientIdEnv: 'SLACK_CLIENT_ID',
     clientSecretEnv: 'SLACK_CLIENT_SECRET',
     defaultScopes: ['chat:write', 'channels:read']

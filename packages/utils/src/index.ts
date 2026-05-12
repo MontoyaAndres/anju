@@ -96,6 +96,17 @@ import type {
   ResourceUrlContext,
   SourceButton
 } from './sources';
+import {
+  refreshOAuthToken,
+  OAuthReauthRequiredError,
+  buildReauthMetadata,
+  clearReauthMetadata,
+  isCredentialNeedingReauth
+} from './oauth';
+import type {
+  RefreshOAuthTokenInput,
+  RefreshedOAuthToken
+} from './oauth';
 
 export const utils = {
   Schema,
@@ -148,7 +159,12 @@ export const utils = {
   safeHostname,
   buildResourceDownloadUrl,
   formatSourcesAsMarkdown,
-  formatSourcesAsButtons
+  formatSourcesAsButtons,
+  refreshOAuthToken,
+  OAuthReauthRequiredError,
+  buildReauthMetadata,
+  clearReauthMetadata,
+  isCredentialNeedingReauth
 };
 
 export type {
@@ -175,5 +191,7 @@ export type {
   ToolStatusEvent,
   Source,
   ResourceUrlContext,
-  SourceButton
+  SourceButton,
+  RefreshOAuthTokenInput,
+  RefreshedOAuthToken
 };

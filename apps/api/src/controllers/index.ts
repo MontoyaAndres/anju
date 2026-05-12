@@ -6,6 +6,7 @@ import { OrganizationLlmController } from './organizationLlm';
 import { OAuthController } from './oauth';
 import { CatalogController } from './catalog';
 import { ChannelController } from './channel';
+import { GoogleDriveController } from './googleDrive';
 
 export {
   UserController,
@@ -15,5 +16,6 @@ export {
   OrganizationLlmController,
   OAuthController,
   CatalogController,
-  ChannelController
+  ChannelController,
+  GoogleDriveController
 };

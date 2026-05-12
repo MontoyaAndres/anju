@@ -214,7 +214,11 @@ const callback = async (c: Context<AppEnv>) => {
     }
   });
 
-  const redirectUrl = `${utils.getEnv(c, 'NEXT_PUBLIC_WEB_URL')}/organization/${organizationId}/project/${projectId}/tools?connected=${provider}`;
+  const targetPage =
+    provider === utils.constants.OAUTH_PROVIDER_GOOGLE_DRIVE
+      ? 'resources'
+      : 'tools';
+  const redirectUrl = `${utils.getEnv(c, 'NEXT_PUBLIC_WEB_URL')}/organization/${organizationId}/project/${projectId}/${targetPage}?connected=${provider}`;
 
   return c.redirect(redirectUrl);
 };

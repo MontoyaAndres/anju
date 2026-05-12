@@ -32,6 +32,19 @@ export const Wrapper = styled.div<IProps>`
       `}
     }
 
+    .small {
+      font-size: ${theme.fonts.sm};
+      padding: 6px 14px;
+      border-radius: 8px;
+      text-transform: none;
+      align-items: center;
+      gap: 4px;
+
+      .button-text {
+        font-weight: 600;
+      }
+    }
+
     & > .MuiButton-outlined {
       color: ${theme.colors.bastille};
       border: 1px solid ${theme.colors.alto};

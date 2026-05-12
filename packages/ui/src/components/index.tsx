@@ -7,6 +7,10 @@ import { Skeleton } from './skeleton';
 import { CopyableBlock } from './copyable-block';
 import { Markdown } from './markdown';
 import { Status } from './status';
+import { Breadcrumbs } from './breadcrumbs';
+import { Modal } from './modal';
+import { GoogleDriveBrowser } from './google-drive-browser';
+import { TruncatedText } from './truncated-text';
 
 export const UI = {
   Input,
@@ -17,5 +21,17 @@ export const UI = {
   Skeleton,
   CopyableBlock,
   Markdown,
-  Status
+  Status,
+  Breadcrumbs,
+  Modal,
+  GoogleDriveBrowser,
+  TruncatedText
 };
+
+export type {
+  BreadcrumbItem
+} from './breadcrumbs';
+export type {
+  GoogleDriveItem,
+  GoogleDriveTab
+} from './google-drive-browser';

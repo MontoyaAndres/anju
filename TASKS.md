@@ -1,5 +1,5 @@
-- Upload resources using Google Drive or OneDrive (maybe increase limit?)
-- Project public endpoints with public token
+- Replicate what I did with Google Drive with One Drive and increase limit size to 1GB
+- Protect by default using api token for mcp, each has its own token to use the mcp
 - support zip, rar, audio and videos (embeddings)
 - invitations and roles on projects and organizations
 - make http endpoint generate types for apps

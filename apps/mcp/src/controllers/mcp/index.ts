@@ -50,16 +50,24 @@ const business = async (c: Context<AppEnv>) => {
     throw new Error('MCP Server not found');
   }
 
-  // Website parents are folders, not queryable resources: they have no
-  // content of their own, and their URI collides with the seed page that
-  // ends up indexed as a child. Hide them from MCP entirely.
-  const exposedResources = artifact.artifactResources.filter(
-    r =>
-      !(
-        r.sourceType === utils.constants.RESOURCE_SOURCE_TYPE_WEBSITE &&
-        !r.parentResourceId
-      )
-  );
+  // Folders aren't queryable resources: website parents collide with their
+  // seed page indexed as a child, and Google Drive folders are pure
+  // references whose content lives in their children. Hide both from MCP.
+  const exposedResources = artifact.artifactResources.filter(r => {
+    if (
+      r.sourceType === utils.constants.RESOURCE_SOURCE_TYPE_WEBSITE &&
+      !r.parentResourceId
+    ) {
+      return false;
+    }
+    if (
+      r.sourceType ===
+      utils.constants.RESOURCE_SOURCE_TYPE_GOOGLE_DRIVE_FOLDER
+    ) {
+      return false;
+    }
+    return true;
+  });
 
   const refreshedCredentials = await Promise.all(
     artifact.artifactCredentials.map(cred => refreshCredentialIfNeeded(c, cred))

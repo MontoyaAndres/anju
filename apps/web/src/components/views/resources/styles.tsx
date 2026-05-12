@@ -97,7 +97,9 @@ export const Wrapper = styled.div<IProps>`
             font-weight: 500;
             color: ${theme.colors.bastille}99;
             cursor: pointer;
-            transition: background-color 0.15s ease, color 0.15s ease;
+            transition:
+              background-color 0.15s ease,
+              color 0.15s ease;
 
             & > svg {
               width: 16px;
@@ -208,6 +210,10 @@ export const Wrapper = styled.div<IProps>`
         margin: 0 0 12px 0;
       }
 
+      .resources-breadcrumbs {
+        margin: 0 0 12px 0;
+      }
+
       .resources-folders {
         display: flex;
         flex-direction: column;
@@ -223,35 +229,41 @@ export const Wrapper = styled.div<IProps>`
           background: ${theme.colors.white};
           cursor: pointer;
           text-align: left;
-          transition: border-color 0.15s ease, background-color 0.15s ease;
+          transition:
+            border-color 0.15s ease,
+            background-color 0.15s ease;
 
           &:hover {
             border-color: ${theme.colors.bastille}40;
             background-color: ${theme.colors.bastille}05;
+
+            .resource-folder-icon {
+              border-color: ${theme.colors.bastille}30;
+              box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+            }
           }
 
           .resource-folder-icon {
             width: 40px;
             height: 40px;
-            border-radius: 10px;
             display: flex;
             align-items: center;
             justify-content: center;
             flex-shrink: 0;
+            color: ${theme.colors.bastille};
+            border: 1px solid ${theme.colors.alto};
+            border-radius: 10px;
 
             & > svg {
               width: 22px;
               height: 22px;
             }
 
-            &.files {
-              background-color: ${theme.colors.bastille}0F;
-              color: ${theme.colors.bastille};
-            }
-
-            &.websites {
-              background-color: ${theme.colors.bastille}0F;
-              color: ${theme.colors.bastille};
+            img {
+              width: 22px;
+              height: 22px;
+              display: block;
+              object-fit: contain;
             }
           }
 
@@ -285,7 +297,9 @@ export const Wrapper = styled.div<IProps>`
             font-weight: 600;
             color: ${theme.colors.bastille};
             cursor: pointer;
-            transition: background-color 0.15s ease, border-color 0.15s ease;
+            transition:
+              background-color 0.15s ease,
+              border-color 0.15s ease;
             flex-shrink: 0;
 
             & > svg {
@@ -313,6 +327,12 @@ export const Wrapper = styled.div<IProps>`
           width: 48px;
           height: 48px;
           color: ${theme.colors.bastille}40;
+        }
+
+        .resources-empty-icon-img {
+          width: 48px;
+          height: 48px;
+          object-fit: contain;
         }
 
         h3 {
@@ -368,6 +388,11 @@ export const Wrapper = styled.div<IProps>`
           &:hover {
             border-color: ${theme.colors.bastille}40;
             background-color: ${theme.colors.bastille}05;
+
+            .resource-item-icon {
+              border-color: ${theme.colors.bastille}30;
+              box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+            }
           }
 
           &.active {
@@ -385,25 +410,26 @@ export const Wrapper = styled.div<IProps>`
           }
 
           .resource-item-icon {
-            width: 32px;
-            height: 32px;
-            border-radius: 8px;
+            width: 40px;
+            height: 40px;
             display: flex;
             align-items: center;
             justify-content: center;
-            background-color: ${theme.colors.bastille}0F;
-            color: ${theme.colors.bastille};
             flex-shrink: 0;
             overflow: hidden;
+            color: ${theme.colors.bastille};
+            border: 1px solid ${theme.colors.alto};
+            border-radius: 10px;
 
             & > svg {
-              width: 18px;
-              height: 18px;
+              width: 22px;
+              height: 22px;
             }
 
-            .resource-item-favicon {
-              width: 20px;
-              height: 20px;
+            .resource-item-favicon,
+            .resource-item-iconlink {
+              width: 22px;
+              height: 22px;
               object-fit: contain;
               border-radius: 4px;
             }
@@ -416,18 +442,29 @@ export const Wrapper = styled.div<IProps>`
 
           .resource-item-top {
             display: flex;
-            align-items: center;
             gap: 8px;
+            justify-content: space-between;
+
+            .resource-item-top-between {
+              display: flex;
+              gap: 8px;
+              align-items: center;
+              justify-content: space-between;
+            }
 
             .resource-item-title {
               font-size: ${theme.fonts.base};
               font-weight: 600;
               color: ${theme.colors.bastille};
               margin: 0;
-              flex: 1;
               white-space: nowrap;
               overflow: hidden;
               text-overflow: ellipsis;
+              max-width: 200px;
+
+              @media (min-width: ${theme.screens.md}) {
+                max-width: 400px;
+              }
             }
 
             .resource-item-type {
@@ -436,8 +473,13 @@ export const Wrapper = styled.div<IProps>`
               color: ${theme.colors.saltBox};
               background-color: ${theme.colors.bastille}0A;
               padding: 2px 8px;
-              border-radius: 4px;
+              border-radius: 20px;
               white-space: nowrap;
+              overflow: hidden;
+              text-overflow: ellipsis;
+              width: fit-content;
+              height: fit-content;
+              max-width: 300px;
             }
           }
 
@@ -822,40 +864,6 @@ export const Wrapper = styled.div<IProps>`
           flex-direction: column;
           gap: 20px;
 
-          .panel-parent-back {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 6px 10px;
-            background: transparent;
-            border: 1px solid ${theme.colors.alto};
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: ${theme.fonts.sm};
-            font-weight: 500;
-            color: ${theme.colors.bastille};
-            align-self: flex-start;
-            max-width: 100%;
-            transition: background-color 0.15s ease, border-color 0.15s ease;
-
-            & > svg {
-              width: 16px;
-              height: 16px;
-              flex-shrink: 0;
-            }
-
-            & > span {
-              white-space: nowrap;
-              overflow: hidden;
-              text-overflow: ellipsis;
-            }
-
-            &:hover {
-              background-color: ${theme.colors.bastille}05;
-              border-color: ${theme.colors.bastille}40;
-            }
-          }
-
           .panel-info-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -865,6 +873,7 @@ export const Wrapper = styled.div<IProps>`
               display: flex;
               flex-direction: column;
               gap: 4px;
+              min-width: 0;
 
               .panel-info-label {
                 font-size: ${theme.fonts.xs};
@@ -877,6 +886,9 @@ export const Wrapper = styled.div<IProps>`
               .panel-info-value {
                 font-size: ${theme.fonts.sm};
                 color: ${theme.colors.bastille};
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
               }
 
               .panel-info-badge {
@@ -954,7 +966,9 @@ export const Wrapper = styled.div<IProps>`
                 background: ${theme.colors.white};
                 cursor: pointer;
                 text-align: left;
-                transition: border-color 0.15s ease, background-color 0.15s ease;
+                transition:
+                  border-color 0.15s ease,
+                  background-color 0.15s ease;
 
                 .panel-child-title {
                   flex: 1;
