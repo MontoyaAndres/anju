@@ -7,6 +7,7 @@ import { OAuthController } from './oauth';
 import { CatalogController } from './catalog';
 import { ChannelController } from './channel';
 import { GoogleDriveController } from './googleDrive';
+import { OneDriveController } from './oneDrive';
 
 export {
   UserController,
@@ -17,5 +18,6 @@ export {
   OAuthController,
   CatalogController,
   ChannelController,
-  GoogleDriveController
+  GoogleDriveController,
+  OneDriveController
 };

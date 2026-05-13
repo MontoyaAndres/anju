@@ -7,7 +7,9 @@ import type {
   CrawlDiscoverJob,
   PageJob,
   GdriveDiscoverJob,
-  GdriveFileJob
+  GdriveFileJob,
+  OnedriveDiscoverJob,
+  OnedriveFileJob
 } from './queue';
 
 export type Variables = {
@@ -23,6 +25,8 @@ export type Bindings = {
   CRAWL_PAGE_QUEUE: Queue<PageJob>;
   GDRIVE_DISCOVER_QUEUE: Queue<GdriveDiscoverJob>;
   GDRIVE_FILE_QUEUE: Queue<GdriveFileJob>;
+  ONEDRIVE_DISCOVER_QUEUE: Queue<OnedriveDiscoverJob>;
+  ONEDRIVE_FILE_QUEUE: Queue<OnedriveFileJob>;
   RESOURCE_HANDLER: DurableObjectNamespace<ResourceHandler>;
   RESOURCE_HANDLER_PORT: string;
   DATABASE_URL?: string;

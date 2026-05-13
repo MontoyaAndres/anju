@@ -66,6 +66,11 @@ const business = async (c: Context<AppEnv>) => {
     ) {
       return false;
     }
+    if (
+      r.sourceType === utils.constants.RESOURCE_SOURCE_TYPE_ONE_DRIVE_FOLDER
+    ) {
+      return false;
+    }
     return true;
   });
 

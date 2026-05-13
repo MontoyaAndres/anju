@@ -37,7 +37,7 @@ import FormControlLabel from '@mui/material/FormControlLabel';
 
 import { Wrapper } from './styles';
 
-import type { GoogleDriveItem } from '@anju/ui';
+import type { CloudDriveItem } from '@anju/ui';
 
 interface Resource {
   id: string;
@@ -66,7 +66,7 @@ interface Resource {
 }
 
 type ViewMode = 'sources' | 'all';
-type FolderId = 'files' | 'websites' | 'gdrive' | null;
+type FolderId = 'files' | 'websites' | 'gdrive' | 'onedrive' | null;
 type AddingType = 'file' | 'website' | null;
 
 const isFolderResource = (resource: {
@@ -75,7 +75,9 @@ const isFolderResource = (resource: {
 }): boolean => {
   if (
     resource.sourceType ===
-    utils.constants.RESOURCE_SOURCE_TYPE_GOOGLE_DRIVE_FOLDER
+      utils.constants.RESOURCE_SOURCE_TYPE_GOOGLE_DRIVE_FOLDER ||
+    resource.sourceType ===
+      utils.constants.RESOURCE_SOURCE_TYPE_ONE_DRIVE_FOLDER
   ) {
     return true;
   }
@@ -100,6 +102,20 @@ const isGoogleDriveResource = (resource: {
   }
   const meta = resource.metadata as { driveFileId?: string } | null;
   return !!meta?.driveFileId;
+};
+
+const isOneDriveResource = (resource: {
+  sourceType: string;
+  metadata: Record<string, unknown> | null;
+}): boolean => {
+  if (
+    resource.sourceType ===
+    utils.constants.RESOURCE_SOURCE_TYPE_ONE_DRIVE_FOLDER
+  ) {
+    return true;
+  }
+  const meta = resource.metadata as { oneDriveItemId?: string } | null;
+  return !!meta?.oneDriveItemId;
 };
 
 const ResourceFavicon = ({ favicon }: { favicon: string | null }) => {
@@ -155,7 +171,9 @@ const getResourceIcon = (resource: {
 }) => {
   if (
     resource.sourceType ===
-    utils.constants.RESOURCE_SOURCE_TYPE_GOOGLE_DRIVE_FOLDER
+      utils.constants.RESOURCE_SOURCE_TYPE_GOOGLE_DRIVE_FOLDER ||
+    resource.sourceType ===
+      utils.constants.RESOURCE_SOURCE_TYPE_ONE_DRIVE_FOLDER
   ) {
     return <FolderOpenOutlined />;
   }
@@ -232,23 +250,36 @@ export const Resources = () => {
   );
   const apiBase = `/organization/${organizationId}/project/${projectId}/artifact/resource`;
   const gdriveApiBase = `/organization/${organizationId}/project/${projectId}/artifact/google-drive`;
+  const onedriveApiBase = `/organization/${organizationId}/project/${projectId}/artifact/one-drive`;
   const isCreating = addingType !== null;
 
   const [gdriveOpen, setGdriveOpen] = useState(false);
   const [gdriveToken, setGdriveToken] = useState<string | null>(null);
   const [gdriveLoadingToken, setGdriveLoadingToken] = useState(false);
   const [gdriveSelected, setGdriveSelected] = useState<
-    Map<string, GoogleDriveItem>
+    Map<string, CloudDriveItem>
   >(new Map());
   const [gdriveImporting, setGdriveImporting] = useState(false);
   const [gdriveSyncingId, setGdriveSyncingId] = useState<string | null>(null);
+
+  const [onedriveOpen, setOnedriveOpen] = useState(false);
+  const [onedriveToken, setOnedriveToken] = useState<string | null>(null);
+  const [onedriveLoadingToken, setOnedriveLoadingToken] = useState(false);
+  const [onedriveSelected, setOnedriveSelected] = useState<
+    Map<string, CloudDriveItem>
+  >(new Map());
+  const [onedriveImporting, setOnedriveImporting] = useState(false);
+  const [onedriveSyncingId, setOnedriveSyncingId] = useState<string | null>(
+    null
+  );
 
   const fileResources = useMemo(
     () =>
       resources.filter(
         r =>
           r.sourceType === utils.constants.RESOURCE_SOURCE_TYPE_FILE &&
-          !isGoogleDriveResource(r)
+          !isGoogleDriveResource(r) &&
+          !isOneDriveResource(r)
       ),
     [resources]
   );
@@ -266,6 +297,20 @@ export const Resources = () => {
         0
       ),
     [gdriveTopResources]
+  );
+
+  const onedriveTopResources = useMemo(
+    () => resources.filter(r => !r.parentResourceId && isOneDriveResource(r)),
+    [resources]
+  );
+
+  const onedriveChildrenTotal = useMemo(
+    () =>
+      onedriveTopResources.reduce(
+        (total, r) => total + (r.childResourceCount ?? 0),
+        0
+      ),
+    [onedriveTopResources]
   );
 
   const websiteParents = useMemo(
@@ -332,6 +377,8 @@ export const Resources = () => {
       list = websiteParents;
     } else if (folder === 'gdrive') {
       list = gdriveTopResources;
+    } else if (folder === 'onedrive') {
+      list = onedriveTopResources;
     } else {
       list = [];
     }
@@ -350,6 +397,7 @@ export const Resources = () => {
     fileResources,
     websiteParents,
     gdriveTopResources,
+    onedriveTopResources,
     resources,
     search
   ]);
@@ -440,7 +488,9 @@ export const Resources = () => {
     if (!selectedResource) return null;
     if (
       selectedResource.sourceType ===
-      utils.constants.RESOURCE_SOURCE_TYPE_GOOGLE_DRIVE_FOLDER
+        utils.constants.RESOURCE_SOURCE_TYPE_GOOGLE_DRIVE_FOLDER ||
+      selectedResource.sourceType ===
+        utils.constants.RESOURCE_SOURCE_TYPE_ONE_DRIVE_FOLDER
     ) {
       return selectedResource.id;
     }
@@ -509,6 +559,8 @@ export const Resources = () => {
     if (view === 'sources') {
       if (isGoogleDriveResource(match)) {
         setFolder('gdrive');
+      } else if (isOneDriveResource(match)) {
+        setFolder('onedrive');
       } else if (
         match.sourceType === utils.constants.RESOURCE_SOURCE_TYPE_WEBSITE
       ) {
@@ -1145,12 +1197,12 @@ export const Resources = () => {
     setGdriveImporting(true);
     try {
       const items = Array.from(gdriveSelected.values()).map(item => ({
-        fileId: item.fileId,
+        fileId: item.id,
         name: item.name,
         mimeType: item.mimeType,
         isFolder: item.isFolder,
         iconLink: item.iconLink,
-        webViewLink: item.webViewLink,
+        webViewLink: item.webUrl,
         modifiedTime: item.modifiedTime,
         size: item.size
       }));
@@ -1223,6 +1275,132 @@ export const Resources = () => {
     }
   };
 
+  const startOneDriveConnect = async () => {
+    try {
+      const data = await utils.fetcher({
+        url: `/oauth/${utils.constants.OAUTH_PROVIDER_ONE_DRIVE}/authorize?organizationId=${organizationId}&projectId=${projectId}`,
+        config: { credentials: 'include' }
+      });
+      if (data?.url) {
+        window.location.href = data.url;
+      } else {
+        snackbar.error('Unable to start OneDrive connection');
+      }
+    } catch {
+      snackbar.error('Unable to start OneDrive connection');
+    }
+  };
+
+  const handleOpenOneDrive = async () => {
+    if (onedriveLoadingToken) return;
+    setOnedriveLoadingToken(true);
+    try {
+      const data = await utils.fetcher({
+        url: `${onedriveApiBase}/token`,
+        config: { credentials: 'include' }
+      });
+      if (data?.error) {
+        snackbar.error('Connect OneDrive to import files');
+        await startOneDriveConnect();
+        return;
+      }
+      if (data?.accessToken) {
+        setOnedriveToken(data.accessToken);
+        setOnedriveSelected(new Map());
+        setOnedriveOpen(true);
+      } else {
+        await startOneDriveConnect();
+      }
+    } catch {
+      snackbar.error('Failed to open OneDrive');
+    } finally {
+      setOnedriveLoadingToken(false);
+    }
+  };
+
+  const handleOneDriveImport = async () => {
+    if (onedriveImporting || onedriveSelected.size === 0) return;
+    setOnedriveImporting(true);
+    try {
+      const items = Array.from(onedriveSelected.values()).map(item => ({
+        itemId: item.id,
+        driveId: item.driveId,
+        name: item.name,
+        mimeType: item.mimeType,
+        isFolder: item.isFolder,
+        webUrl: item.webUrl,
+        lastModifiedDateTime: item.modifiedTime,
+        size: item.size
+      }));
+      const data = await utils.fetcher({
+        url: onedriveApiBase,
+        config: {
+          method: 'POST',
+          credentials: 'include',
+          body: JSON.stringify({ items })
+        }
+      });
+      if (data && !data.error) {
+        setOnedriveOpen(false);
+        setOnedriveSelected(new Map());
+        setFolder('onedrive');
+        fetchResources();
+        const count = items.length;
+        snackbar.success(
+          `Importing ${count} item${count === 1 ? '' : 's'} from OneDrive`
+        );
+      } else {
+        snackbar.error(data?.error || 'Failed to import from OneDrive');
+      }
+    } catch {
+      snackbar.error('Failed to import from OneDrive');
+    } finally {
+      setOnedriveImporting(false);
+    }
+  };
+
+  const handleOneDriveSync = async () => {
+    if (onedriveSyncingId) return;
+    const currentFolder = currentFolderId
+      ? findResourceById(currentFolderId)
+      : null;
+    const targets =
+      currentFolder && isOneDriveResource(currentFolder)
+        ? [currentFolder]
+        : onedriveTopResources;
+    if (targets.length === 0) {
+      snackbar.error('Nothing to sync');
+      return;
+    }
+    setOnedriveSyncingId(currentFolder?.id ?? '__all__');
+    try {
+      const results = await Promise.allSettled(
+        targets.map(t =>
+          utils.fetcher({
+            url: `${onedriveApiBase}/${t.id}/sync`,
+            config: { method: 'POST', credentials: 'include' }
+          })
+        )
+      );
+      fetchResources();
+      if (currentFolderId) fetchChildren(currentFolderId);
+      const failed = results.filter(
+        r =>
+          r.status === 'rejected' ||
+          (r.status === 'fulfilled' && r.value?.error)
+      ).length;
+      if (failed > 0) {
+        snackbar.error(
+          `Sync failed for ${failed} item${failed === 1 ? '' : 's'}`
+        );
+      } else {
+        snackbar.success('Sync started');
+      }
+    } finally {
+      setOnedriveSyncingId(null);
+    }
+  };
+
   const renderFolderHome = () => (
     <div className="resources-folders">
       <div
@@ -1264,7 +1442,49 @@ export const Resources = () => {
           disabled={gdriveLoadingToken}
         >
           <Add />
-          {gdriveLoadingToken ? 'Loading…' : 'Add from Drive'}
+          {gdriveLoadingToken ? 'Loading…' : 'Add from Google Drive'}
+        </button>
+      </div>
+      <div
+        className="resource-folder"
+        role="button"
+        tabIndex={0}
+        onClick={() => setFolder('onedrive')}
+        onKeyDown={e => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            setFolder('onedrive');
+          }
+        }}
+      >
+        <div className="resource-folder-icon onedrive">
+          <img src="/ONEDRIVE.svg" alt="" />
+        </div>
+        <div className="resource-folder-body">
+          <p className="resource-folder-title">OneDrive</p>
+          <p className="resource-folder-meta">
+            {onedriveTopResources.length} item
+            {onedriveTopResources.length === 1 ? '' : 's'}
+            {onedriveChildrenTotal > 0 && (
+              <>
+                {' · '}
+                {onedriveChildrenTotal} document
+                {onedriveChildrenTotal === 1 ? '' : 's'}
+              </>
+            )}
+          </p>
+        </div>
+        <button
+          type="button"
+          className="resource-folder-action"
+          onClick={e => {
+            e.stopPropagation();
+            handleOpenOneDrive();
+          }}
+          disabled={onedriveLoadingToken}
+        >
+          <Add />
+          {onedriveLoadingToken ? 'Loading…' : 'Add from OneDrive'}
         </button>
       </div>
       <div
@@ -1409,7 +1629,9 @@ export const Resources = () => {
         ? 'Websites'
         : folder === 'gdrive'
           ? 'Google Drive'
-          : '';
+          : folder === 'onedrive'
+            ? 'OneDrive'
+            : '';
   const folderEmptyLabel = folder === 'websites' ? 'Add website' : 'Add files';
   const folderEmptyType: 'file' | 'website' =
     folder === 'websites' ? 'website' : 'file';
@@ -1515,7 +1737,7 @@ export const Resources = () => {
                 >
                   <Add />
                   <span className="button-text">
-                    {gdriveLoadingToken ? 'Loading…' : 'Add from Drive'}
+                    {gdriveLoadingToken ? 'Loading…' : 'Add from Google Drive'}
                   </span>
                 </UI.Button>
               )}
@@ -1529,6 +1751,34 @@ export const Resources = () => {
                 <Sync />
                 <span className="button-text">
                   {gdriveSyncingId !== null ? 'Syncing…' : 'Sync'}
+                </span>
+              </UI.Button>
+            )}
+            {view === 'sources' &&
+              folder === 'onedrive' &&
+              folderPath.length === 0 && (
+                <UI.Button
+                  variant="contained"
+                  size="small"
+                  onClick={handleOpenOneDrive}
+                  disabled={onedriveLoadingToken}
+                >
+                  <Add />
+                  <span className="button-text">
+                    {onedriveLoadingToken ? 'Loading…' : 'Add from OneDrive'}
+                  </span>
+                </UI.Button>
+              )}
+            {folder === 'onedrive' && (
+              <UI.Button
+                variant="outlined"
+                size="small"
+                onClick={handleOneDriveSync}
+                disabled={onedriveSyncingId !== null}
+              >
+                <Sync />
+                <span className="button-text">
+                  {onedriveSyncingId !== null ? 'Syncing…' : 'Sync'}
                 </span>
               </UI.Button>
             )}
@@ -1616,6 +1866,12 @@ export const Resources = () => {
                       alt=""
                       className="resources-empty-icon-img"
                     />
+                  ) : folder === 'onedrive' ? (
+                    <img
+                      src="/ONEDRIVE.svg"
+                      alt=""
+                      className="resources-empty-icon-img"
+                    />
                   ) : (
                     <FolderOpenOutlined />
                   )}
@@ -1626,14 +1882,18 @@ export const Resources = () => {
                         ? 'No websites yet'
                         : folder === 'gdrive'
                           ? 'No Google Drive items yet'
-                          : 'No files yet'}
+                          : folder === 'onedrive'
+                            ? 'No OneDrive items yet'
+                            : 'No files yet'}
                   </h3>
                   <p>
                     {folder === 'websites'
                       ? 'Add a URL to crawl and index its pages.'
                       : folder === 'gdrive'
                         ? 'Pick files or folders from Google Drive to import and keep in sync.'
-                        : 'Upload files or paste text content for this MCP server to serve.'}
+                        : folder === 'onedrive'
+                          ? 'Pick files or folders from OneDrive to import and keep in sync.'
+                          : 'Upload files or paste text content for this MCP server to serve.'}
                   </p>
                   {view === 'sources' &&
                     (folder === 'gdrive' ? (
@@ -1645,7 +1905,23 @@ export const Resources = () => {
                       >
                         <Add />
                         <span className="button-text">
-                          {gdriveLoadingToken ? 'Loading…' : 'Add from Drive'}
+                          {gdriveLoadingToken
+                            ? 'Loading…'
+                            : 'Add from Google Drive'}
+                        </span>
+                      </UI.Button>
+                    ) : folder === 'onedrive' ? (
+                      <UI.Button
+                        variant="contained"
+                        size="small"
+                        onClick={handleOpenOneDrive}
+                        disabled={onedriveLoadingToken}
+                      >
+                        <Add />
+                        <span className="button-text">
+                          {onedriveLoadingToken
+                            ? 'Loading…'
+                            : 'Add from OneDrive'}
                         </span>
                       </UI.Button>
                     ) : (
@@ -2407,7 +2683,8 @@ export const Resources = () => {
           </>
         }
       >
-        <UI.GoogleDriveBrowser
+        <UI.CloudDriveBrowser
+          provider="google-drive"
           accessToken={gdriveToken}
           selected={gdriveSelected}
           onSelectionChange={setGdriveSelected}
@@ -2415,6 +2692,56 @@ export const Resources = () => {
             setGdriveToken(null);
             setGdriveOpen(false);
             startGoogleDriveConnect();
+          }}
+        />
+      </UI.Modal>
+      <UI.Modal
+        open={onedriveOpen}
+        title="Import from OneDrive"
+        width={820}
+        onClose={() => {
+          if (onedriveImporting) return;
+          setOnedriveOpen(false);
+          setOnedriveSelected(new Map());
+        }}
+        footer={
+          <>
+            <UI.Button
+              size="small"
+              className="small"
+              disabled={onedriveImporting}
+              onClick={() => {
+                setOnedriveOpen(false);
+                setOnedriveSelected(new Map());
+              }}
+            >
+              Cancel
+            </UI.Button>
+            <UI.Button
+              variant="contained"
+              size="small"
+              className="small"
+              disabled={onedriveImporting || onedriveSelected.size === 0}
+              onClick={handleOneDriveImport}
+            >
+              {onedriveImporting
+                ? 'Importing…'
+                : onedriveSelected.size === 0
+                  ? 'Add selected'
+                  : `Add selected (${onedriveSelected.size})`}
+            </UI.Button>
+          </>
+        }
+      >
+        <UI.CloudDriveBrowser
+          provider="onedrive"
+          accessToken={onedriveToken}
+          selected={onedriveSelected}
+          onSelectionChange={setOnedriveSelected}
+          onTokenExpired={() => {
+            setOnedriveToken(null);
+            setOnedriveOpen(false);
+            startOneDriveConnect();
           }}
         />
       </UI.Modal>

@@ -9,7 +9,7 @@ import { Markdown } from './markdown';
 import { Status } from './status';
 import { Breadcrumbs } from './breadcrumbs';
 import { Modal } from './modal';
-import { GoogleDriveBrowser } from './google-drive-browser';
+import { CloudDriveBrowser } from './cloud-drive-browser';
 import { TruncatedText } from './truncated-text';
 
 export const UI = {
@@ -24,14 +24,9 @@ export const UI = {
   Status,
   Breadcrumbs,
   Modal,
-  GoogleDriveBrowser,
+  CloudDriveBrowser,
   TruncatedText
 };
 
-export type {
-  BreadcrumbItem
-} from './breadcrumbs';
-export type {
-  GoogleDriveItem,
-  GoogleDriveTab
-} from './google-drive-browser';
+export type { BreadcrumbItem } from './breadcrumbs';
+export type { CloudDriveItem, CloudDriveProvider } from './cloud-drive-browser';

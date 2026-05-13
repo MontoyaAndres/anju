@@ -32,6 +32,10 @@ const ENV_NAMES: Record<
     clientIdEnv: 'MICROSOFT_CLIENT_ID',
     clientSecretEnv: 'MICROSOFT_CLIENT_SECRET'
   },
+  [utils.constants.OAUTH_PROVIDER_ONE_DRIVE]: {
+    clientIdEnv: 'MICROSOFT_CLIENT_ID',
+    clientSecretEnv: 'MICROSOFT_CLIENT_SECRET'
+  },
   [utils.constants.OAUTH_PROVIDER_SLACK]: {
     clientIdEnv: 'SLACK_CLIENT_ID',
     clientSecretEnv: 'SLACK_CLIENT_SECRET'

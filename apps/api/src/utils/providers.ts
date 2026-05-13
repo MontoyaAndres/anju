@@ -42,6 +42,17 @@ export const providers: Record<string, OAuthProviderConfig> = {
       'offline_access'
     ]
   },
+  [utils.constants.OAUTH_PROVIDER_ONE_DRIVE]: {
+    authUrl: utils.constants.MICROSOFT_OAUTH_AUTH_URL,
+    tokenUrl: utils.constants.MICROSOFT_OAUTH_TOKEN_URL,
+    clientIdEnv: 'MICROSOFT_CLIENT_ID',
+    clientSecretEnv: 'MICROSOFT_CLIENT_SECRET',
+    defaultScopes: [
+      'https://graph.microsoft.com/Files.Read',
+      'https://graph.microsoft.com/Files.Read.All',
+      'offline_access'
+    ]
+  },
   [utils.constants.OAUTH_PROVIDER_SLACK]: {
     authUrl: utils.constants.SLACK_OAUTH_AUTH_URL,
     tokenUrl: utils.constants.SLACK_OAUTH_TOKEN_URL,

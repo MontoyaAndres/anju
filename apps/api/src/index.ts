@@ -12,7 +12,8 @@ import {
   OAuthController,
   CatalogController,
   ChannelController,
-  GoogleDriveController
+  GoogleDriveController,
+  OneDriveController
 } from './controllers';
 import { UserMiddleware } from './middleware';
 import { createAuth } from './utils';
@@ -21,7 +22,9 @@ import {
   handleCrawlDiscoverBatch,
   handleCrawlPageBatch,
   handleGdriveDiscoverBatch,
-  handleGdriveFileBatch
+  handleGdriveFileBatch,
+  handleOnedriveDiscoverBatch,
+  handleOnedriveFileBatch
 } from './queue';
 
 // types
@@ -32,7 +35,9 @@ import type {
   CrawlDiscoverJob,
   PageJob,
   GdriveDiscoverJob,
-  GdriveFileJob
+  GdriveFileJob,
+  OnedriveDiscoverJob,
+  OnedriveFileJob
 } from './queue';
 
 const app = new Hono<AppEnv>();
@@ -186,6 +191,23 @@ app
     GoogleDriveController.sync
   )
 
+  // OneDrive artifact controller
+  .get(
+    '/organization/:organizationId/project/:projectId/artifact/one-drive/token',
+    UserMiddleware.verify,
+    OneDriveController.token
+  )
+  .post(
+    '/organization/:organizationId/project/:projectId/artifact/one-drive',
+    UserMiddleware.verify,
+    OneDriveController.create
+  )
+  .post(
+    '/organization/:organizationId/project/:projectId/artifact/one-drive/:resourceId/sync',
+    UserMiddleware.verify,
+    OneDriveController.sync
+  )
+
   // Artifact Tool controller
   .get(
     '/organization/:organizationId/project/:projectId/artifact/tool',
@@ -299,6 +321,8 @@ export default {
       | PageJob
       | GdriveDiscoverJob
       | GdriveFileJob
+      | OnedriveDiscoverJob
+      | OnedriveFileJob
     >,
     env: Bindings,
     ctx: ExecutionContext
@@ -327,6 +351,20 @@ export default {
     if (batch.queue.startsWith('anju-gdrive-file')) {
       return handleGdriveFileBatch(
         batch as MessageBatch<GdriveFileJob>,
+        env,
+        ctx
+      );
+    }
+    if (batch.queue.startsWith('anju-onedrive-discover')) {
+      return handleOnedriveDiscoverBatch(
+        batch as MessageBatch<OnedriveDiscoverJob>,
+        env,
+        ctx
+      );
+    }
+    if (batch.queue.startsWith('anju-onedrive-file')) {
+      return handleOnedriveFileBatch(
+        batch as MessageBatch<OnedriveFileJob>,
         env,
         ctx
       );

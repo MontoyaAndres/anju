@@ -50,6 +50,12 @@ queue = "anju-gdrive-discover-development"
 [[env.development.queues.producers]]
 binding = "GDRIVE_FILE_QUEUE"
 queue = "anju-gdrive-file-development"
+[[env.development.queues.producers]]
+binding = "ONEDRIVE_DISCOVER_QUEUE"
+queue = "anju-onedrive-discover-development"
+[[env.development.queues.producers]]
+binding = "ONEDRIVE_FILE_QUEUE"
+queue = "anju-onedrive-file-development"
 [[env.development.queues.consumers]]
 queue = "anju-index-development"
 max_batch_size = 1
@@ -85,6 +91,20 @@ max_batch_timeout = 5
 max_concurrency = 5
 max_retries = 3
 dead_letter_queue = "anju-gdrive-file-dlq-development"
+[[env.development.queues.consumers]]
+queue = "anju-onedrive-discover-development"
+max_batch_size = 1
+max_batch_timeout = 5
+max_concurrency = 2
+max_retries = 3
+dead_letter_queue = "anju-onedrive-discover-dlq-development"
+[[env.development.queues.consumers]]
+queue = "anju-onedrive-file-development"
+max_batch_size = 1
+max_batch_timeout = 5
+max_concurrency = 5
+max_retries = 3
+dead_letter_queue = "anju-onedrive-file-dlq-development"
 [[env.development.containers]]
 class_name = "ResourceHandler"
 image = "../resource-handler/Dockerfile"
@@ -135,6 +155,12 @@ queue = "anju-gdrive-discover-production"
 [[env.production.queues.producers]]
 binding = "GDRIVE_FILE_QUEUE"
 queue = "anju-gdrive-file-production"
+[[env.production.queues.producers]]
+binding = "ONEDRIVE_DISCOVER_QUEUE"
+queue = "anju-onedrive-discover-production"
+[[env.production.queues.producers]]
+binding = "ONEDRIVE_FILE_QUEUE"
+queue = "anju-onedrive-file-production"
 [[env.production.queues.consumers]]
 queue = "anju-index-production"
 max_batch_size = 1
@@ -170,6 +196,20 @@ max_batch_timeout = 5
 max_concurrency = 5
 max_retries = 3
 dead_letter_queue = "anju-gdrive-file-dlq-production"
+[[env.production.queues.consumers]]
+queue = "anju-onedrive-discover-production"
+max_batch_size = 1
+max_batch_timeout = 5
+max_concurrency = 2
+max_retries = 3
+dead_letter_queue = "anju-onedrive-discover-dlq-production"
+[[env.production.queues.consumers]]
+queue = "anju-onedrive-file-production"
+max_batch_size = 1
+max_batch_timeout = 5
+max_concurrency = 5
+max_retries = 3
+dead_letter_queue = "anju-onedrive-file-dlq-production"
 [[env.production.containers]]
 class_name = "ResourceHandler"
 image = "../resource-handler/Dockerfile"

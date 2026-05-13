@@ -13,7 +13,9 @@ import {
   enqueueIndex,
   enqueueCrawlDiscover,
   enqueueGdriveDiscover,
-  enqueueGdriveFile
+  enqueueGdriveFile,
+  enqueueOnedriveDiscover,
+  enqueueOnedriveFile
 } from './queue';
 import {
   getDriveAccessToken,
@@ -24,6 +26,17 @@ import {
   isFolderMime,
   buildDriveResourceMetadata
 } from './googleDrive';
+import {
+  getOneDriveAccessToken,
+  getOneDriveItem,
+  listOneDriveFolderChildren,
+  downloadOneDriveFile,
+  oneDriveUri,
+  parseOneDriveUri,
+  isOneDriveFolder,
+  oneDriveFileMimeType,
+  buildOneDriveResourceMetadata
+} from './oneDrive';
 
 export {
   createAuth,
@@ -39,13 +52,24 @@ export {
   enqueueCrawlDiscover,
   enqueueGdriveDiscover,
   enqueueGdriveFile,
+  enqueueOnedriveDiscover,
+  enqueueOnedriveFile,
   getDriveAccessToken,
   getDriveFile,
   listDriveFolderChildren,
   downloadDriveFile,
   driveUri,
   isFolderMime,
-  buildDriveResourceMetadata
+  buildDriveResourceMetadata,
+  getOneDriveAccessToken,
+  getOneDriveItem,
+  listOneDriveFolderChildren,
+  downloadOneDriveFile,
+  oneDriveUri,
+  parseOneDriveUri,
+  isOneDriveFolder,
+  oneDriveFileMimeType,
+  buildOneDriveResourceMetadata
 };
 
 export type { McpClientHandle } from './mcpClient';

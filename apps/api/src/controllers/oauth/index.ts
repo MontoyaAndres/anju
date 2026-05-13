@@ -215,7 +215,8 @@ const callback = async (c: Context<AppEnv>) => {
   });
 
   const targetPage =
-    provider === utils.constants.OAUTH_PROVIDER_GOOGLE_DRIVE
+    provider === utils.constants.OAUTH_PROVIDER_GOOGLE_DRIVE ||
+    provider === utils.constants.OAUTH_PROVIDER_ONE_DRIVE
       ? 'resources'
       : 'tools';
   const redirectUrl = `${utils.getEnv(c, 'NEXT_PUBLIC_WEB_URL')}/organization/${organizationId}/project/${projectId}/${targetPage}?connected=${provider}`;

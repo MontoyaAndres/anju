@@ -1108,11 +1108,13 @@ const downloadResourceFile = async (c: Context<AppEnv>) => {
   }
 
   const fileName = resource.fileKey.split('/').pop() || resource.title;
+  const asciiFileName = fileName.replace(/[^\x20-\x7E]/g, '_').replace(/"/g, '');
+  const encodedFileName = encodeURIComponent(fileName);
 
   return new Response(object.body as unknown as ReadableStream, {
     headers: {
       'Content-Type': resource.mimeType,
-      'Content-Disposition': `inline; filename="${fileName}"`,
+      'Content-Disposition': `inline; filename="${asciiFileName}"; filename*=UTF-8''${encodedFileName}`,
       'Cache-Control': 'private, max-age=3600'
     }
   });

@@ -3,7 +3,9 @@ import type {
   IndexJob,
   CrawlDiscoverJob,
   GdriveDiscoverJob,
-  GdriveFileJob
+  GdriveFileJob,
+  OnedriveDiscoverJob,
+  OnedriveFileJob
 } from '../queue';
 
 export const enqueueIndex = async (
@@ -73,5 +75,47 @@ export const enqueueGdriveFile = async (
 
   await env.GDRIVE_FILE_QUEUE.sendBatch(
     ids.map(id => ({ body: { resourceId: id } satisfies GdriveFileJob }))
+  );
+};
+
+export const enqueueOnedriveDiscover = async (
+  env: Bindings,
+  resourceIds: string | string[]
+): Promise<void> => {
+  const ids = Array.isArray(resourceIds) ? resourceIds : [resourceIds];
+  if (ids.length === 0) return;
+  if (!env.ONEDRIVE_DISCOVER_QUEUE) return;
+
+  if (ids.length === 1) {
+    await env.ONEDRIVE_DISCOVER_QUEUE.send({
+      resourceId: ids[0]
+    } satisfies OnedriveDiscoverJob);
+    return;
+  }
+
+  await env.ONEDRIVE_DISCOVER_QUEUE.sendBatch(
+    ids.map(id => ({
+      body: { resourceId: id } satisfies OnedriveDiscoverJob
+    }))
+  );
+};
+
+export const enqueueOnedriveFile = async (
+  env: Bindings,
+  resourceIds: string | string[]
+): Promise<void> => {
+  const ids = Array.isArray(resourceIds) ? resourceIds : [resourceIds];
+  if (ids.length === 0) return;
+  if (!env.ONEDRIVE_FILE_QUEUE) return;
+
+  if (ids.length === 1) {
+    await env.ONEDRIVE_FILE_QUEUE.send({
+      resourceId: ids[0]
+    } satisfies OnedriveFileJob);
+    return;
+  }
+
+  await env.ONEDRIVE_FILE_QUEUE.sendBatch(
+    ids.map(id => ({ body: { resourceId: id } satisfies OnedriveFileJob }))
   );
 };
