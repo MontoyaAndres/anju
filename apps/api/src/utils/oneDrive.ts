@@ -227,7 +227,7 @@ export const downloadOneDriveFile = async (
   file: OneDriveFile,
   driveId?: string
 ): Promise<{
-  body: ArrayBuffer;
+  body: ReadableStream<Uint8Array>;
   mimeType: string;
   fileName: string;
 }> => {
@@ -242,6 +242,9 @@ export const downloadOneDriveFile = async (
       `onedrive download failed (${response.status}) for ${file.id}: ${detail}`
     );
   }
+  if (!response.body) {
+    throw new Error(`onedrive download returned empty body for ${file.id}`);
+  }
 
   const mimeType =
     file.file?.mimeType ||
@@ -249,7 +252,7 @@ export const downloadOneDriveFile = async (
     utils.constants.MIMETYPE_APPLICATION_OCTET_STREAM;
 
   return {
-    body: await response.arrayBuffer(),
+    body: response.body,
     mimeType,
     fileName: file.name
   };

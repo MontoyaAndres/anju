@@ -1,4 +1,8 @@
-import type { ExecutionContext, MessageBatch } from '@cloudflare/workers-types';
+import type {
+  ExecutionContext,
+  MessageBatch,
+  ReadableStream as WorkersReadableStream
+} from '@cloudflare/workers-types';
 import { db } from '@anju/db';
 import { utils } from '@anju/utils';
 import { eq, sql } from 'drizzle-orm';
@@ -110,6 +114,19 @@ const syncOne = async (env: Bindings, resourceId: string): Promise<void> => {
     return;
   }
 
+  const declaredSize =
+    typeof file.size === 'number' && Number.isFinite(file.size)
+      ? file.size
+      : null;
+  if (
+    declaredSize !== null &&
+    declaredSize > utils.constants.MAX_FILE_SIZE
+  ) {
+    throw new Error(
+      `OneDrive file ${file.id} exceeds the ${utils.constants.MAX_FILE_SIZE / (1024 * 1024)}MB limit (size: ${declaredSize} bytes)`
+    );
+  }
+
   const downloaded = await downloadOneDriveFile(accessToken, file, driveId);
 
   const bucket = env.STORAGE_BUCKET;
@@ -141,9 +158,25 @@ const syncOne = async (env: Bindings, resourceId: string): Promise<void> => {
     }
   }
 
-  await bucket.put(key, downloaded.body, {
-    httpMetadata: { contentType: downloaded.mimeType }
-  });
+  const putResult = await bucket.put(
+    key,
+    downloaded.body as unknown as WorkersReadableStream,
+    {
+      httpMetadata: { contentType: downloaded.mimeType }
+    }
+  );
+  const storedSize = putResult?.size ?? declaredSize ?? 0;
+
+  if (storedSize > utils.constants.MAX_FILE_SIZE) {
+    try {
+      await bucket.delete(key);
+    } catch {
+      // best-effort
+    }
+    throw new Error(
+      `OneDrive file ${file.id} exceeded the ${utils.constants.MAX_FILE_SIZE / (1024 * 1024)}MB limit after download (size: ${storedSize} bytes)`
+    );
+  }
 
   await dbInstance
     .update(db.schema.artifactResource)
@@ -152,7 +185,7 @@ const syncOne = async (env: Bindings, resourceId: string): Promise<void> => {
       fileName: downloaded.fileName,
       fileKey: key,
       mimeType: downloaded.mimeType,
-      size: downloaded.body.byteLength,
+      size: storedSize,
       status: utils.constants.STATUS_PENDING,
       metadata: buildOneDriveResourceMetadata(file, driveId, {
         storedMimeType: downloaded.mimeType,

@@ -380,7 +380,8 @@ const USER_AVATAR_MIME_TYPES = [
   MIMETYPE_IMAGE_GIF
 ];
 
-const MAX_FILE_SIZE = 24 * 1024 * 1024; // 24MB
+const MAX_FILE_SIZE = 500 * 1024 * 1024; // 500MB
+const MAX_AVATAR_SIZE = 5 * 1024 * 1024; // 5MB
 
 // Gmail caps a sent message at 25MB encoded. Combined raw attachment size
 // must stay under ~18MB so the base64 multipart envelope fits.
@@ -671,6 +672,7 @@ export const constants = {
   RESOURCE_ICON_THEME_LIGHT,
   RESOURCE_ICON_THEMES,
   MAX_FILE_SIZE,
+  MAX_AVATAR_SIZE,
   GMAIL_MAX_RAW_ATTACHMENT_BYTES,
   TELEGRAM_MAX_PHOTO_BYTES,
   TELEGRAM_MAX_FILE_BYTES,

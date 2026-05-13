@@ -232,7 +232,7 @@ export const downloadDriveFile = async (
   accessToken: string,
   file: GoogleDriveFile
 ): Promise<{
-  body: ArrayBuffer;
+  body: ReadableStream<Uint8Array>;
   mimeType: string;
   fileName: string;
 }> => {
@@ -250,10 +250,15 @@ export const downloadDriveFile = async (
         `drive files.export failed (${response.status}) for ${file.id}: ${detail}`
       );
     }
+    if (!response.body) {
+      throw new Error(
+        `drive files.export returned empty body for ${file.id}`
+      );
+    }
     const ext = utils.constants.GOOGLE_DRIVE_EXPORT_EXTENSIONS[file.mimeType];
     const fileName = ext ? `${file.name}.${ext}` : file.name;
     return {
-      body: await response.arrayBuffer(),
+      body: response.body,
       mimeType: exportMime,
       fileName
     };
@@ -273,8 +278,11 @@ export const downloadDriveFile = async (
       `drive files download failed (${response.status}) for ${file.id}: ${detail}`
     );
   }
+  if (!response.body) {
+    throw new Error(`drive files download returned empty body for ${file.id}`);
+  }
   return {
-    body: await response.arrayBuffer(),
+    body: response.body,
     mimeType: file.mimeType,
     fileName: file.name
   };

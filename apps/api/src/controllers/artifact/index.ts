@@ -7,6 +7,7 @@ import { enqueueIndex, enqueueCrawlDiscover } from '../../utils';
 
 // types
 import { AppEnv } from '../../types';
+import type { ReadableStream as WorkersReadableStream } from '@cloudflare/workers-types';
 
 const createPrompt = async (c: Context<AppEnv>) => {
   const body = await c.req.json();
@@ -878,21 +879,37 @@ const uploadResourceFile = async (c: Context<AppEnv>) => {
       organizationId: c.req.param('organizationId')
     });
 
-  const formData = await c.req.formData();
-  const file = formData.get('file');
+  const contentType = c.req.header('content-type');
+  const fileNameHeader = c.req.header('x-file-name');
+  const contentLengthHeader = c.req.header('content-length');
 
-  if (!file || !(file instanceof File)) {
-    throw new Error('File is required');
+  if (!contentType) {
+    throw new Error('content-type header is required');
+  }
+  if (!fileNameHeader) {
+    throw new Error('x-file-name header is required');
+  }
+  if (!contentLengthHeader) {
+    throw new Error('content-length header is required');
   }
 
-  if (file.size > utils.constants.MAX_FILE_SIZE) {
+  const fileSize = Number.parseInt(contentLengthHeader, 10);
+  if (!Number.isFinite(fileSize) || fileSize <= 0) {
+    throw new Error('Invalid content-length');
+  }
+  if (fileSize > utils.constants.MAX_FILE_SIZE) {
     throw new Error(
       `File size exceeds the ${utils.constants.MAX_FILE_SIZE / (1024 * 1024)}MB limit`
     );
   }
+  if (!(utils.constants.MIMETYPES as readonly string[]).includes(contentType)) {
+    throw new Error(`Unsupported mime type: ${contentType}`);
+  }
 
-  if (!(utils.constants.MIMETYPES as readonly string[]).includes(file.type)) {
-    throw new Error(`Unsupported mime type: ${file.type}`);
+  const fileName = decodeURIComponent(fileNameHeader);
+  const body = c.req.raw.body;
+  if (!body) {
+    throw new Error('Request body is required');
   }
 
   const dbInstance = db.create(c);
@@ -924,21 +941,27 @@ const uploadResourceFile = async (c: Context<AppEnv>) => {
       throw new Error('Artifact not found for the project');
     }
 
-    const key = `organizations/${currentValues.organizationId}/projects/${currentValues.projectId}/resources/${currentArtifactByProject.id}/${file.name}`;
+    const key = `organizations/${currentValues.organizationId}/projects/${currentValues.projectId}/resources/${currentArtifactByProject.id}/${fileName}`;
 
+    let storedSize = fileSize;
     if (bucket) {
-      await bucket.put(key, await file.arrayBuffer(), {
-        httpMetadata: { contentType: file.type }
-      });
+      const putResult = await bucket.put(
+        key,
+        body as unknown as WorkersReadableStream,
+        {
+          httpMetadata: { contentType }
+        }
+      );
+      storedSize = putResult?.size ?? fileSize;
     }
 
     const artifactResource = await tx
       .update(db.schema.artifactResource)
       .set({
         fileKey: key,
-        fileName: file.name,
-        mimeType: file.type,
-        size: file.size,
+        fileName,
+        mimeType: contentType,
+        size: storedSize,
         status: utils.constants.STATUS_PENDING
       })
       .where(

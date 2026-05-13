@@ -1137,16 +1137,24 @@ export const Resources = () => {
 
   const uploadFile = async (resourceId: string) => {
     if (!file) return;
-    const formData = new FormData();
-    formData.append('file', file);
-    await utils.fetcher({
-      url: `${apiBase}/${resourceId}/upload`,
-      config: {
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}${apiBase}/${resourceId}/upload`,
+      {
         method: 'POST',
         credentials: 'include',
-        body: formData
+        headers: {
+          'content-type':
+            file.type || utils.constants.MIMETYPE_APPLICATION_OCTET_STREAM,
+          'x-file-name': encodeURIComponent(file.name)
+        },
+        body: file
       }
-    });
+    );
+    if (!response.ok) {
+      const detail = await response.text().catch(() => '');
+      throw new Error(detail || `Upload failed (${response.status})`);
+    }
+    return await response.json();
   };
 
   const startGoogleDriveConnect = async () => {
