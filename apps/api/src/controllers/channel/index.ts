@@ -11,6 +11,8 @@ import {
   getTelegramBotInfo
 } from './telegram';
 
+import type { TelegramBotInfo } from './telegram';
+
 import type { AppEnv } from '../../types';
 
 const list = async (c: Context<AppEnv>) => {
@@ -62,11 +64,12 @@ const create = async (c: Context<AppEnv>) => {
   if (!apiUrl) throw new Error('Missing env: NEXT_PUBLIC_API_URL');
 
   let platformMetadata: Record<string, unknown> | null = null;
+  let telegramBotInfo: TelegramBotInfo | null = null;
   if (currentValues.platform === utils.constants.CHANNEL_PLATFORM_TELEGRAM) {
-    const botInfo = await getTelegramBotInfo(
+    telegramBotInfo = await getTelegramBotInfo(
       currentValues.credentials.botToken
     );
-    platformMetadata = { telegram: { bot: botInfo } };
+    platformMetadata = { telegram: { bot: telegramBotInfo } };
   }
 
   const result = await dbInstance.transaction(async tx => {
@@ -90,6 +93,70 @@ const create = async (c: Context<AppEnv>) => {
       .limit(1);
 
     if (!artifactRow) throw new Error('Artifact not found for the project');
+
+    if (telegramBotInfo) {
+      const [conflict] = await tx
+        .select({
+          projectName: db.schema.project.name,
+          organizationId: db.schema.project.organizationId,
+          organizationName: db.schema.organization.name
+        })
+        .from(db.schema.channel)
+        .innerJoin(
+          db.schema.artifact,
+          eq(db.schema.channel.artifactId, db.schema.artifact.id)
+        )
+        .innerJoin(
+          db.schema.project,
+          eq(db.schema.artifact.projectId, db.schema.project.id)
+        )
+        .innerJoin(
+          db.schema.organization,
+          eq(db.schema.project.organizationId, db.schema.organization.id)
+        )
+        .where(
+          and(
+            eq(
+              db.schema.channel.platform,
+              utils.constants.CHANNEL_PLATFORM_TELEGRAM
+            ),
+            sql`(${db.schema.channel.metadata}->'telegram'->'bot'->>'id')::bigint = ${telegramBotInfo.id}`
+          )
+        )
+        .limit(1);
+
+      if (conflict) {
+        if (conflict.organizationId === currentValues.organizationId) {
+          throw new Error(
+            `Telegram bot @${telegramBotInfo.username} is already connected to project "${conflict.projectName}" in this organization. Remove it there first or use a different bot.`
+          );
+        }
+
+        const [membership] = await tx
+          .select({ organizationId: db.schema.organizationUser.organizationId })
+          .from(db.schema.organizationUser)
+          .where(
+            and(
+              eq(db.schema.organizationUser.userId, currentValues.userId),
+              eq(
+                db.schema.organizationUser.organizationId,
+                conflict.organizationId
+              )
+            )
+          )
+          .limit(1);
+
+        if (membership) {
+          throw new Error(
+            `Telegram bot @${telegramBotInfo.username} is already connected to project "${conflict.projectName}" in your organization "${conflict.organizationName}". Remove it there first or use a different bot.`
+          );
+        }
+
+        throw new Error(
+          `Telegram bot @${telegramBotInfo.username} is already connected to a project in another organization you don't have access to. Use a different bot.`
+        );
+      }
+    }
 
     if (currentValues.llmId) {
       const [llmRow] = await tx
