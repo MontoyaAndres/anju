@@ -49,7 +49,7 @@ app
       origin: (origin, c) =>
         origin === utils.getEnv(c, 'NEXT_PUBLIC_WEB_URL') ? origin : null,
       credentials: true,
-      allowHeaders: ['Content-Type', 'User-Agent'],
+      allowHeaders: ['Content-Type', 'User-Agent', 'x-file-name'],
       allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
     })
   )
@@ -147,6 +147,11 @@ app
     '/organization/:organizationId/project/:projectId/artifact/resource',
     UserMiddleware.verify,
     ArtifactController.createResource
+  )
+  .get(
+    '/organization/:organizationId/project/:projectId/artifact/resource/:resourceId',
+    UserMiddleware.verify,
+    ArtifactController.getResource
   )
   .put(
     '/organization/:organizationId/project/:projectId/artifact/resource/:resourceId',

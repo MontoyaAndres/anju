@@ -21,7 +21,7 @@ const ensureSupportedMime = (
 ): void => {
   if (folder) return;
   const supported = (
-    utils.constants.EMBEDDABLE_MIME_TYPES as readonly string[]
+    utils.constants.MIMETYPES as readonly string[]
   ).includes(mimeType || '');
   if (!supported) {
     throw new Error(`Unsupported OneDrive mime type: ${mimeType ?? 'unknown'}`);

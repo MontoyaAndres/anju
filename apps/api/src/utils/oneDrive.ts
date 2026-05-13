@@ -230,6 +230,7 @@ export const downloadOneDriveFile = async (
   body: ReadableStream<Uint8Array>;
   mimeType: string;
   fileName: string;
+  contentLength: number | null;
 }> => {
   const downloadUrl = file['@microsoft.graph.downloadUrl'];
   const response = downloadUrl
@@ -251,10 +252,26 @@ export const downloadOneDriveFile = async (
     response.headers.get('content-type') ||
     utils.constants.MIMETYPE_APPLICATION_OCTET_STREAM;
 
+  const header = response.headers.get('content-length');
+  let contentLength: number | null = null;
+  if (header) {
+    const parsed = Number.parseInt(header, 10);
+    if (Number.isFinite(parsed) && parsed >= 0) contentLength = parsed;
+  }
+  if (
+    contentLength === null &&
+    typeof file.size === 'number' &&
+    Number.isFinite(file.size) &&
+    file.size >= 0
+  ) {
+    contentLength = file.size;
+  }
+
   return {
     body: response.body,
     mimeType,
-    fileName: file.name
+    fileName: file.name,
+    contentLength
   };
 };
 

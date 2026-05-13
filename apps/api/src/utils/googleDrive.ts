@@ -228,6 +228,18 @@ export const listDriveFolderChildren = async (
   return out;
 };
 
+const parseContentLength = (
+  response: Response,
+  fallback: number | null = null
+): number | null => {
+  const header = response.headers.get('content-length');
+  if (header) {
+    const parsed = Number.parseInt(header, 10);
+    if (Number.isFinite(parsed) && parsed >= 0) return parsed;
+  }
+  return fallback;
+};
+
 export const downloadDriveFile = async (
   accessToken: string,
   file: GoogleDriveFile
@@ -235,6 +247,7 @@ export const downloadDriveFile = async (
   body: ReadableStream<Uint8Array>;
   mimeType: string;
   fileName: string;
+  contentLength: number | null;
 }> => {
   const exportMime =
     utils.constants.GOOGLE_DRIVE_EXPORT_MIME_TYPES[file.mimeType];
@@ -260,10 +273,12 @@ export const downloadDriveFile = async (
     return {
       body: response.body,
       mimeType: exportMime,
-      fileName
+      fileName,
+      contentLength: parseContentLength(response)
     };
   }
 
+  const declaredSize = file.size ? Number.parseInt(file.size, 10) : null;
   const params = new URLSearchParams({
     alt: 'media',
     supportsAllDrives: 'true'
@@ -284,7 +299,11 @@ export const downloadDriveFile = async (
   return {
     body: response.body,
     mimeType: file.mimeType,
-    fileName: file.name
+    fileName: file.name,
+    contentLength: parseContentLength(
+      response,
+      Number.isFinite(declaredSize) ? declaredSize : null
+    )
   };
 };
 

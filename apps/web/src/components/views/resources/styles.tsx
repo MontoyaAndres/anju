@@ -440,6 +440,10 @@ export const Wrapper = styled.div<IProps>`
             min-width: 0;
           }
 
+          .resource-item-remove-button {
+            align-self: center;
+          }
+
           .resource-item-top {
             display: flex;
             gap: 8px;
@@ -1038,6 +1042,23 @@ export const Wrapper = styled.div<IProps>`
             line-height: 1.5;
             white-space: pre-wrap;
             word-break: break-word;
+          }
+
+          .panel-section-toggle {
+            margin-top: 8px;
+            padding: 8px 12px;
+            font-size: ${theme.fonts.sm};
+            font-weight: 500;
+            color: ${theme.colors.bastille};
+            background: transparent;
+            border: 1px solid ${theme.colors.alto};
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 120ms ease;
+
+            &:hover {
+              background-color: ${theme.colors.bastille}08;
+            }
           }
         }
       }

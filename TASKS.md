@@ -1,4 +1,6 @@
 - Protect by default using api token for mcp, each has its own token to use the mcp
+- In artifact table save the total of size for resources
+- User from resource preview can upload multiple files
 - invitations and roles on projects and organizations
 - make http endpoint generate types for apps
 - Create outlook, slack tool and search for the best ones out there

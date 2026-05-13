@@ -1,5 +1,5 @@
 import { Context } from 'hono';
-import { and, eq, isNull, sql } from 'drizzle-orm';
+import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { utils } from '@anju/utils';
 import { db } from '@anju/db';
 
@@ -525,6 +525,45 @@ const updateResource = async (c: Context<AppEnv>) => {
   return c.json(result);
 };
 
+const getResource = async (c: Context<AppEnv>) => {
+  const currentValues =
+    await utils.Schema.ARTIFACT_GET_RESOURCE_BY_ID.parseAsync({
+      resourceId: c.req.param('resourceId'),
+      projectId: c.req.param('projectId'),
+      userId: c.get('user').id,
+      organizationId: c.req.param('organizationId')
+    });
+
+  const dbInstance = db.create(c);
+
+  const [artifactRow] = await dbInstance
+    .select()
+    .from(db.schema.artifact)
+    .where(eq(db.schema.artifact.projectId, currentValues.projectId))
+    .limit(1);
+
+  if (!artifactRow) {
+    throw new Error('Artifact not found for the project');
+  }
+
+  const [resource] = await dbInstance
+    .select()
+    .from(db.schema.artifactResource)
+    .where(
+      and(
+        eq(db.schema.artifactResource.id, currentValues.resourceId),
+        eq(db.schema.artifactResource.artifactId, artifactRow.id)
+      )
+    )
+    .limit(1);
+
+  if (!resource) {
+    throw new Error('Resource not found');
+  }
+
+  return c.json(resource);
+};
+
 const listResources = async (c: Context<AppEnv>) => {
   const currentValues = await utils.Schema.ARTIFACT_GET_RESOURCE.parseAsync({
     projectId: c.req.param('projectId'),
@@ -573,6 +612,7 @@ const removeResource = async (c: Context<AppEnv>) => {
   });
 
   const dbInstance = db.create(c);
+  const fileKeysToDelete: string[] = [];
 
   await dbInstance.transaction(async tx => {
     const [project] = await tx
@@ -600,48 +640,85 @@ const removeResource = async (c: Context<AppEnv>) => {
       throw new Error('Artifact not found for the project');
     }
 
-    const [{ count: childCount }] = await tx
-      .select({ count: sql<number>`count(*)::int` })
+    const [seed] = await tx
+      .select({
+        id: db.schema.artifactResource.id,
+        fileKey: db.schema.artifactResource.fileKey,
+        parentResourceId: db.schema.artifactResource.parentResourceId
+      })
       .from(db.schema.artifactResource)
-      .where(
-        eq(db.schema.artifactResource.parentResourceId, currentValues.resourceId)
-      );
-
-    const deleteResource = await tx
-      .delete(db.schema.artifactResource)
       .where(
         and(
           eq(db.schema.artifactResource.id, currentValues.resourceId),
-          eq(db.schema.artifactResource.artifactId, currentArtifactByProject.id)
+          eq(
+            db.schema.artifactResource.artifactId,
+            currentArtifactByProject.id
+          )
         )
       )
-      .returning();
+      .limit(1);
 
-    if (deleteResource.length === 0) {
+    if (!seed) {
       throw new Error('Resource not found');
     }
 
-    const removedCount = 1 + Number(childCount || 0);
+    if (seed.fileKey) fileKeysToDelete.push(seed.fileKey);
+
+    const allIds = new Set<string>([seed.id]);
+    let frontier: string[] = [seed.id];
+    while (frontier.length > 0) {
+      const children = await tx
+        .select({
+          id: db.schema.artifactResource.id,
+          fileKey: db.schema.artifactResource.fileKey
+        })
+        .from(db.schema.artifactResource)
+        .where(
+          inArray(db.schema.artifactResource.parentResourceId, frontier)
+        );
+
+      const nextFrontier: string[] = [];
+      for (const child of children) {
+        if (allIds.has(child.id)) continue;
+        allIds.add(child.id);
+        nextFrontier.push(child.id);
+        if (child.fileKey) fileKeysToDelete.push(child.fileKey);
+      }
+      frontier = nextFrontier;
+    }
+
+    await tx
+      .delete(db.schema.artifactResource)
+      .where(eq(db.schema.artifactResource.id, seed.id));
 
     await tx
       .update(db.schema.artifact)
       .set({
-        artifactResourceCount: sql`(${db.schema.artifact.artifactResourceCount}::int - ${removedCount})::int`
+        artifactResourceCount: sql`GREATEST(${db.schema.artifact.artifactResourceCount}::int - ${allIds.size}, 0)`
       })
       .where(eq(db.schema.artifact.id, currentArtifactByProject.id));
 
-    const removed = deleteResource[0];
-    if (removed.parentResourceId) {
+    if (seed.parentResourceId) {
       await tx
         .update(db.schema.artifactResource)
         .set({
           childResourceCount: sql`GREATEST(${db.schema.artifactResource.childResourceCount}::int - 1, 0)`
         })
         .where(
-          eq(db.schema.artifactResource.id, removed.parentResourceId)
+          eq(db.schema.artifactResource.id, seed.parentResourceId)
         );
     }
   });
+
+  if (fileKeysToDelete.length > 0 && c.env.STORAGE_BUCKET) {
+    for (const key of fileKeysToDelete) {
+      try {
+        await c.env.STORAGE_BUCKET.delete(key);
+      } catch {
+        // best-effort
+      }
+    }
+  }
 
   return c.json(currentValues);
 };
@@ -1194,6 +1271,7 @@ export const ArtifactController = {
   updateResource,
   removeResource,
   listResources,
+  getResource,
   uploadResourceFile,
   downloadResourceFile,
   updateResourceShowSource,

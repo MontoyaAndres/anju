@@ -1,7 +1,6 @@
 import type {
   ExecutionContext,
-  MessageBatch,
-  ReadableStream as WorkersReadableStream
+  MessageBatch
 } from '@cloudflare/workers-types';
 import { db } from '@anju/db';
 import { utils } from '@anju/utils';
@@ -14,7 +13,7 @@ import {
   downloadDriveFile,
   buildDriveResourceMetadata
 } from '../utils';
-import { markResourceFailed, reportQueueError } from './shared';
+import { markResourceFailed, putR2Stream, reportQueueError } from './shared';
 
 import type { Bindings } from '../types';
 
@@ -153,12 +152,12 @@ const syncOne = async (env: Bindings, resourceId: string): Promise<void> => {
     }
   }
 
-  const putResult = await bucket.put(
+  const putResult = await putR2Stream(
+    bucket,
     key,
-    downloaded.body as unknown as WorkersReadableStream,
-    {
-      httpMetadata: { contentType: downloaded.mimeType }
-    }
+    downloaded.body,
+    downloaded.contentLength ?? declaredSize,
+    { contentType: downloaded.mimeType }
   );
   const storedSize = putResult?.size ?? declaredSize ?? 0;
 

@@ -121,9 +121,7 @@ const insertChildResource = async (
   const mimeType = folder ? '' : oneDriveFileMimeType(child);
   const supported =
     folder ||
-    (utils.constants.EMBEDDABLE_MIME_TYPES as readonly string[]).includes(
-      mimeType
-    );
+    (utils.constants.MIMETYPES as readonly string[]).includes(mimeType);
   if (!supported) return null;
 
   const driveId = child.parentReference?.driveId ?? parentDriveId;

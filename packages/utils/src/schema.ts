@@ -351,6 +351,13 @@ const ARTIFACT_GET_RESOURCE = z.object({
   organizationId: z.uuid()
 });
 
+const ARTIFACT_GET_RESOURCE_BY_ID = z.object({
+  resourceId: z.uuid(),
+  projectId: z.uuid(),
+  userId: z.uuid(),
+  organizationId: z.uuid()
+});
+
 const ARTIFACT_REMOVE_RESOURCE = z.object({
   resourceId: z.uuid(),
   projectId: z.uuid(),
@@ -594,6 +601,7 @@ export const Schema = {
   ARTIFACT_UPDATE_RESOURCE,
   ARTIFACT_UPDATE_RESOURCE_VIEW,
   ARTIFACT_GET_RESOURCE,
+  ARTIFACT_GET_RESOURCE_BY_ID,
   ARTIFACT_REMOVE_RESOURCE,
   ARTIFACT_UPLOAD_RESOURCE_FILE,
   ARTIFACT_DOWNLOAD_RESOURCE_FILE,

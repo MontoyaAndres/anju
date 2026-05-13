@@ -223,6 +223,9 @@ export const Resources = () => {
   >('idle');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [deleteAlert, setDeleteAlert] = useState(false);
+  const [resourceToDelete, setResourceToDelete] = useState<Resource | null>(
+    null
+  );
   const [submitting, setSubmitting] = useState(false);
   const [sourceVisibilityUpdating, setSourceVisibilityUpdating] =
     useState(false);
@@ -231,6 +234,9 @@ export const Resources = () => {
   const [filePreviewUrl, setFilePreviewUrl] = useState<string | null>(null);
   const [filePreviewError, setFilePreviewError] = useState<string | null>(null);
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(
+    new Set()
+  );
   const [annotations, setAnnotations] = useState<{
     audience: string[];
     priority: string;
@@ -625,6 +631,76 @@ export const Resources = () => {
     };
   }, [selectedResource?.id, selectedResource?.fileKey, apiBase]);
 
+  useEffect(() => {
+    setExpandedSections(new Set());
+  }, [selectedResource?.id]);
+
+  const renderCollapsibleJson = (
+    sectionKey: string,
+    label: string,
+    value: unknown,
+    threshold = 600
+  ) => {
+    const json = JSON.stringify(value, null, 2);
+    const isLarge = json.length > threshold;
+    const expanded = expandedSections.has(sectionKey);
+    return (
+      <div className="panel-section">
+        <h3 className="panel-section-label">{label}</h3>
+        {isLarge && !expanded ? (
+          <button
+            type="button"
+            className="panel-section-toggle"
+            onClick={() =>
+              setExpandedSections(prev => {
+                const next = new Set(prev);
+                next.add(sectionKey);
+                return next;
+              })
+            }
+          >
+            Show {label.toLowerCase()} ({json.length.toLocaleString()} chars)
+          </button>
+        ) : (
+          <>
+            <pre className="panel-content-pre">{json}</pre>
+            {isLarge && (
+              <button
+                type="button"
+                className="panel-section-toggle"
+                onClick={() =>
+                  setExpandedSections(prev => {
+                    const next = new Set(prev);
+                    next.delete(sectionKey);
+                    return next;
+                  })
+                }
+              >
+                Hide {label.toLowerCase()}
+              </button>
+            )}
+          </>
+        )}
+      </div>
+    );
+  };
+
+  const fetchResourceDetail = async (resourceId: string) => {
+    try {
+      const data = await utils.fetcher({
+        url: `${apiBase}/${resourceId}`,
+        config: { credentials: 'include' }
+      });
+      if (data && !data.error) {
+        setSelectedResource(prev =>
+          prev && prev.id === resourceId ? data : prev
+        );
+      }
+    } catch {
+      // best-effort — keep showing the cached row
+    }
+  };
+
   const handleSelect = (resource: Resource) => {
     if (isFolderResource(resource)) {
       setFolderPath(computeAncestry(resource.id));
@@ -636,6 +712,7 @@ export const Resources = () => {
     setSelectedResource(resource);
     setIsEditing(false);
     setAddingType(null);
+    fetchResourceDetail(resource.id);
   };
 
   const startCreate = (type: 'file' | 'website') => {
@@ -794,8 +871,15 @@ export const Resources = () => {
         if (ops.afterPersist) await ops.afterPersist(data.id);
         setAddingType(null);
         setFile(null);
-        setSelectedResource(data);
         fetchResources();
+        if (addingType === 'website') {
+          setSelectedResource(null);
+          setIsEditing(false);
+          setFolderPath([data.id]);
+          fetchChildren(data.id);
+        } else {
+          setSelectedResource(data);
+        }
         snackbar.success(
           addingType === 'website' ? 'Crawl started' : 'Resource created'
         );
@@ -965,21 +1049,36 @@ export const Resources = () => {
 
   const handleDeleteClick = () => {
     if (!selectedResource) return;
+    setResourceToDelete(selectedResource);
+    setDeleteAlert(true);
+  };
+
+  const handleDeleteRow = (e: React.MouseEvent, resource: Resource) => {
+    e.stopPropagation();
+    setResourceToDelete(resource);
     setDeleteAlert(true);
   };
 
   const handleDeleteConfirm = async () => {
-    if (!selectedResource || submitting) return;
+    if (!resourceToDelete || submitting) return;
+    const target = resourceToDelete;
     setSubmitting(true);
     try {
       const data = await utils.fetcher({
-        url: `${apiBase}/${selectedResource.id}`,
+        url: `${apiBase}/${target.id}`,
         config: { method: 'DELETE', credentials: 'include' }
       });
       if (data && !data.error) {
         setDeleteAlert(false);
-        setSelectedResource(null);
-        setIsEditing(false);
+        setResourceToDelete(null);
+        if (selectedResource?.id === target.id) {
+          setSelectedResource(null);
+          setIsEditing(false);
+        }
+        const folderIdx = folderPath.indexOf(target.id);
+        if (folderIdx !== -1) {
+          setFolderPath(prev => prev.slice(0, folderIdx));
+        }
         fetchResources();
         snackbar.success('Resource deleted');
       } else {
@@ -1576,6 +1675,7 @@ export const Resources = () => {
   const renderResourceRow = (resource: Resource) => {
     const isWebsite =
       resource.sourceType === utils.constants.RESOURCE_SOURCE_TYPE_WEBSITE;
+    const isFolder = isFolderResource(resource);
     const childCount = isWebsite
       ? (childrenByParent[resource.id]?.length ??
         resource.childResourceCount ??
@@ -1626,6 +1726,16 @@ export const Resources = () => {
             <span>{new Date(resource.updatedAt).toLocaleDateString()}</span>
           </div>
         </div>
+        {isFolder && (
+          <IconButton
+            size="small"
+            aria-label="Delete folder"
+            className="resource-item-remove-button"
+            onClick={e => handleDeleteRow(e, resource)}
+          >
+            <DeleteOutline fontSize="small" />
+          </IconButton>
+        )}
       </div>
     );
   };
@@ -2612,31 +2722,65 @@ export const Resources = () => {
                     )}
                   </div>
                 )}
-                {selectedResource.content && (
-                  <div className="panel-section">
-                    <h3 className="panel-section-label">Content</h3>
-                    <pre className="panel-content-pre">
-                      {selectedResource.content}
-                    </pre>
-                  </div>
-                )}
+                {selectedResource.content &&
+                  (() => {
+                    const text = selectedResource.content;
+                    const threshold = 600;
+                    const isLarge = text.length > threshold;
+                    const expanded = expandedSections.has('content');
+                    return (
+                      <div className="panel-section">
+                        <h3 className="panel-section-label">Content</h3>
+                        {isLarge && !expanded ? (
+                          <button
+                            type="button"
+                            className="panel-section-toggle"
+                            onClick={() =>
+                              setExpandedSections(prev => {
+                                const next = new Set(prev);
+                                next.add('content');
+                                return next;
+                              })
+                            }
+                          >
+                            Show content ({text.length.toLocaleString()} chars)
+                          </button>
+                        ) : (
+                          <>
+                            <pre className="panel-content-pre">{text}</pre>
+                            {isLarge && (
+                              <button
+                                type="button"
+                                className="panel-section-toggle"
+                                onClick={() =>
+                                  setExpandedSections(prev => {
+                                    const next = new Set(prev);
+                                    next.delete('content');
+                                    return next;
+                                  })
+                                }
+                              >
+                                Hide content
+                              </button>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    );
+                  })()}
                 {selectedResource.metadata &&
-                  Object.keys(selectedResource.metadata).length > 0 && (
-                    <div className="panel-section">
-                      <h3 className="panel-section-label">Metadata</h3>
-                      <pre className="panel-content-pre">
-                        {JSON.stringify(selectedResource.metadata, null, 2)}
-                      </pre>
-                    </div>
+                  Object.keys(selectedResource.metadata).length > 0 &&
+                  renderCollapsibleJson(
+                    'metadata',
+                    'Metadata',
+                    selectedResource.metadata
                   )}
                 {selectedResource.annotations &&
-                  Object.keys(selectedResource.annotations).length > 0 && (
-                    <div className="panel-section">
-                      <h3 className="panel-section-label">Annotations</h3>
-                      <pre className="panel-content-pre">
-                        {JSON.stringify(selectedResource.annotations, null, 2)}
-                      </pre>
-                    </div>
+                  Object.keys(selectedResource.annotations).length > 0 &&
+                  renderCollapsibleJson(
+                    'annotations',
+                    'Annotations',
+                    selectedResource.annotations
                   )}
               </div>
             ) : null}
@@ -2646,12 +2790,25 @@ export const Resources = () => {
       <UI.Alert
         open={deleteAlert}
         title="Delete resource"
-        description={`Are you sure you want to delete "${selectedResource?.title}"? This action cannot be undone.`}
+        description={(() => {
+          const title = resourceToDelete?.title ?? '';
+          const isFolder = resourceToDelete
+            ? isFolderResource(resourceToDelete)
+            : false;
+          const childCount = resourceToDelete?.childResourceCount ?? 0;
+          if (isFolder && childCount > 0) {
+            return `Are you sure you want to delete "${title}"? This will also remove ${childCount} item${childCount === 1 ? '' : 's'} inside. This action cannot be undone.`;
+          }
+          return `Are you sure you want to delete "${title}"? This action cannot be undone.`;
+        })()}
         confirmText="Delete"
         cancelText="Cancel"
         loading={submitting}
         onConfirm={handleDeleteConfirm}
-        onCancel={() => setDeleteAlert(false)}
+        onCancel={() => {
+          setDeleteAlert(false);
+          setResourceToDelete(null);
+        }}
       />
       <UI.Modal
         open={gdriveOpen}

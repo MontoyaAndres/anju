@@ -120,9 +120,7 @@ const insertChildResource = async (
   const folder = isFolderMime(child.mimeType);
   const supported =
     folder ||
-    (utils.constants.EMBEDDABLE_MIME_TYPES as readonly string[]).includes(
-      child.mimeType
-    );
+    (utils.constants.MIMETYPES as readonly string[]).includes(child.mimeType);
   if (!supported) return null;
 
   const dbInstance = db.create({ env });

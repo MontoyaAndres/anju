@@ -1,7 +1,7 @@
 import type { ExecutionContext, MessageBatch } from '@cloudflare/workers-types';
 import { db } from '@anju/db';
 import { utils } from '@anju/utils';
-import { eq, and, inArray, ne } from 'drizzle-orm';
+import { eq, and, inArray, ne, sql } from 'drizzle-orm';
 import { getResourceHandler } from '@anju/containers';
 
 import { markResourceFailed, reportQueueError } from './shared';
@@ -118,32 +118,43 @@ const discoverOne = async (
     return;
   }
 
-  const inserted = await dbInstance
-    .insert(db.schema.artifactResource)
-    .values(
-      newPages.map(page => ({
-        title: page.title || page.url,
-        uri: page.url,
-        type: utils.constants.RESOURCE_TYPE_STATIC,
-        sourceType: utils.constants.RESOURCE_SOURCE_TYPE_WEBSITE,
-        status: utils.constants.STATUS_PENDING,
-        mimeType: utils.constants.MIMETYPE_TEXT,
-        encoding: utils.constants.ENCODING_UTF8,
-        artifactId: resource.artifactId,
-        parentResourceId: resource.id,
-        metadata: { depth: page.depth }
-      }))
-    )
-    .returning({ id: db.schema.artifactResource.id });
+  const inserted = await dbInstance.transaction(async tx => {
+    const rows = await tx
+      .insert(db.schema.artifactResource)
+      .values(
+        newPages.map(page => ({
+          title: page.title || page.url,
+          uri: page.url,
+          type: utils.constants.RESOURCE_TYPE_STATIC,
+          sourceType: utils.constants.RESOURCE_SOURCE_TYPE_WEBSITE,
+          status: utils.constants.STATUS_PENDING,
+          mimeType: utils.constants.MIMETYPE_TEXT,
+          encoding: utils.constants.ENCODING_UTF8,
+          artifactId: resource.artifactId,
+          parentResourceId: resource.id,
+          metadata: { depth: page.depth }
+        }))
+      )
+      .returning({ id: db.schema.artifactResource.id });
 
-  await dbInstance
-    .update(db.schema.artifactResource)
-    .set({
-      childResourceCount: newPages.length,
-      status: utils.constants.STATUS_PENDING,
-      ...(seed ? { metadata: mergedParentMetadata } : {})
-    })
-    .where(eq(db.schema.artifactResource.id, resourceId));
+    await tx
+      .update(db.schema.artifact)
+      .set({
+        artifactResourceCount: sql`(${db.schema.artifact.artifactResourceCount}::int + ${newPages.length})::int`
+      })
+      .where(eq(db.schema.artifact.id, resource.artifactId));
+
+    await tx
+      .update(db.schema.artifactResource)
+      .set({
+        childResourceCount: newPages.length,
+        status: utils.constants.STATUS_PENDING,
+        ...(seed ? { metadata: mergedParentMetadata } : {})
+      })
+      .where(eq(db.schema.artifactResource.id, resourceId));
+
+    return rows;
+  });
 
   if (env.CRAWL_PAGE_QUEUE) {
     await env.CRAWL_PAGE_QUEUE.sendBatch(

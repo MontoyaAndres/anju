@@ -21,7 +21,7 @@ const isFolder = (mimeType: string, isFolderFlag: boolean): boolean =>
 const ensureSupportedMime = (mimeType: string, folder: boolean): void => {
   if (folder) return;
   const supported = (
-    utils.constants.EMBEDDABLE_MIME_TYPES as readonly string[]
+    utils.constants.MIMETYPES as readonly string[]
   ).includes(mimeType);
   if (!supported) {
     throw new Error(`Unsupported Google Drive mime type: ${mimeType}`);
