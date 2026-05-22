@@ -28,9 +28,7 @@ export const sendInvitationEmail = async (
     input.scope === utils.constants.INVITATION_SCOPE_PROJECT
       ? 'project'
       : 'organization';
-  const acceptUrl = `${webUrl}/invitations?token=${encodeURIComponent(
-    input.token
-  )}`;
+  const acceptUrl = `${webUrl}/invitation/${input.token}`;
   const expiryDays = utils.constants.INVITATION_EXPIRY_DAYS;
 
   const subject = `${input.inviterName} invited you to the ${input.targetName} ${scopeLabel}`;

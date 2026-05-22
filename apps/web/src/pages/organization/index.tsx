@@ -20,13 +20,25 @@ export interface IProps {
     id: string;
     name: string;
     ownerId: string;
-    projectCount: string;
-    organizationUserCount: string;
+    projectCount: number;
+    organizationUserCount: number;
     createdAt: string;
     updatedAt: string;
+    isMember: boolean;
     projects: {
       id: string;
       name: string;
+      isMember: boolean;
+    }[];
+    members: {
+      userId: string;
+      role: string;
+      user: {
+        id: string;
+        name: string;
+        email: string;
+        image: string | null;
+      };
     }[];
   }[];
 }

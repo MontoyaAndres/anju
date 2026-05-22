@@ -3,8 +3,8 @@ import { ssr } from '../../../utils';
 
 import type { IProps } from './project/[projectId]';
 
-const SettingsPage = (_props: IProps) => {
-  return <Components.Views.Settings />;
+const SettingsPage = (props: IProps) => {
+  return <Components.Views.Settings auth={props.auth} />;
 };
 
 SettingsPage.getLayout = Components.Layouts.Home;

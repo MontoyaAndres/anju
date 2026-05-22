@@ -44,9 +44,8 @@ import {
   OrgSwitcherWrapper,
   Wrapper
 } from './styles';
+import { NoAccess } from './no-access';
 import { authClient } from '../../../utils';
-
-const DOCS_URL = 'https://docs.anju.ai';
 
 type SocialProvider = 'google' | 'github';
 
@@ -116,6 +115,7 @@ const HomeLayout = ({ page }: { page: HomePage }) => {
   const [projectStatus, setProjectStatus] = useState<
     'idle' | 'pending' | 'rejected' | 'resolved'
   >('idle');
+  const [projectAccessDenied, setProjectAccessDenied] = useState(false);
   const accountMenuRef = useRef<HTMLDivElement>(null);
   const accountTriggerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -150,6 +150,29 @@ const HomeLayout = ({ page }: { page: HomePage }) => {
       loadOrganizations();
     }
   }, [currentOrgId, currentProjectId, organizations]);
+
+  // An org member who is not a project member is forbidden from every project
+  // endpoint — probe one and surface the lack of access as a top alert.
+  useEffect(() => {
+    if (!currentOrgId || !currentProjectId) {
+      setProjectAccessDenied(false);
+      return;
+    }
+    const controller = new AbortController();
+    (async () => {
+      try {
+        const data = await utils.fetcher({
+          url: `/organization/${currentOrgId}/project/${currentProjectId}`,
+          config: { credentials: 'include', signal: controller.signal }
+        });
+        if (controller.signal.aborted) return;
+        setProjectAccessDenied(utils.isApiError(data));
+      } catch {
+        // aborted or network failure — leave the current state
+      }
+    })();
+    return () => controller.abort();
+  }, [currentOrgId, currentProjectId]);
 
   useEffect(() => {
     if (!accountClicked) return;
@@ -332,7 +355,7 @@ const HomeLayout = ({ page }: { page: HomePage }) => {
   const handleDocumentationClicked = () => {
     setAccountClicked(false);
     setMobileMenuClicked(false);
-    window.open(DOCS_URL, '_blank', 'noopener,noreferrer');
+    window.open(utils.constants.DOCS_URL, '_blank', 'noopener,noreferrer');
   };
 
   const handleSettingsClicked = () => {
@@ -835,7 +858,13 @@ const HomeLayout = ({ page }: { page: HomePage }) => {
             </div>
           </div>
         )}
-        <div className="box-container">{page}</div>
+        <div className="box-container">
+          {projectAccessDenied ? (
+            <NoAccess organizationId={currentOrgId} />
+          ) : (
+            page
+          )}
+        </div>
       </div>
       {switcherOpen && (
         <UI.Portal>

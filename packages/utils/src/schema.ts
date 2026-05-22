@@ -97,10 +97,12 @@ const ORGANIZATION_INVITATION_CREATE = z.object({
   organizationId: z.uuid()
 });
 
-const ORGANIZATION_INVITATION_CREATE_VIEW = ORGANIZATION_INVITATION_CREATE.omit({
-  userId: true,
-  organizationId: true
-});
+const ORGANIZATION_INVITATION_CREATE_VIEW = ORGANIZATION_INVITATION_CREATE.omit(
+  {
+    userId: true,
+    organizationId: true
+  }
+);
 
 const ORGANIZATION_INVITATION_LIST = z.object({
   userId: z.uuid(),
@@ -145,6 +147,34 @@ const INVITATION_RESPOND = z.object({
   invitationId: z.uuid(),
   userId: z.uuid(),
   action: z.enum(constants.INVITATION_RESPONSES)
+});
+
+const INVITATION_GET_BY_TOKEN = z.object({
+  token: z.string().min(8).max(128)
+});
+
+const ORGANIZATION_MEMBER_LIST = z.object({
+  userId: z.uuid(),
+  organizationId: z.uuid()
+});
+
+const ORGANIZATION_MEMBER_REMOVE = z.object({
+  memberUserId: z.uuid(),
+  userId: z.uuid(),
+  organizationId: z.uuid()
+});
+
+const PROJECT_MEMBER_LIST = z.object({
+  userId: z.uuid(),
+  organizationId: z.uuid(),
+  projectId: z.uuid()
+});
+
+const PROJECT_MEMBER_REMOVE = z.object({
+  memberUserId: z.uuid(),
+  userId: z.uuid(),
+  organizationId: z.uuid(),
+  projectId: z.uuid()
 });
 
 const ARTIFACT_CREATE_PROMPT = z.object({
@@ -219,16 +249,8 @@ const ARTIFACT_CREATE_WEBSITE_VIEW = z.object({
       'Only http and https URLs are supported'
     ),
   description: z.string().optional(),
-  maxPages: z
-    .number()
-    .int()
-    .min(1)
-    .max(constants.CRAWL_MAX_PAGES_LIMIT),
-  maxDepth: z
-    .number()
-    .int()
-    .min(0)
-    .max(constants.CRAWL_MAX_DEPTH_LIMIT)
+  maxPages: z.number().int().min(1).max(constants.CRAWL_MAX_PAGES_LIMIT),
+  maxDepth: z.number().int().min(0).max(constants.CRAWL_MAX_DEPTH_LIMIT)
 });
 
 const ARTIFACT_CREATE_WEBSITE = z.object({
@@ -241,16 +263,8 @@ const ARTIFACT_CREATE_WEBSITE = z.object({
     ),
   description: z.string().optional(),
   crawlConfig: z.object({
-    maxPages: z
-      .number()
-      .int()
-      .min(1)
-      .max(constants.CRAWL_MAX_PAGES_LIMIT),
-    maxDepth: z
-      .number()
-      .int()
-      .min(0)
-      .max(constants.CRAWL_MAX_DEPTH_LIMIT)
+    maxPages: z.number().int().min(1).max(constants.CRAWL_MAX_PAGES_LIMIT),
+    maxDepth: z.number().int().min(0).max(constants.CRAWL_MAX_DEPTH_LIMIT)
   }),
   projectId: z.uuid(),
   userId: z.uuid(),
@@ -690,6 +704,11 @@ export const Schema = {
   PROJECT_INVITATION_LIST,
   PROJECT_INVITATION_REMOVE,
   INVITATION_RESPOND,
+  INVITATION_GET_BY_TOKEN,
+  ORGANIZATION_MEMBER_LIST,
+  ORGANIZATION_MEMBER_REMOVE,
+  PROJECT_MEMBER_LIST,
+  PROJECT_MEMBER_REMOVE,
   ARTIFACT_CREATE_PROMPT,
   ARTIFACT_CREATE_PROMPT_VIEW,
   ARTIFACT_UPDATE_PROMPT,

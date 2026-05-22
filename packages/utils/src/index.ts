@@ -51,6 +51,7 @@ import type {
   TelegramSendResponse
 } from './telegramSend';
 import { parseHttpErrorMessage } from './parseHttpError';
+import { isApiError, getApiErrorMessage } from './apiError';
 import { toStringArray } from './coerce';
 import { validateMessageVariables } from './validateMessageVariables';
 import { JsonSchema, jsonSchemaToZodShape } from './jsonSchemaToZodShape';
@@ -144,6 +145,8 @@ export const utils = {
   formatFilenameHeader,
   chunkBase64,
   parseHttpErrorMessage,
+  isApiError,
+  getApiErrorMessage,
   toStringArray,
   jsonSchemaToZodShape,
   validateMessageVariables,

@@ -63,6 +63,123 @@ export const Wrapper = styled.div`
       }
     }
 
+    .invitations-panel {
+      background: ${theme.colors.white};
+      border: 1px solid ${theme.colors.bastille}1a;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 24px;
+
+      .invitations-head {
+        margin-bottom: 14px;
+
+        .invitations-title {
+          font-size: ${theme.fonts.lg};
+          font-weight: 700;
+          color: ${theme.colors.bastille};
+          margin: 0;
+        }
+
+        .invitations-subtitle {
+          font-size: ${theme.fonts.sm};
+          color: ${theme.colors.bastille}99;
+          margin: 4px 0 0;
+        }
+      }
+
+      .invitations-list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .invitation-card {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        flex-wrap: wrap;
+        padding: 14px 16px;
+        border: 1px solid ${theme.colors.bastille}14;
+        border-radius: 10px;
+        background: ${theme.colors.bastille}05;
+
+        .invitation-info {
+          min-width: 0;
+
+          .invitation-target {
+            font-size: ${theme.fonts.base};
+            font-weight: 600;
+            color: ${theme.colors.bastille};
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+
+            .invitation-scope {
+              font-size: 10px;
+              font-weight: 700;
+              text-transform: uppercase;
+              letter-spacing: 0.04em;
+              color: ${theme.colors.bastille}99;
+              background: ${theme.colors.bastille}0d;
+              border-radius: 4px;
+              padding: 2px 6px;
+            }
+          }
+
+          .invitation-meta {
+            font-size: ${theme.fonts.xs};
+            color: ${theme.colors.bastille}99;
+            margin: 4px 0 0;
+          }
+        }
+
+        .invitation-actions {
+          display: flex;
+          gap: 8px;
+
+          .MuiButtonBase-root {
+            text-transform: none;
+            font-size: ${theme.fonts.sm};
+            padding: 5px 14px;
+            border-radius: 8px;
+            min-width: 0;
+            width: auto;
+          }
+        }
+      }
+    }
+
+    .organization-empty {
+      background: ${theme.colors.white};
+      border: 1px dashed ${theme.colors.alto};
+      border-radius: 12px;
+      padding: 32px 20px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+
+      .organization-empty-text {
+        font-size: ${theme.fonts.sm};
+        color: ${theme.colors.bastille}99;
+        margin: 0;
+        max-width: 420px;
+        line-height: 1.5;
+      }
+
+      .MuiButtonBase-root {
+        text-transform: none;
+        font-size: ${theme.fonts.sm};
+        padding: 6px 16px;
+        border-radius: 8px;
+        width: auto;
+      }
+    }
+
     .organization-list {
       display: grid;
       grid-template-columns: 1fr;
@@ -83,17 +200,49 @@ export const Wrapper = styled.div`
         padding: 20px;
         cursor: pointer;
         transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
 
         &:hover {
           border-color: ${theme.colors.bastille}40;
           box-shadow: 0 2px 8px ${theme.colors.bastille}20;
         }
 
-        .organization-card-name {
-          font-size: ${theme.fonts.lg};
-          color: ${theme.colors.bastille};
-          font-weight: 600;
-          margin: 0 0 12px 0;
+        &.organization-card-basic {
+          border-style: dashed;
+        }
+
+        .organization-card-head {
+          display: flex;
+          align-items: flex-start;
+          justify-content: space-between;
+          gap: 8px;
+
+          .organization-card-name {
+            font-size: ${theme.fonts.lg};
+            color: ${theme.colors.bastille};
+            font-weight: 600;
+            margin: 0;
+            word-break: break-word;
+          }
+
+          .organization-badge {
+            flex-shrink: 0;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: ${theme.colors.fernGreen};
+            background: ${theme.colors.fernGreen}1a;
+            border-radius: 4px;
+            padding: 2px 6px;
+
+            &.organization-badge-basic {
+              color: ${theme.colors.saltBox};
+              background: ${theme.colors.bastille}0d;
+            }
+          }
         }
 
         .organization-info {
@@ -108,6 +257,64 @@ export const Wrapper = styled.div`
             font-size: ${theme.fonts.sm};
             color: ${theme.colors.bastille}99;
             font-weight: 400;
+          }
+        }
+
+        .organization-basic-note {
+          font-size: ${theme.fonts.sm};
+          color: ${theme.colors.bastille}99;
+          margin: 0;
+          line-height: 1.5;
+        }
+
+        .organization-members {
+          display: flex;
+          align-items: center;
+
+          .member-avatar {
+            width: 30px;
+            height: 30px;
+            border-radius: 999px;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: ${theme.colors.bastille};
+            color: ${theme.colors.white};
+            font-size: ${theme.fonts.xs};
+            font-weight: 600;
+            border: 2px solid ${theme.colors.white};
+            margin-left: -8px;
+
+            &:first-of-type {
+              margin-left: 0;
+            }
+
+            img {
+              width: 100%;
+              height: 100%;
+              object-fit: cover;
+            }
+
+            &.member-avatar-more {
+              background: ${theme.colors.alto};
+              color: ${theme.colors.bastille};
+            }
+          }
+        }
+
+        .organization-card-actions {
+          display: flex;
+          gap: 8px;
+          margin-top: 4px;
+
+          .MuiButtonBase-root {
+            text-transform: none;
+            font-size: ${theme.fonts.sm};
+            padding: 5px 14px;
+            border-radius: 8px;
+            min-width: 0;
+            width: auto;
           }
         }
       }
@@ -189,6 +396,13 @@ export const ModalDialog = styled.div`
       .modal-error {
         color: ${theme.colors.red};
         font-size: ${theme.fonts.sm};
+        margin: 0;
+      }
+
+      .modal-hint {
+        color: ${theme.colors.bastille}99;
+        font-size: ${theme.fonts.xs};
+        line-height: 1.5;
         margin: 0;
       }
     }

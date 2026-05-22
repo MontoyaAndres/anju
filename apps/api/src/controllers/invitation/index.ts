@@ -353,15 +353,15 @@ const respond = async (c: Context<AppEnv>) => {
   }
 
   if (invitation.email !== sessionEmail) {
-    throw new Error('This invitation was not sent to your account');
+    throw new Error('Forbidden: this invitation was not sent to your account');
   }
 
   if (invitation.status !== utils.constants.STATUS_PENDING) {
-    throw new Error('This invitation is no longer pending');
+    throw new Error('This invitation has already been responded to');
   }
 
   if (invitation.expiresAt.getTime() <= Date.now()) {
-    throw new Error('This invitation has expired');
+    throw new Error('This invitation has already expired');
   }
 
   if (currentValues.action === utils.constants.INVITATION_RESPONSE_DECLINE) {
@@ -377,7 +377,7 @@ const respond = async (c: Context<AppEnv>) => {
       .returning({ id: db.schema.invitation.id });
 
     if (!declined) {
-      throw new Error('This invitation is no longer pending');
+      throw new Error('This invitation has already been responded to');
     }
 
     return c.json({
@@ -403,7 +403,7 @@ const respond = async (c: Context<AppEnv>) => {
       .returning();
 
     if (!accepted) {
-      throw new Error('This invitation is no longer pending');
+      throw new Error('This invitation has already been responded to');
     }
 
     if (accepted.projectId) {
@@ -452,6 +452,41 @@ const respond = async (c: Context<AppEnv>) => {
   return c.json({ id: result.id, status: result.status });
 };
 
+const getByToken = async (c: Context<AppEnv>) => {
+  const currentValues = await utils.Schema.INVITATION_GET_BY_TOKEN.parseAsync({
+    token: c.req.param('token')
+  });
+
+  const dbInstance = db.create(c);
+
+  const invitation = await dbInstance.query.invitation.findFirst({
+    where: eq(db.schema.invitation.token, currentValues.token),
+    with: {
+      organization: { columns: { id: true, name: true } },
+      project: { columns: { id: true, name: true } },
+      invitedBy: { columns: { id: true, name: true } }
+    }
+  });
+
+  if (!invitation) {
+    throw new Error('Invitation not found');
+  }
+
+  return c.json({
+    id: invitation.id,
+    email: invitation.email,
+    status: invitation.status,
+    scope: invitation.projectId
+      ? utils.constants.INVITATION_SCOPE_PROJECT
+      : utils.constants.INVITATION_SCOPE_ORGANIZATION,
+    expired: invitation.expiresAt.getTime() <= Date.now(),
+    expiresAt: invitation.expiresAt,
+    organizationName: invitation.organization?.name ?? null,
+    projectName: invitation.project?.name ?? null,
+    inviterName: invitation.invitedBy?.name ?? null
+  });
+};
+
 export const InvitationController = {
   createForOrganization,
   listForOrganization,
@@ -460,5 +495,6 @@ export const InvitationController = {
   listForProject,
   removeForProject,
   listMine,
-  respond
+  respond,
+  getByToken
 };

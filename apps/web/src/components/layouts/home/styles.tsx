@@ -1010,3 +1010,71 @@ export const ModalDialog = styled.div`
     }
   `}
 `;
+
+export const NoAccessWrapper = styled.div`
+  ${({ theme }) => css`
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: calc(100vh - 60px);
+    padding: 24px;
+
+    @media (min-width: ${theme.screens.xl}) {
+      min-height: 100vh;
+    }
+
+    .no-access-card {
+      width: 100%;
+      max-width: 420px;
+      text-align: center;
+      background: ${theme.colors.white};
+      border: 1px solid ${theme.colors.bastille}1a;
+      border-radius: 16px;
+      padding: 40px 32px;
+
+      .no-access-icon {
+        width: 56px;
+        height: 56px;
+        margin: 0 auto 18px;
+        border-radius: 999px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: ${theme.colors.red}14;
+        color: ${theme.colors.red};
+
+        svg {
+          width: 28px;
+          height: 28px;
+        }
+      }
+
+      .no-access-title {
+        font-size: ${theme.fonts.xl};
+        font-weight: 700;
+        color: ${theme.colors.bastille};
+        margin: 0;
+        line-height: 1.3;
+      }
+
+      .no-access-text {
+        font-size: ${theme.fonts.sm};
+        color: ${theme.colors.bastille}99;
+        margin: 12px 0 0;
+        line-height: 1.55;
+      }
+
+      .no-access-actions {
+        margin-top: 24px;
+
+        .MuiButtonBase-root {
+          text-transform: none;
+          font-size: ${theme.fonts.sm};
+          padding: 9px 18px;
+          border-radius: 10px;
+          width: auto;
+        }
+      }
+    }
+  `}
+`;

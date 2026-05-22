@@ -7,6 +7,7 @@ import {
   UserController,
   ArtifactController,
   InvitationController,
+  MemberController,
   OrganizationController,
   OrganizationLlmController,
   ProjectController,
@@ -108,6 +109,8 @@ app
     UserMiddleware.verify,
     InvitationController.respond
   )
+  // Public — the email landing page resolves an invitation by its token
+  .get('/invitation/token/:token', InvitationController.getByToken)
 
   // User controller
   .post('/user/avatar', UserMiddleware.verify, UserController.uploadAvatar)
@@ -149,6 +152,18 @@ app
     InvitationController.removeForOrganization
   )
 
+  // Organization member controller
+  .get(
+    '/organization/:organizationId/member',
+    UserMiddleware.verify,
+    MemberController.listForOrganization
+  )
+  .delete(
+    '/organization/:organizationId/member/:memberUserId',
+    UserMiddleware.verify,
+    MemberController.removeForOrganization
+  )
+
   // Project controller
   .post(
     '/organization/:organizationId/project',
@@ -186,6 +201,18 @@ app
     '/organization/:organizationId/project/:projectId/invitation/:invitationId',
     UserMiddleware.verify,
     InvitationController.removeForProject
+  )
+
+  // Project member controller
+  .get(
+    '/organization/:organizationId/project/:projectId/member',
+    UserMiddleware.verify,
+    MemberController.listForProject
+  )
+  .delete(
+    '/organization/:organizationId/project/:projectId/member/:memberUserId',
+    UserMiddleware.verify,
+    MemberController.removeForProject
   )
 
   // Artifact controller

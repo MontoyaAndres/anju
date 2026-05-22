@@ -28,7 +28,7 @@ export const Auth = () => {
         <div className="login-content-buttons">
           <UI.Button
             variant="outlined"
-            startIcon="GOOGLE.svg"
+            startIcon="/GOOGLE.svg"
             onClick={() => signIn(utils.constants.SOCIAL_PROVIDER_GOOGLE)}
             disabled={status === 'pending'}
           >
@@ -36,7 +36,7 @@ export const Auth = () => {
           </UI.Button>
           <UI.Button
             variant="outlined"
-            startIcon="GITHUB.svg"
+            startIcon="/GITHUB.svg"
             onClick={() => signIn(utils.constants.SOCIAL_PROVIDER_GITHUB)}
             disabled={status === 'pending'}
           >

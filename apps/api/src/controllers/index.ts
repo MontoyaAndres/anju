@@ -2,6 +2,7 @@ import { UserController } from './user';
 import { ProjectController } from './project';
 import { ArtifactController } from './artifact';
 import { InvitationController } from './invitation';
+import { MemberController } from './member';
 import { OrganizationController } from './organization';
 import { OrganizationLlmController } from './organizationLlm';
 import { OAuthController } from './oauth';
@@ -16,6 +17,7 @@ export {
   ProjectController,
   ArtifactController,
   InvitationController,
+  MemberController,
   OrganizationController,
   OrganizationLlmController,
   OAuthController,

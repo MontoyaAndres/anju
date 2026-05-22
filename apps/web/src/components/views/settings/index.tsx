@@ -6,8 +6,21 @@ import IconButton from '@mui/material/IconButton';
 import { Add, DeleteOutline, EditOutlined } from '@mui/icons-material';
 
 import { Wrapper } from './styles';
+import { MembersManager } from './members-manager';
 
-type Section = 'organization' | 'models' | 'danger';
+type Section = 'organization' | 'members' | 'projects' | 'models' | 'danger';
+
+interface SettingsProps {
+  auth: {
+    id: string;
+    name: string;
+    email: string;
+    emailVerified: boolean;
+    image: string;
+    createdAt: string;
+    updatedAt: string;
+  };
+}
 
 interface Project {
   id: string;
@@ -68,19 +81,24 @@ const llmCatalogLabel = (llm: OrganizationLlm) => {
   return `${llm.provider} / ${llm.model}`;
 };
 
-export const Settings = () => {
+export const Settings = (props: SettingsProps) => {
+  const { auth } = props;
   const router = useRouter();
   const snackbar = UI.Alert.useSnackbar();
   const { id: organizationId } = router.query as { id: string };
 
   const [section, setSection] = useState<Section>('organization');
   const organizationRef = useRef<HTMLElement | null>(null);
+  const membersRef = useRef<HTMLElement | null>(null);
+  const projectsRef = useRef<HTMLElement | null>(null);
   const modelsRef = useRef<HTMLElement | null>(null);
   const dangerRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     const refs: Array<{ id: Section; el: HTMLElement | null }> = [
       { id: 'organization', el: organizationRef.current },
+      { id: 'members', el: membersRef.current },
+      { id: 'projects', el: projectsRef.current },
       { id: 'models', el: modelsRef.current },
       { id: 'danger', el: dangerRef.current }
     ];
@@ -103,6 +121,8 @@ export const Settings = () => {
   const scrollToSection = (id: Section) => {
     const map: Record<Section, HTMLElement | null> = {
       organization: organizationRef.current,
+      members: membersRef.current,
+      projects: projectsRef.current,
       models: modelsRef.current,
       danger: dangerRef.current
     };
@@ -120,6 +140,13 @@ export const Settings = () => {
   const [removingOrg, setRemovingOrg] = useState(false);
   const [orgDeleteAlert, setOrgDeleteAlert] = useState(false);
 
+  // 'member' sees the full settings; 'project-only' (in a project of this org
+  // but not the org itself) sees only the Projects section; 'none' has no
+  // access at all.
+  const [access, setAccess] = useState<
+    'loading' | 'member' | 'project-only' | 'none'
+  >('loading');
+
   const [llms, setLlms] = useState<OrganizationLlm[]>([]);
   const [llmsLoading, setLlmsLoading] = useState(true);
   const [llmForm, setLlmForm] = useState<typeof INITIAL_LLM_FORM | null>(null);
@@ -130,7 +157,13 @@ export const Settings = () => {
   );
   const [llmDeleting, setLlmDeleting] = useState(false);
 
+  const [expandedProjectId, setExpandedProjectId] = useState<string | null>(
+    null
+  );
+
   const orgBase = `/organization/${organizationId}`;
+  // Any admin member can rename the organization; only the owner may delete it.
+  const isOwner = !!organization && organization.ownerId === auth.id;
 
   const fetchOrganization = async (signal?: AbortSignal) => {
     if (!organizationId) return;
@@ -141,12 +174,35 @@ export const Settings = () => {
         config: { credentials: 'include', signal }
       });
       if (signal?.aborted) return;
-      if (data && !data.error) {
+      if (data && !utils.isApiError(data)) {
         setOrganization(data);
         setOrgName(data.name || '');
+        setAccess('member');
+        return;
+      }
+      // Not an organization member — fall back to the org list, which still
+      // returns project-only organizations (basic info plus just the projects
+      // the caller can reach).
+      const list = await utils.fetcher({
+        url: '/organization',
+        config: { credentials: 'include', signal }
+      });
+      if (signal?.aborted) return;
+      const found = Array.isArray(list)
+        ? (list.find(
+            (item: Organization) => item.id === organizationId
+          ) as Organization | undefined)
+        : undefined;
+      if (found) {
+        setOrganization(found);
+        setOrgName(found.name || '');
+        setAccess('project-only');
+      } else {
+        setOrganization(null);
+        setAccess('none');
       }
     } catch {
-      // ignore
+      // ignore — aborted or network failure
     } finally {
       if (!signal?.aborted) setOrgLoading(false);
     }
@@ -554,16 +610,53 @@ export const Settings = () => {
         )}
       </section>
 
-      <section className="settings-section">
-        <div className="settings-section-header">
-          <div className="settings-section-text">
-            <h2 className="settings-section-title">Projects</h2>
-            <p className="settings-section-description">
-              Projects under this organization. Click one to open it.
-            </p>
-          </div>
-        </div>
+    </section>
+  );
 
+  const renderMembers = () => (
+    <section
+      ref={el => {
+        membersRef.current = el;
+      }}
+    >
+      <header className="settings-header">
+        <h1 className="settings-title">Members</h1>
+        <p className="settings-subtitle">
+          People with access to this organization. Invite teammates by email —
+          they accept the invitation in-app.
+        </p>
+      </header>
+
+      <section className="settings-section">
+        {organization ? (
+          <MembersManager
+            scope="organization"
+            basePath={orgBase}
+            currentUserId={auth.id}
+            ownerId={organization.ownerId}
+          />
+        ) : (
+          <UI.Skeleton variant="rounded" width="100%" height={160} />
+        )}
+      </section>
+    </section>
+  );
+
+  const renderProjects = () => (
+    <section
+      ref={el => {
+        projectsRef.current = el;
+      }}
+    >
+      <header className="settings-header">
+        <h1 className="settings-title">Projects</h1>
+        <p className="settings-subtitle">
+          Projects under this organization. Open a project, or manage who can
+          access it.
+        </p>
+      </header>
+
+      <section className="settings-section">
         {orgLoading && !organization ? (
           <div className="projects-list">
             {[0, 1].map(i => (
@@ -579,6 +672,19 @@ export const Settings = () => {
                 <p className="project-item-name">{project.name}</p>
                 <button
                   type="button"
+                  className="project-item-toggle"
+                  onClick={() =>
+                    setExpandedProjectId(
+                      expandedProjectId === project.id ? null : project.id
+                    )
+                  }
+                >
+                  {expandedProjectId === project.id
+                    ? 'Hide members'
+                    : 'Members'}
+                </button>
+                <button
+                  type="button"
                   className="project-item-link"
                   onClick={() =>
                     router.push(
@@ -588,6 +694,15 @@ export const Settings = () => {
                 >
                   Open →
                 </button>
+                {expandedProjectId === project.id && (
+                  <div className="project-members">
+                    <MembersManager
+                      scope="project"
+                      basePath={`${orgBase}/project/${project.id}`}
+                      currentUserId={auth.id}
+                    />
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -730,41 +845,85 @@ export const Settings = () => {
     </section>
   );
 
+  if (access === 'none') {
+    return (
+      <Wrapper>
+        <main className="settings-content">
+          <section>
+            <header className="settings-header">
+              <h1 className="settings-title">No access</h1>
+              <p className="settings-subtitle">
+                You don&apos;t have access to this organization or any of its
+                projects.
+              </p>
+            </header>
+            <section className="settings-section">
+              <p className="projects-empty">
+                Ask an admin to invite you to get access.
+              </p>
+              <div className="settings-actions">
+                <UI.Button
+                  variant="contained"
+                  size="small"
+                  onClick={() => router.push('/organization')}
+                >
+                  Back to organizations
+                </UI.Button>
+              </div>
+            </section>
+          </section>
+        </main>
+      </Wrapper>
+    );
+  }
+
+  // A project-only member sees only the Projects section — the rest of the
+  // settings page is organization-level and not theirs to manage.
+  const isMember = access === 'member';
+
   return (
     <Wrapper>
       <aside className="settings-nav">
-        {navItem('organization', 'Organization')}
-        {navItem('models', 'Models')}
-        {navItem('danger', 'Danger zone', true)}
+        {isMember && navItem('organization', 'Organization')}
+        {isMember && navItem('members', 'Members')}
+        {navItem('projects', 'Projects')}
+        {isMember && navItem('models', 'Models')}
+        {isMember && isOwner && navItem('danger', 'Danger zone', true)}
       </aside>
 
       <main className="settings-content">
-        {renderOrganization()}
-        {renderModels()}
-        {renderDanger()}
+        {isMember && renderOrganization()}
+        {isMember && renderMembers()}
+        {renderProjects()}
+        {isMember && renderModels()}
+        {isMember && isOwner && renderDanger()}
       </main>
 
-      <UI.Alert
-        open={orgDeleteAlert}
-        title="Remove organization?"
-        description={`This will permanently delete "${organization?.name || 'this organization'}" along with every project, channel, conversation, resource and model inside it. This cannot be undone.`}
-        confirmText="Yes, remove permanently"
-        cancelText="Cancel"
-        loading={removingOrg}
-        onConfirm={handleOrgRemoveConfirm}
-        onCancel={() => setOrgDeleteAlert(false)}
-      />
+      {isMember && (
+        <UI.Alert
+          open={orgDeleteAlert}
+          title="Remove organization?"
+          description={`This will permanently delete "${organization?.name || 'this organization'}" along with every project, channel, conversation, resource and model inside it. This cannot be undone.`}
+          confirmText="Yes, remove permanently"
+          cancelText="Cancel"
+          loading={removingOrg}
+          onConfirm={handleOrgRemoveConfirm}
+          onCancel={() => setOrgDeleteAlert(false)}
+        />
+      )}
 
-      <UI.Alert
-        open={!!llmDeleteAlert}
-        title="Remove model"
-        description={`Remove "${llmDeleteAlert?.name || 'this model'}"? Channels using it must be re-pointed first.`}
-        confirmText="Remove"
-        cancelText="Cancel"
-        loading={llmDeleting}
-        onConfirm={handleLlmDeleteConfirm}
-        onCancel={() => setLlmDeleteAlert(null)}
-      />
+      {isMember && (
+        <UI.Alert
+          open={!!llmDeleteAlert}
+          title="Remove model"
+          description={`Remove "${llmDeleteAlert?.name || 'this model'}"? Channels using it must be re-pointed first.`}
+          confirmText="Remove"
+          cancelText="Cancel"
+          loading={llmDeleting}
+          onConfirm={handleLlmDeleteConfirm}
+          onCancel={() => setLlmDeleteAlert(null)}
+        />
+      )}
     </Wrapper>
   );
 };

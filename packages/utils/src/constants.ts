@@ -521,6 +521,8 @@ const EMBED_BATCH_SIZE = 96;
 
 const RESOURCE_HANDLER_SLEEP_AFTER = '10m';
 
+const DOCS_URL = 'https://docs.anju.ai';
+
 const BASE64_DATA_URI_RE =
   /data:image\/[a-zA-Z0-9+\-.]+;base64,[A-Za-z0-9+/=\s]+/g;
 const RAW_BASE64_BLOB_RE = /[A-Za-z0-9+/]{512,}={0,2}/g;
@@ -821,6 +823,7 @@ export const constants = {
   CHUNK_OVERLAP_CHARS,
   EMBED_BATCH_SIZE,
   RESOURCE_HANDLER_SLEEP_AFTER,
+  DOCS_URL,
   BASE64_DATA_URI_RE,
   RAW_BASE64_BLOB_RE,
   CHUNK_SEPARATORS,

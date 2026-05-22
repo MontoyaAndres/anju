@@ -6,6 +6,7 @@ import { Channels } from './channels';
 import { Organization } from './organization';
 import { Settings } from './settings';
 import { Link } from './link';
+import { Invitation } from './invitation';
 
 export const Views = {
   Auth,
@@ -15,5 +16,6 @@ export const Views = {
   Channels,
   Organization,
   Settings,
-  Link
+  Link,
+  Invitation
 };

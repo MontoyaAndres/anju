@@ -368,5 +368,197 @@ export const Wrapper = styled.div`
         color: ${theme.colors.red};
       }
     }
+
+    .projects-list .project-item {
+      flex-wrap: wrap;
+    }
+
+    .project-item-toggle {
+      appearance: none;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: ${theme.fonts.xs};
+      font-weight: 600;
+      color: ${theme.colors.bastille}99;
+      padding: 4px 8px;
+
+      &:hover {
+        color: ${theme.colors.bastille};
+      }
+    }
+
+    .project-members {
+      flex-basis: 100%;
+      margin-top: 4px;
+      padding-top: 14px;
+      border-top: 1px solid ${theme.colors.bastille}14;
+    }
+  `}
+`;
+
+export const MembersManagerWrapper = styled.div`
+  ${({ theme }) => css`
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+
+    .mm-denied {
+      font-size: ${theme.fonts.sm};
+      color: ${theme.colors.bastille}99;
+      margin: 0;
+      padding: 14px;
+      background: ${theme.colors.bastille}08;
+      border-radius: 8px;
+      line-height: 1.5;
+    }
+
+    .mm-block-head {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+
+      .mm-block-title {
+        font-size: ${theme.fonts.sm};
+        font-weight: 600;
+        color: ${theme.colors.bastille};
+        margin: 0;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+
+      .mm-count {
+        font-size: ${theme.fonts.xs};
+        font-weight: 600;
+        color: ${theme.colors.bastille}99;
+        background: ${theme.colors.bastille}0d;
+        border-radius: 999px;
+        padding: 1px 8px;
+      }
+    }
+
+    .mm-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .mm-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 12px;
+      border: 1px solid ${theme.colors.bastille}14;
+      border-radius: 10px;
+
+      .mm-avatar {
+        flex-shrink: 0;
+        width: 34px;
+        height: 34px;
+        border-radius: 999px;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: ${theme.colors.bastille};
+        color: ${theme.colors.white};
+        font-size: ${theme.fonts.sm};
+        font-weight: 600;
+
+        img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+
+        &.mm-avatar-pending {
+          background: ${theme.colors.bastille}26;
+          color: ${theme.colors.bastille};
+        }
+      }
+
+      .mm-row-info {
+        flex: 1;
+        min-width: 0;
+
+        .mm-row-name {
+          font-size: ${theme.fonts.sm};
+          font-weight: 600;
+          color: ${theme.colors.bastille};
+          margin: 0;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          flex-wrap: wrap;
+        }
+
+        .mm-row-sub {
+          font-size: ${theme.fonts.xs};
+          color: ${theme.colors.bastille}99;
+          margin: 2px 0 0;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+      }
+
+      .mm-tag {
+        font-size: 10px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: ${theme.colors.bastille}99;
+        background: ${theme.colors.bastille}0d;
+        border-radius: 4px;
+        padding: 1px 6px;
+
+        &.mm-tag-owner {
+          color: ${theme.colors.fernGreen};
+          background: ${theme.colors.fernGreen}1a;
+        }
+      }
+
+      .mm-role {
+        flex-shrink: 0;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        color: ${theme.colors.bastille}99;
+        border: 1px solid ${theme.colors.bastille}1a;
+        border-radius: 4px;
+        padding: 2px 6px;
+
+        &.mm-role-pending {
+          color: ${theme.colors.saltBox};
+        }
+      }
+
+      .MuiIconButton-root {
+        flex-shrink: 0;
+        padding: 4px;
+      }
+    }
+
+    .mm-invite {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+
+      .mm-invite-field {
+        flex: 1;
+      }
+
+      .MuiButtonBase-root {
+        flex-shrink: 0;
+        margin-top: 8px;
+        font-size: ${theme.fonts.sm};
+        padding: 7px 16px;
+        border-radius: 8px;
+        text-transform: none;
+        white-space: nowrap;
+      }
+    }
   `}
 `;
