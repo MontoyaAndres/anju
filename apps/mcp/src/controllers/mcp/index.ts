@@ -13,7 +13,14 @@ import {
   readResourceContent,
   refreshCredentialIfNeeded,
   generateEmbedding,
-  resolveArtifactSlug
+  resolveArtifactSlug,
+  parseJsonRpcMessages,
+  collectBodyOnlyRequests,
+  parseClient,
+  resolveExternalSessionId,
+  upsertSession,
+  flushRequests,
+  type PendingRequest
 } from '../../utils';
 
 // types
@@ -73,10 +80,7 @@ const business = async (c: Context<AppEnv>) => {
   }
 
   if (jwtUserId && artifact.project.projectUsers.length === 0) {
-    return c.json(
-      { error: 'You do not have access to this artifact' },
-      403
-    );
+    return c.json({ error: 'You do not have access to this artifact' }, 403);
   }
 
   // Folders aren't queryable resources: website parents collide with their
@@ -90,8 +94,7 @@ const business = async (c: Context<AppEnv>) => {
       return false;
     }
     if (
-      r.sourceType ===
-      utils.constants.RESOURCE_SOURCE_TYPE_GOOGLE_DRIVE_FOLDER
+      r.sourceType === utils.constants.RESOURCE_SOURCE_TYPE_GOOGLE_DRIVE_FOLDER
     ) {
       return false;
     }
@@ -114,6 +117,7 @@ const business = async (c: Context<AppEnv>) => {
   });
   const transport = new StreamableHTTPTransport();
   const bucket = c.env.STORAGE_BUCKET;
+  const pendingRequests: PendingRequest[] = [];
 
   for (const prompt of artifact.artifactPrompts) {
     const schema = utils.jsonSchemaToZodShape(prompt.schema as JsonSchema);
@@ -126,12 +130,13 @@ const business = async (c: Context<AppEnv>) => {
         argsSchema: schema
       },
       async args => {
+        const startedAt = Date.now();
         const promptMessages = (prompt.messages || []) as Array<{
           role: 'user' | 'assistant';
           content: string;
         }>;
 
-        return {
+        const result = {
           messages: promptMessages.map(msg => {
             let text = msg.content;
 
@@ -147,6 +152,17 @@ const business = async (c: Context<AppEnv>) => {
             };
           })
         };
+
+        pendingRequests.push({
+          method: utils.constants.MCP_REQUEST_METHOD_PROMPTS_GET,
+          promptId: prompt.id,
+          artifactPromptId: prompt.id,
+          input: args,
+          output: result,
+          latencyMs: Date.now() - startedAt
+        });
+
+        return result;
       }
     );
   }
@@ -178,25 +194,48 @@ const business = async (c: Context<AppEnv>) => {
         template,
         resourceMetadata,
         async (uri: URL, variables) => {
-          const result = await readResourceContent(resource, uri, bucket);
+          const startedAt = Date.now();
+          try {
+            const result = await readResourceContent(resource, uri, bucket);
 
-          for (const content of result.contents) {
-            if ('text' in content && content.text) {
-              for (const [key, value] of Object.entries(variables)) {
-                const replacement = Array.isArray(value)
-                  ? value.join(', ')
-                  : value;
-                content.text = content.text.replaceAll(
-                  `{{${key}}}`,
-                  replacement || ''
-                );
+            for (const content of result.contents) {
+              if ('text' in content && content.text) {
+                for (const [key, value] of Object.entries(variables)) {
+                  const replacement = Array.isArray(value)
+                    ? value.join(', ')
+                    : value;
+                  content.text = content.text.replaceAll(
+                    `{{${key}}}`,
+                    replacement || ''
+                  );
+                }
+
+                content.text = content.text.replaceAll(/\{\{[^}]+\}\}/g, '');
               }
-
-              content.text = content.text.replaceAll(/\{\{[^}]+\}\}/g, '');
             }
-          }
 
-          return result;
+            pendingRequests.push({
+              method: utils.constants.MCP_REQUEST_METHOD_RESOURCES_READ,
+              resourceUri: uri.toString(),
+              artifactResourceId: resource.id,
+              input: { uri: uri.toString(), variables },
+              output: result,
+              latencyMs: Date.now() - startedAt
+            });
+            return result;
+          } catch (error) {
+            pendingRequests.push({
+              method: utils.constants.MCP_REQUEST_METHOD_RESOURCES_READ,
+              resourceUri: uri.toString(),
+              artifactResourceId: resource.id,
+              input: { uri: uri.toString(), variables },
+              output: null,
+              latencyMs: Date.now() - startedAt,
+              errorMessage:
+                error instanceof Error ? error.message : String(error)
+            });
+            throw error;
+          }
         }
       );
 
@@ -207,7 +246,32 @@ const business = async (c: Context<AppEnv>) => {
       resource.id,
       resource.uri,
       resourceMetadata,
-      async (uri: URL) => readResourceContent(resource, uri, bucket)
+      async (uri: URL) => {
+        const startedAt = Date.now();
+        try {
+          const result = await readResourceContent(resource, uri, bucket);
+          pendingRequests.push({
+            method: utils.constants.MCP_REQUEST_METHOD_RESOURCES_READ,
+            resourceUri: uri.toString(),
+            artifactResourceId: resource.id,
+            input: { uri: uri.toString() },
+            output: result,
+            latencyMs: Date.now() - startedAt
+          });
+          return result;
+        } catch (error) {
+          pendingRequests.push({
+            method: utils.constants.MCP_REQUEST_METHOD_RESOURCES_READ,
+            resourceUri: uri.toString(),
+            artifactResourceId: resource.id,
+            input: { uri: uri.toString() },
+            output: null,
+            latencyMs: Date.now() - startedAt,
+            errorMessage: error instanceof Error ? error.message : String(error)
+          });
+          throw error;
+        }
+      }
     );
   }
 
@@ -246,8 +310,9 @@ const business = async (c: Context<AppEnv>) => {
         inputSchema: schema
       },
       async args => {
+        const startedAt = Date.now();
         if (reauthRequired) {
-          return {
+          const result = {
             content: [
               {
                 type: 'text' as const,
@@ -255,24 +320,108 @@ const business = async (c: Context<AppEnv>) => {
               }
             ]
           };
+          pendingRequests.push({
+            method: utils.constants.MCP_REQUEST_METHOD_TOOLS_CALL,
+            toolName: toolDef.key,
+            artifactToolId: artifactTool.id,
+            input: args,
+            output: result,
+            latencyMs: Date.now() - startedAt,
+            errorMessage: `${provider} credential needs re-authorization`
+          });
+          return result;
         }
-        return handler.handler(args, {
-          config: toolConfig,
-          credentials: toolCredentials,
-          resources: exposedResources,
-          bucket,
-          env: c.env,
-          db: dbInstance,
-          artifactId: artifact.id,
-          embedQuery: (text: string) => generateEmbedding(c, text)
-        });
+        try {
+          const result = await handler.handler(args, {
+            config: toolConfig,
+            credentials: toolCredentials,
+            resources: exposedResources,
+            bucket,
+            env: c.env,
+            db: dbInstance,
+            artifactId: artifact.id,
+            embedQuery: (text: string) => generateEmbedding(c, text)
+          });
+          pendingRequests.push({
+            method: utils.constants.MCP_REQUEST_METHOD_TOOLS_CALL,
+            toolName: toolDef.key,
+            artifactToolId: artifactTool.id,
+            input: args,
+            output: result,
+            latencyMs: Date.now() - startedAt
+          });
+          return result;
+        } catch (error) {
+          pendingRequests.push({
+            method: utils.constants.MCP_REQUEST_METHOD_TOOLS_CALL,
+            toolName: toolDef.key,
+            artifactToolId: artifactTool.id,
+            input: args,
+            output: null,
+            latencyMs: Date.now() - startedAt,
+            errorMessage: error instanceof Error ? error.message : String(error)
+          });
+          throw error;
+        }
       }
     );
   }
 
   await mcpServer.connect(transport);
 
-  return transport.handleRequest(c);
+  // Read the body once so we can both inspect JSON-RPC method names (for
+  // list/discovery calls the SDK auto-handles) and forward it to the transport.
+  // GET (SSE stream) and DELETE (session teardown) have no body.
+  let parsedBody: unknown | undefined;
+  if (c.req.method === 'POST') {
+    try {
+      parsedBody = await c.req.json();
+    } catch {
+      parsedBody = undefined;
+    }
+  }
+
+  const messages = parseJsonRpcMessages(parsedBody);
+  const bodyOnly = collectBodyOnlyRequests(messages);
+
+  const response = await transport.handleRequest(c, parsedBody);
+
+  // Drop notifications (no `id`) and ping if nothing actually happened.
+  const allRequests: PendingRequest[] = [...bodyOnly, ...pendingRequests];
+  if (allRequests.length === 0) return response;
+
+  const userAgent = c.req.header('user-agent') ?? null;
+  const ipAddress =
+    c.req.header('cf-connecting-ip') ?? c.req.header('x-forwarded-for') ?? null;
+  const client = parseClient(userAgent);
+  const externalSessionId = resolveExternalSessionId(
+    c,
+    artifact.id,
+    jwtUserId,
+    userAgent
+  );
+
+  c.executionCtx.waitUntil(
+    (async () => {
+      try {
+        const session = await upsertSession(dbInstance, {
+          artifactId: artifact.id,
+          externalSessionId,
+          authKind: authContext?.kind ?? utils.constants.MCP_AUTH_KIND_JWT,
+          userId: jwtUserId,
+          userAgent,
+          ipAddress,
+          clientName: client.name,
+          clientVersion: client.version
+        });
+        await flushRequests(dbInstance, session.id, allRequests);
+      } catch (error) {
+        console.error('Failed to record MCP usage', error);
+      }
+    })()
+  );
+
+  return response;
 };
 
 const health = async (c: Context<AppEnv>) => {

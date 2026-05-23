@@ -295,6 +295,13 @@
       "when": 1779463289476,
       "tag": "0041_pink_sister_grimm",
       "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1779528748691,
+      "tag": "0042_silly_gambit",
+      "breakpoints": true
     }
   ]
 }

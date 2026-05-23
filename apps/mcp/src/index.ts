@@ -21,11 +21,11 @@ app
         'User-Agent',
         'Authorization',
         'Accept',
-        'Mcp-Session-Id',
         'mcp-protocol-version',
+        utils.constants.MCP_SESSION_HEADER,
         utils.constants.MCP_INTERNAL_HEADER
       ],
-      exposeHeaders: ['WWW-Authenticate', 'Mcp-Session-Id'],
+      exposeHeaders: ['WWW-Authenticate', utils.constants.MCP_SESSION_HEADER],
       allowMethods: ['GET', 'POST', 'DELETE', 'OPTIONS']
     })
   )

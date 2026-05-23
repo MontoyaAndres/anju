@@ -1,7 +1,6 @@
-- When user using just the mcp for Claude Desktop, or any mcp client, save logs - save how the user uses the mcp server we create
 - make http endpoint generate types for apps
-- Home view per project has logs, how the user uses the mcp and channels how interactive it is based on everything it has, also shows the mcp link
 - Create outlook, slack tool and search for the best ones out there (Inspiration https://www.chatbase.co/)
+- Home view per project has logs, how the user uses the mcp and channels how interactive it is based on everything it has, also shows the mcp link
 - Create landing (inspiration https://postiz.com/ I like how the show the images of how to use the product, it is more visual)
 - Create docs
   https://styles.refero.design/

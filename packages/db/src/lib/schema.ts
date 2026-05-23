@@ -522,6 +522,80 @@ export const channelMessage = pgTable(
   ]
 );
 
+export const mcpSession = pgTable(
+  'mcp_session',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => uuid()),
+    externalSessionId: text('external_session_id').notNull(),
+    authKind: text('auth_kind').notNull(),
+    clientName: text('client_name'),
+    clientVersion: text('client_version'),
+    userAgent: text('user_agent'),
+    ipAddress: text('ip_address'),
+    requestCount: integer('request_count').notNull().default(0),
+    lastRequestAt: timestamp('last_request_at', { mode: 'date' }),
+    metadata: json('metadata'),
+    artifactId: text('artifact_id')
+      .notNull()
+      .references(() => artifact.id, { onDelete: 'cascade' }),
+    userId: text('user_id').references(() => user.id, {
+      onDelete: 'set null'
+    }),
+    createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { mode: 'date' })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date())
+  },
+  table => [
+    index('mcp_session_artifactId_idx').on(table.artifactId),
+    index('mcp_session_userId_idx').on(table.userId),
+    uniqueIndex('mcp_session_external_idx').on(
+      table.artifactId,
+      table.externalSessionId
+    )
+  ]
+);
+
+export const mcpRequest = pgTable(
+  'mcp_request',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => uuid()),
+    method: text('method').notNull(),
+    toolName: text('tool_name'),
+    resourceUri: text('resource_uri'),
+    promptId: text('prompt_id'),
+    input: json('input'),
+    output: json('output'),
+    latencyMs: integer('latency_ms'),
+    errorMessage: text('error_message'),
+    sessionId: text('session_id')
+      .notNull()
+      .references(() => mcpSession.id, { onDelete: 'cascade' }),
+    artifactToolId: text('artifact_tool_id').references(() => artifactTool.id, {
+      onDelete: 'set null'
+    }),
+    artifactResourceId: text('artifact_resource_id').references(
+      () => artifactResource.id,
+      { onDelete: 'set null' }
+    ),
+    artifactPromptId: text('artifact_prompt_id').references(
+      () => artifactPrompt.id,
+      { onDelete: 'set null' }
+    ),
+    createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow()
+  },
+  table => [
+    index('mcp_request_sessionId_idx').on(table.sessionId),
+    index('mcp_request_method_idx').on(table.method),
+    index('mcp_request_createdAt_idx').on(table.createdAt)
+  ]
+);
+
 export const errorLog = pgTable(
   'error_log',
   {
@@ -854,7 +928,8 @@ export const artifactRelations = relations(artifact, ({ one, many }) => ({
   artifactResources: many(artifactResource),
   artifactTools: many(artifactTool),
   artifactCredentials: many(artifactCredential),
-  channels: many(channel)
+  channels: many(channel),
+  mcpSessions: many(mcpSession)
 }));
 
 export const organizationLlmRelations = relations(
@@ -1005,6 +1080,37 @@ export const artifactResourceRelations = relations(
     chunks: many(artifactResourceChunk)
   })
 );
+
+export const mcpSessionRelations = relations(mcpSession, ({ one, many }) => ({
+  artifact: one(artifact, {
+    fields: [mcpSession.artifactId],
+    references: [artifact.id]
+  }),
+  user: one(user, {
+    fields: [mcpSession.userId],
+    references: [user.id]
+  }),
+  requests: many(mcpRequest)
+}));
+
+export const mcpRequestRelations = relations(mcpRequest, ({ one }) => ({
+  session: one(mcpSession, {
+    fields: [mcpRequest.sessionId],
+    references: [mcpSession.id]
+  }),
+  artifactTool: one(artifactTool, {
+    fields: [mcpRequest.artifactToolId],
+    references: [artifactTool.id]
+  }),
+  artifactResource: one(artifactResource, {
+    fields: [mcpRequest.artifactResourceId],
+    references: [artifactResource.id]
+  }),
+  artifactPrompt: one(artifactPrompt, {
+    fields: [mcpRequest.artifactPromptId],
+    references: [artifactPrompt.id]
+  })
+}));
 
 export const artifactResourceChunkRelations = relations(
   artifactResourceChunk,
