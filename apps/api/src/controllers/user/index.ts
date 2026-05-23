@@ -40,7 +40,7 @@ const uploadAvatar = async (c: Context<AppEnv>) => {
     throw new Error('Storage not available');
   }
 
-  const filename = `avatar-${Date.now()}.${extensionFor(file.type)}`;
+  const filename = utils.formatFilename(`avatar.${extensionFor(file.type)}`);
   const key = `users/${user.id}/avatar/${filename}`;
 
   await bucket.put(key, await file.arrayBuffer(), {

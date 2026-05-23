@@ -1018,7 +1018,7 @@ const uploadResourceFile = async (c: Context<AppEnv>) => {
       throw new Error('Artifact not found for the project');
     }
 
-    const key = `organizations/${currentValues.organizationId}/projects/${currentValues.projectId}/resources/${currentArtifactByProject.id}/${fileName}`;
+    const key = `organizations/${currentValues.organizationId}/projects/${currentValues.projectId}/resources/${currentArtifactByProject.id}/${utils.formatFilename(fileName)}`;
 
     let storedSize = fileSize;
     if (bucket) {

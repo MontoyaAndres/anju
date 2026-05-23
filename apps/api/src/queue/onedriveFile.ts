@@ -147,7 +147,7 @@ const syncOne = async (env: Bindings, resourceId: string): Promise<void> => {
     .where(eq(db.schema.artifact.id, resource.artifactId))
     .limit(1);
 
-  const key = `organizations/${organizationId}/projects/${projectId}/resources/${artifactId}/onedrive/${file.id}/${downloaded.fileName}`;
+  const key = `organizations/${organizationId}/projects/${projectId}/resources/${artifactId}/onedrive/${file.id}/${utils.formatFilename(downloaded.fileName)}`;
 
   if (resource.fileKey && resource.fileKey !== key) {
     try {

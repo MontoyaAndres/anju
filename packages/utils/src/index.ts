@@ -57,6 +57,7 @@ import { validateMessageVariables } from './validateMessageVariables';
 import { JsonSchema, jsonSchemaToZodShape } from './jsonSchemaToZodShape';
 import { formatRelative } from './formatRelative';
 import { slugifyPromptTitle } from './slugifyPromptTitle';
+import { formatFilename } from './formatFilename';
 import {
   decodeEntities,
   escapeHtml,
@@ -152,6 +153,7 @@ export const utils = {
   validateMessageVariables,
   formatRelative,
   slugifyPromptTitle,
+  formatFilename,
   decodeEntities,
   escapeHtml,
   parseOpenXmlProps,
