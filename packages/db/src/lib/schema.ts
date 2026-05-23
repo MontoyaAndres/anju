@@ -182,6 +182,9 @@ export const externalIdentity = pgTable(
     userId: text('user_id')
       .notNull()
       .references(() => user.id, { onDelete: 'cascade' }),
+    channelId: text('channel_id')
+      .notNull()
+      .references(() => channel.id, { onDelete: 'cascade' }),
     provider: text('provider').notNull(),
     externalId: text('external_id').notNull(),
     displayName: text('display_name'),
@@ -194,11 +197,13 @@ export const externalIdentity = pgTable(
       .$onUpdate(() => new Date())
   },
   table => [
-    uniqueIndex('external_identity_provider_externalId_idx').on(
+    uniqueIndex('external_identity_channel_provider_external_idx').on(
+      table.channelId,
       table.provider,
       table.externalId
     ),
-    index('external_identity_userId_idx').on(table.userId)
+    index('external_identity_userId_idx').on(table.userId),
+    index('external_identity_channelId_idx').on(table.channelId)
   ]
 );
 

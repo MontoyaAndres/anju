@@ -5,10 +5,16 @@ import { utils } from '@anju/utils';
 
 import type { AppEnv } from '../types';
 
+export interface McpClientChannelContext {
+  channelId: string;
+  platform: string;
+}
+
 export const createMcpClient = async (
   c: Context<AppEnv>,
   slug: string,
-  bearerToken?: string
+  bearerToken?: string,
+  channelContext?: McpClientChannelContext
 ) => {
   const mcpBaseUrl = process.env.NEXT_PUBLIC_MCP_URL;
   if (!mcpBaseUrl) {
@@ -30,6 +36,21 @@ export const createMcpClient = async (
         headers.set('authorization', `Bearer ${bearerToken}`);
       } else if (internalSecret) {
         headers.set(utils.constants.MCP_INTERNAL_HEADER, internalSecret);
+      }
+      // Tag channel-relayed self-fetches so the MCP worker can populate
+      // mcp_session.{userAgent,clientName,metadata.via} — otherwise a service
+      // binding call has no UA and the row looks like an anonymous machine
+      // request.
+      if (channelContext) {
+        headers.set('user-agent', utils.constants.MCP_CHANNEL_CLIENT_USER_AGENT);
+        headers.set(
+          utils.constants.MCP_CHANNEL_ID_HEADER,
+          channelContext.channelId
+        );
+        headers.set(
+          utils.constants.MCP_CHANNEL_PLATFORM_HEADER,
+          channelContext.platform
+        );
       }
       const forwarded = { ...(init ?? {}), headers };
       return mcpBinding.fetch(

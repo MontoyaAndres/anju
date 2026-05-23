@@ -23,7 +23,9 @@ app
         'Accept',
         'mcp-protocol-version',
         utils.constants.MCP_SESSION_HEADER,
-        utils.constants.MCP_INTERNAL_HEADER
+        utils.constants.MCP_INTERNAL_HEADER,
+        utils.constants.MCP_CHANNEL_ID_HEADER,
+        utils.constants.MCP_CHANNEL_PLATFORM_HEADER
       ],
       exposeHeaders: ['WWW-Authenticate', utils.constants.MCP_SESSION_HEADER],
       allowMethods: ['GET', 'POST', 'DELETE', 'OPTIONS']

@@ -115,7 +115,9 @@ const business = async (c: Context<AppEnv>) => {
     description: artifact.project.description || 'MCP Server Description',
     version: '0.0.1'
   });
-  const transport = new StreamableHTTPTransport();
+  const transport = new StreamableHTTPTransport({
+    enableJsonResponse: true
+  });
   const bucket = c.env.STORAGE_BUCKET;
   const pendingRequests: PendingRequest[] = [];
 
@@ -394,6 +396,29 @@ const business = async (c: Context<AppEnv>) => {
   const ipAddress =
     c.req.header('cf-connecting-ip') ?? c.req.header('x-forwarded-for') ?? null;
   const client = parseClient(userAgent);
+
+  // Channel-relayed self-fetches from the API worker tag themselves so we can
+  // distinguish them from direct MCP clients (Claude Desktop, mcp-inspector).
+  // Only honor these on trusted auth paths — internal-secret (the API holds
+  // it) or bot-on-behalf-of JWTs (minted in-process by the API, never issued
+  // to external OAuth clients). Otherwise a Claude Desktop user could spoof
+  // them and pollute the session metadata.
+  const channelTrust =
+    authContext?.kind === 'internal' || authContext?.isBotToken === true;
+  const channelIdHeader = channelTrust
+    ? (c.req.header(utils.constants.MCP_CHANNEL_ID_HEADER) ?? null)
+    : null;
+  const channelPlatformHeader = channelTrust
+    ? (c.req.header(utils.constants.MCP_CHANNEL_PLATFORM_HEADER) ?? null)
+    : null;
+  const sessionMetadata: Record<string, unknown> | null = channelIdHeader
+    ? {
+        via: 'channel',
+        channelId: channelIdHeader,
+        platform: channelPlatformHeader
+      }
+    : null;
+
   const externalSessionId = resolveExternalSessionId(
     c,
     artifact.id,
@@ -412,7 +437,8 @@ const business = async (c: Context<AppEnv>) => {
           userAgent,
           ipAddress,
           clientName: client.name,
-          clientVersion: client.version
+          clientVersion: client.version,
+          metadata: sessionMetadata
         });
         await flushRequests(dbInstance, session.id, allRequests);
       } catch (error) {

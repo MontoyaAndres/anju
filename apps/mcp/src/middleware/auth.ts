@@ -184,7 +184,8 @@ const verify: MiddlewareHandler<AppEnv> = async (c, next) => {
     kind: 'jwt',
     userId: result.userId,
     artifactSlug: slug ?? undefined,
-    scopes: result.scopes
+    scopes: result.scopes,
+    isBotToken: result.isBotToken
   });
 
   return next();

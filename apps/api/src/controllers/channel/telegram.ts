@@ -127,7 +127,7 @@ export const handleTelegramWebhook = async (c: Context<AppEnv>) => {
     const isPrivateChat =
       message.chat.type === utils.constants.CHANNEL_CONVERSATION_SCOPE_PRIVATE;
     const replyText = isPrivateChat
-      ? await startTelegramLink(c, message, displayName)
+      ? await startTelegramLink(c, message, displayName, channelRow.id)
       : 'For your security, account linking only works in a private chat — open a direct message with me and send /link there.';
     await sendTelegramMessage(
       credentials.botToken,
@@ -446,6 +446,7 @@ interface ExternalLinkApi {
     body: {
       provider: string;
       externalId: string;
+      channelId: string;
       displayName?: string;
       client_id?: string;
       client_secret?: string;
@@ -453,13 +454,15 @@ interface ExternalLinkApi {
   }) => Promise<{ code: string }>;
 }
 
-// `/link` lets a Telegram user connect their account to an Anju user. It calls
-// the bot-client link endpoint in-process (a Worker self-fetch to its own
-// hostname times out) and replies with a code to redeem on the web.
+// `/link` lets a Telegram user connect their account to an Anju user for THIS
+// specific channel. It calls the bot-client link endpoint in-process (a Worker
+// self-fetch to its own hostname times out) and replies with a code to redeem
+// on the web.
 const startTelegramLink = async (
   c: Context<AppEnv>,
   message: TelegramIncomingMessage,
-  displayName: string
+  displayName: string,
+  channelId: string
 ): Promise<string> => {
   const webUrl = utils.getEnv(c, 'NEXT_PUBLIC_WEB_URL');
   const clientId = utils.getEnv(c, 'BOT_OAUTH_CLIENT_ID');
@@ -476,6 +479,7 @@ const startTelegramLink = async (
       body: {
         provider: utils.constants.CHANNEL_PLATFORM_TELEGRAM,
         externalId: String(message.from.id),
+        channelId,
         displayName: displayName || message.from.username || undefined,
         client_id: clientId,
         client_secret: clientSecret

@@ -103,6 +103,7 @@ interface SessionInput {
   ipAddress: string | null;
   clientName: string | null;
   clientVersion: string | null;
+  metadata?: Record<string, unknown> | null;
 }
 
 export const upsertSession = async (
@@ -132,7 +133,8 @@ export const upsertSession = async (
       userAgent: input.userAgent,
       ipAddress: input.ipAddress,
       clientName: input.clientName,
-      clientVersion: input.clientVersion
+      clientVersion: input.clientVersion,
+      metadata: input.metadata ?? null
     })
     .onConflictDoNothing({
       target: [

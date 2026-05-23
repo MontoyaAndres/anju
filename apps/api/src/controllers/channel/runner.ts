@@ -115,6 +115,7 @@ interface BotTokenApi {
       grant_type: string;
       provider: string;
       external_id: string;
+      channel_id: string;
       audience: string;
       scope?: string;
       client_id?: string;
@@ -131,6 +132,7 @@ const mintBotToken = async (
   c: Context<AppEnv>,
   provider: string,
   externalId: string,
+  channelId: string,
   audience: string
 ): Promise<string | undefined> => {
   const clientId = utils.getEnv(c, 'BOT_OAUTH_CLIENT_ID');
@@ -146,6 +148,7 @@ const mintBotToken = async (
         grant_type: utils.constants.BOT_GRANT_TYPE,
         provider,
         external_id: externalId,
+        channel_id: channelId,
         audience,
         client_id: clientId,
         client_secret: clientSecret
@@ -258,12 +261,15 @@ export const runChannelTurn = async (
     artifactResources.map(r => [r.uri, r.id])
   );
 
-  // Resolve the participant's global account link (set by `/link`).
+  // Resolve the participant's link for THIS channel only (set by `/link`).
+  // Per-channel scoping: a link in another channel — even by the same Telegram
+  // user — does not authenticate them here.
   const [linkedIdentity] = await dbInstance
     .select({ userId: db.schema.externalIdentity.userId })
     .from(db.schema.externalIdentity)
     .where(
       and(
+        eq(db.schema.externalIdentity.channelId, channelRow.id),
         eq(db.schema.externalIdentity.provider, channelRow.platform),
         eq(db.schema.externalIdentity.externalId, options.externalParticipantId)
       )
@@ -303,12 +309,16 @@ export const runChannelTurn = async (
         c,
         channelRow.platform,
         options.externalParticipantId,
+        channelRow.id,
         artifactRow.slug
       );
     }
   }
 
-  const mcp = await createMcpClient(c, artifactRow.slug, mcpAuthToken);
+  const mcp = await createMcpClient(c, artifactRow.slug, mcpAuthToken, {
+    channelId: channelRow.id,
+    platform: channelRow.platform
+  });
   let assistantText = '';
   let assistantMessageId = '';
   let totalLatency = 0;

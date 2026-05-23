@@ -1353,6 +1353,21 @@ export const Resources = () => {
       snackbar.error('Nothing to sync');
       return;
     }
+    try {
+      const tokenData = await utils.fetcher({
+        url: `${gdriveApiBase}/token`,
+        config: { credentials: 'include' }
+      });
+      if (tokenData?.error || !tokenData?.accessToken) {
+        snackbar.error('Connect Google Drive to sync files');
+        await startGoogleDriveConnect();
+        return;
+      }
+    } catch {
+      snackbar.error('Connect Google Drive to sync files');
+      await startGoogleDriveConnect();
+      return;
+    }
     setGdriveSyncingId(currentFolder?.id ?? '__all__');
     try {
       const results = await Promise.allSettled(
@@ -1477,6 +1492,21 @@ export const Resources = () => {
         : onedriveTopResources;
     if (targets.length === 0) {
       snackbar.error('Nothing to sync');
+      return;
+    }
+    try {
+      const tokenData = await utils.fetcher({
+        url: `${onedriveApiBase}/token`,
+        config: { credentials: 'include' }
+      });
+      if (tokenData?.error || !tokenData?.accessToken) {
+        snackbar.error('Connect OneDrive to sync files');
+        await startOneDriveConnect();
+        return;
+      }
+    } catch {
+      snackbar.error('Connect OneDrive to sync files');
+      await startOneDriveConnect();
       return;
     }
     setOnedriveSyncingId(currentFolder?.id ?? '__all__');

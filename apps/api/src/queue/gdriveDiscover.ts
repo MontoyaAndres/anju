@@ -14,6 +14,7 @@ import {
 } from '../utils';
 import { markResourceFailed, reportQueueError } from './shared';
 
+import type { R2Bucket } from '@cloudflare/workers-types';
 import type { Bindings } from '../types';
 import type { GoogleDriveFile } from '../utils/googleDrive';
 
@@ -81,14 +82,15 @@ const extractDriveFileId = (
   return null;
 };
 
-const hasFileChanged = (
+const hasFileChanged = async (
+  bucket: R2Bucket | undefined,
   existingRow: {
     metadata: unknown;
     fileKey: string | null;
     status: string;
   },
   driveFile: GoogleDriveFile
-): boolean => {
+): Promise<boolean> => {
   const meta =
     existingRow.metadata && typeof existingRow.metadata === 'object'
       ? (existingRow.metadata as Record<string, unknown>)
@@ -109,6 +111,15 @@ const hasFileChanged = (
     meta.md5Checksum !== driveFile.md5Checksum
   )
     return true;
+  // Drive metadata is unchanged — confirm R2 still has the object before skipping.
+  if (bucket) {
+    try {
+      const head = await bucket.head(existingRow.fileKey);
+      if (!head) return true;
+    } catch {
+      return true;
+    }
+  }
   return false;
 };
 
@@ -242,7 +253,7 @@ const discoverOne = async (
       continue;
     }
 
-    if (hasFileChanged(existingRow, child)) {
+    if (await hasFileChanged(env.STORAGE_BUCKET, existingRow, child)) {
       await dbInstance
         .update(db.schema.artifactResource)
         .set({

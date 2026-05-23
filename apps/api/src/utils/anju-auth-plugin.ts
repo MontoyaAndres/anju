@@ -49,11 +49,13 @@ interface LinkPayload {
   externalId: string;
   displayName: string | null;
   botClientId: string;
+  channelId: string;
 }
 
 interface ExternalIdentityRow {
   id: string;
   userId: string;
+  channelId: string;
   provider: string;
   externalId: string;
   displayName: string | null;
@@ -125,6 +127,7 @@ export const anjuAuthPlugin = (
         body: z.object({
           provider: z.enum(utils.constants.CHANNEL_PLATFORMS),
           externalId: z.string().min(1),
+          channelId: z.string().min(1),
           displayName: z.string().optional(),
           client_id: z.string().optional(),
           client_secret: z.string().optional()
@@ -146,6 +149,7 @@ export const anjuAuthPlugin = (
         const payload: LinkPayload = {
           provider: ctx.body.provider,
           externalId: ctx.body.externalId,
+          channelId: ctx.body.channelId,
           displayName: ctx.body.displayName ?? null,
           botClientId: client.clientId
         };
@@ -201,6 +205,7 @@ export const anjuAuthPlugin = (
         const existing = (await ctx.context.adapter.findOne({
           model: 'externalIdentity',
           where: [
+            { field: 'channelId', value: payload.channelId },
             { field: 'provider', value: payload.provider },
             { field: 'externalId', value: payload.externalId }
           ]
@@ -218,6 +223,7 @@ export const anjuAuthPlugin = (
             model: 'externalIdentity',
             data: {
               userId,
+              channelId: payload.channelId,
               provider: payload.provider,
               externalId: payload.externalId,
               displayName: payload.displayName,
@@ -282,6 +288,7 @@ export const anjuAuthPlugin = (
           grant_type: z.literal(utils.constants.BOT_GRANT_TYPE),
           provider: z.enum(utils.constants.CHANNEL_PLATFORMS),
           external_id: z.string().min(1),
+          channel_id: z.string().min(1),
           audience: z.string().min(1),
           scope: z.string().optional(),
           client_id: z.string().optional(),
@@ -299,6 +306,7 @@ export const anjuAuthPlugin = (
         const identity = (await ctx.context.adapter.findOne({
           model: 'externalIdentity',
           where: [
+            { field: 'channelId', value: ctx.body.channel_id },
             { field: 'provider', value: ctx.body.provider },
             { field: 'externalId', value: ctx.body.external_id }
           ]
@@ -347,6 +355,15 @@ export const anjuAuthPlugin = (
           type: 'string',
           references: {
             model: 'user',
+            field: 'id',
+            onDelete: 'cascade'
+          },
+          index: true
+        },
+        channelId: {
+          type: 'string',
+          references: {
+            model: 'channel',
             field: 'id',
             onDelete: 'cascade'
           },

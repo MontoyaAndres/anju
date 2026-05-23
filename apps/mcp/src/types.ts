@@ -12,6 +12,7 @@ export type Variables = {
     userId?: string;
     artifactSlug?: string;
     scopes?: string[];
+    isBotToken?: boolean;
   };
 };
 
