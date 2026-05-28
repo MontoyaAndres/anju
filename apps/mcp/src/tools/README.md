@@ -4,11 +4,11 @@ Tools exposed to MCP clients (Claude Desktop, ChatGPT, Cursor, Notion Custom Age
 
 ## How a tool plugs in
 
-- A row in `tool_group` (with optional `provider` for OAuth-bound tools) and a row in `tool_definition` (with a unique `key`).
+- A row in `tool_group` (with optional `provider` for OAuth- or API-key-bound tools) and a row in `tool_definition` (with a unique `key`).
 - A `ToolDefinition` exported from this folder and registered in [registry.ts](registry.ts) under the same `key`.
 - Handler receives [`ToolContext`](types.ts): `config`, `credentials[]` (already refreshed and filtered to the group's `provider`), `resources[]`, `bucket` (R2), `env`, `db`, `artifactId`, `embedQuery`.
 - Handler returns `{ content: [{ type: 'text', text }] }`. Anything CPU/binary-heavy (PDF, headless browser, large multipart) belongs in [apps/resource-handler](../../../resource-handler/) — call it through the `RESOURCE_HANDLER` DO.
-- OAuth providers live in [constants.ts](../../../../packages/utils/src/constants.ts) (`OAUTH_PROVIDERS`, `OAUTH_AUTH_URLS`, `OAUTH_TOKEN_URLS`) and refresh is handled by [`refreshOAuthToken`](../../../../packages/utils/src/oauth.ts).
+- Auth and per-tool/group config are wired the same way for every provider — see [Provider auth](#provider-auth) and [Config & the Tools UI](#config--the-tools-ui).
 
 ## Build vs. proxy
 
@@ -18,6 +18,31 @@ Two flavors of tool in this codebase:
 - **Proxied tools** — `mcp-proxy` and `http-endpoint` definitions where one `tool_definition` row produces *many* MCP tools at server boot, derived from the `artifact_tool.config` of each instance. Use when the vendor already ships an MCP server (Notion, GitHub, Linear, Stripe, Atlassian, Sentry, Cloudflare), or when the user wants to expose their own backend without a TypeScript handler.
 
 The default position: **proxy first, build only when there's no good MCP server or it's Anju-specific**. Hand-rolling a Notion tool when Notion ships and maintains its own is wasted effort.
+
+## Provider auth
+
+A tool group's `provider` ties it to an `artifact_credential` row; the MCP server refreshes (if applicable) and filters `credentials[]` to that provider before calling the handler — so **handlers never deal with auth flow, only `credentials[0].accessToken`**. Two flavors:
+
+**OAuth** (Gmail, Outlook, Google Drive/Calendar, Slack):
+- Register in [constants.ts](../../../../packages/utils/src/constants.ts): `OAUTH_PROVIDERS`, `OAUTH_AUTH_URLS`, `OAUTH_TOKEN_URLS`.
+- Add scopes + client env names in [apps/api providers.ts](../../../api/src/utils/providers.ts) and the refresh env map in [apps/mcp refreshCredential.ts](../../utils/refreshCredential.ts).
+- Refresh is automatic via [`refreshOAuthToken`](../../../../packages/utils/src/oauth.ts); expired refresh tokens flip the credential to `needsReauth`.
+- Tools UI shows **Connect** → `GET /oauth/:provider/authorize` → consent → callback stores the credential.
+
+**API key** (Cal.com — the first; pattern for Tavily/Airtable/etc.):
+- Add the provider to `API_KEY_PROVIDERS` in [constants.ts](../../../../packages/utils/src/constants.ts). No `providers.ts` entry, no scopes, no refresh.
+- The key is stored as an `artifact_credential` (encrypted `accessToken`, null `refreshToken`/`expiresAt`) via `POST …/artifact/credential` → [`ArtifactController.createCredential`](../../../api/src/controllers/artifact/index.ts). **The key is validated against the vendor before it's persisted** (Cal.com: `validateCalcomApiKey` hits `GET /v2/event-types`); an invalid key is rejected with an `Invalid …` error that surfaces in the UI, and nothing is written.
+- `refreshCredentialIfNeeded` is a no-op for these (no refresh token), so `credentials[0].accessToken` is the raw key.
+- Tools UI shows **Add API key** (a modal that POSTs the key) instead of Connect; Disconnect/`needsReauth`/connected-state reuse the OAuth plumbing.
+
+## Config & the Tools UI
+
+Config lives on `artifact_tool.config` (JSON, per tool). Two scopes:
+
+- **Group-level** — settings that describe the *connection*, not one tool: Google Calendar's `defaultCalendarId` / `defaultTimeZone` / `sendUpdates`, Cal.com's `defaultEventTypeId` / `defaultTimeZone`. Edited **once** in the group header and **fanned out** to every installed tool in the group (`saveGroupToolConfig` in [apps/web tools view](../../../web/src/components/views/tools/index.tsx)). Dropdowns are populated by API listing endpoints (`GET …/artifact/google-calendar/calendars`, `GET …/artifact/calcom/event-types`). Newly-enabled tools inherit the current group defaults.
+- **Per-tool** — knobs that tune one tool (list page size, working hours, buffer, Meet on/off). Declared as a typed schema in `CALENDAR_TOOL_FIELDS` in [constants.ts](../../../../packages/utils/src/constants.ts) and rendered as a form in the tool's edit modal. Tools that only have group-level settings show a "managed at the group level" note instead of the raw JSON editor.
+
+Handlers resolve every setting the same way: **`args.<override>` → `config.<default>` → fallback**. The override arg is an escape hatch, not the default — the agent's job is "book at 7am", the owner's job is "book where". Don't put secrets in `config` (they belong in `artifact_credential`).
 
 ## Shipped
 
@@ -64,14 +89,11 @@ Build order reuses already-scaffolded OAuth providers first, then no-auth tools,
 
 ### Tier 1 — Free / default-discoverable
 
-Both calendar integrations are **shipped** — see the table above:
+Both calendar integrations are **shipped end-to-end** (tools + config UI) — see the table above and the [Provider auth](#provider-auth) / [Config & the Tools UI](#config--the-tools-ui) sections:
 
-> **Google Calendar** (`google-calendar`, OAuth). Config UI on the Tools page: group-level **default calendar / time zone / attendee-notification** controls (fanned out to every calendar tool's `artifact_tool.config`, backed by `GET …/artifact/google-calendar/calendars`), plus per-tool forms for `list-events`, `create-event`, and `find-free-slots`.
+> **Google Calendar** (`google-calendar`, OAuth). Group-level default calendar / time zone / attendee-notification controls, plus per-tool forms for `list-events`, `create-event`, and `find-free-slots`. Falls back to the `primary` calendar and the calendar's own zone when unset.
 
-> **Cal.com** (`calcom`, **API key — no OAuth**). The key is stored as an `artifact_credential` (provider `calcom`, encrypted `accessToken`) and read by the handler via `credentials[0]` — the same plumbing OAuth tools use, minus refresh. Group-level config: `{ defaultEventTypeId: number, defaultTimeZone?: string }`. NL booking flow: the model converts "7am tomorrow" to ISO, then `calcom-list-available-slots` → `calcom-create-booking` against `defaultEventTypeId`; the attendee name/email come from the channel conversation participant. **Auth-entry UI is still owed** — Cal.com is the first API-key provider (`utils.constants.API_KEY_PROVIDERS`), so the Tools page needs an "Add API key" path (POST credential) instead of the OAuth "Connect" button, plus a `defaultEventTypeId` dropdown populated from `calcom-list-event-types`.
-
-#### Default-calendar / default-event-type pattern
-Don't let the model pick the calendar/event-type per call — that's a footgun on multi-calendar accounts (work vs personal, multiple Cal.com event types). Lock it on `artifact_tool.config` via the Tools UI; expose an override arg in the tool schema only as an escape hatch, not the default. The agent's job is "book at 7am"; the artifact owner's job is "book where." Both shipped integrations resolve this the same way: `args.<override>` → `config.<default>` → fallback (Calendar: `primary`; Cal.com: error if no event type).
+> **Cal.com** (`calcom`, **API key — no OAuth**). The Tools page shows an **Add API key** modal (the key is validated against Cal.com before it's stored), plus group-level **default event type** (dropdown from `calcom-list-event-types`) and **default time zone**. NL booking flow: the model converts "7am tomorrow" to ISO, then `calcom-list-available-slots` → `calcom-create-booking` against `defaultEventTypeId`; the attendee name/email come from the channel conversation participant.
 
 #### Web Search
 - **Group:** `web` · **Provider:** none
