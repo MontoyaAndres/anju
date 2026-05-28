@@ -38,6 +38,7 @@ import {
   oneDriveFileMimeType,
   buildOneDriveResourceMetadata
 } from './oneDrive';
+import { getCalendarAccessToken, listCalendars } from './googleCalendar';
 
 export {
   createAuth,
@@ -71,7 +72,9 @@ export {
   parseOneDriveUri,
   isOneDriveFolder,
   oneDriveFileMimeType,
-  buildOneDriveResourceMetadata
+  buildOneDriveResourceMetadata,
+  getCalendarAccessToken,
+  listCalendars
 };
 
 export type { McpClientHandle } from './mcpClient';

@@ -45,6 +45,12 @@ The default position: **proxy first, build only when there's no good MCP server 
 | `slack-search-messages` | slack | `slack` | `search.messages` — **user token (xoxp) only**, requires `search:read`. |
 | `slack-get-user` | slack | `slack` | `users.info` / `users.lookupByEmail`. |
 | `slack-upload-file` | slack | `slack` | Upload an artifact resource via `files.getUploadURLExternal` + `completeUploadExternal`. 100MB cap. |
+| `calendar-list-calendars` | google-calendar | `google-calendar` | `calendarList.list` — discover calendar IDs (and which to lock as default). |
+| `calendar-list-events` | google-calendar | `google-calendar` | `events.list` with `singleEvents`/`orderBy=startTime`. Defaults `timeMin` to now. |
+| `calendar-create-event` | google-calendar | `google-calendar` | `events.insert`. Emails attendees (`sendUpdates=all`) when any are passed. |
+| `calendar-update-event` | google-calendar | `google-calendar` | `events.patch` (partial). Passing attendees replaces the list. |
+| `calendar-delete-event` | google-calendar | `google-calendar` | `events.delete`. Permanent; notifies attendees. |
+| `calendar-find-free-slots` | google-calendar | `google-calendar` | `freeBusy.query` → computed gaps; optional `durationMinutes` filter. |
 
 Baseline pattern to copy when adding a new native provider: [gmail/index.ts](gmail/index.ts).
 
@@ -54,18 +60,18 @@ Build order reuses already-scaffolded OAuth providers first, then no-auth tools,
 
 ### Tier 1 — Free / default-discoverable
 
-#### Google Calendar
-- **Group:** `google-calendar` · **Provider:** new `google-calendar` (don't reuse `google-gmail` — keeps consent screens scoped per use case and reauth granular)
-- **Tools:** `calendar-list-events`, `calendar-create-event`, `calendar-update-event`, `calendar-delete-event`, `calendar-find-free-slots`, `calendar-list-calendars`
-- **API:** `https://www.googleapis.com/calendar/v3`
-- **Scopes:** `https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/calendar.readonly`
+> Google Calendar (`google-calendar`) is **shipped** — see the table above. Config UI is live on the Tools page: group-level **default calendar / time zone / attendee-notification** controls (fanned out to every calendar tool's `artifact_tool.config`, backed by `GET …/artifact/google-calendar/calendars`), plus per-tool forms for `list-events`, `create-event`, and `find-free-slots`. Unset values fall back to the `primary` calendar and the calendar's own zone.
 
 #### Cal.com
 - **Group:** `calcom` · **Provider:** `calcom` (API key, no OAuth)
 - **Tools:** `calcom-list-event-types`, `calcom-list-available-slots`, `calcom-create-booking`, `calcom-cancel-booking`
 - **API:** Cal.com v2
-- **Config:** API key per artifact (encrypted via `utils.encryptString`)
+- **Config:** API key per artifact (encrypted via `utils.encryptString`). Plus per-artifact tool config `{ defaultEventTypeId: number }` on `artifact_tool.config` — populated from `calcom-list-event-types` so the owner picks which event type (e.g. "30-min intro") the agent books against.
+- **NL booking flow:** same as Google Calendar — the model converts "7am tomorrow" to ISO, then `list-available-slots` → `create-booking` against `defaultEventTypeId`. Booking is created on Cal.com directly; the customer email/name come from the channel conversation participant.
 - **Notes:** Picked over Calendly for MVP — open-source, simpler auth, friendlier free tier.
+
+#### Default-calendar pattern (Google Calendar, Cal.com)
+Don't let the model pick the calendar/event-type per call — that's a footgun on multi-calendar accounts (work vs personal, multiple Cal.com event types). Lock it on `artifact_tool.config` via the Tools UI; expose an override arg in the tool schema only as an escape hatch, not the default. The agent's job is "book at 7am"; the artifact owner's job is "book where." This is exactly how the shipped Calendar tools resolve `calendarId`: `args.calendarId` → `config.defaultCalendarId` → `primary`.
 
 #### Web Search
 - **Group:** `web` · **Provider:** none

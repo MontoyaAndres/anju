@@ -239,7 +239,8 @@ export const runChannelTurn = async (
   const artifactTools = await dbInstance
     .select({
       id: db.schema.artifactTool.id,
-      key: db.schema.toolDefinition.key
+      key: db.schema.toolDefinition.key,
+      config: db.schema.artifactTool.config
     })
     .from(db.schema.artifactTool)
     .innerJoin(
@@ -250,6 +251,22 @@ export const runChannelTurn = async (
   const artifactToolIdByKey = new Map<string, string>(
     artifactTools.map(t => [t.key, t.id])
   );
+
+  // Calendar tools share a fanned-out defaultTimeZone in their config; surface
+  // it so the model can resolve "today" / "9am" in the user's zone.
+  const hasCalendarTools = artifactTools.some(t =>
+    t.key.startsWith(utils.constants.CALENDAR_TOOL_KEY_PREFIX)
+  );
+  let channelTimeZone: string | null = null;
+  for (const t of artifactTools) {
+    if (!t.key.startsWith(utils.constants.CALENDAR_TOOL_KEY_PREFIX)) continue;
+    const cfg = t.config as Record<string, unknown> | null;
+    const tz = cfg?.defaultTimeZone;
+    if (typeof tz === 'string' && tz) {
+      channelTimeZone = tz;
+      break;
+    }
+  }
 
   const artifactResources = await dbInstance
     .select()
@@ -418,13 +435,28 @@ export const runChannelTurn = async (
 
     const adapter = getLlmAdapter(llmRow.provider);
 
+    // Anchor the model in real time — channel clients don't inject "now", so
+    // without this the model guesses today's date from its training prior.
+    const contextParts = [`Current date and time: ${new Date().toISOString()}.`];
+    contextParts.push(
+      channelTimeZone
+        ? `The user's time zone is ${channelTimeZone}; resolve relative dates and times ("today", "tomorrow", "9am") in that zone.`
+        : `Resolve relative dates and times in UTC unless the user specifies a zone.`
+    );
+    if (hasCalendarTools) {
+      contextParts.push('Pass absolute ISO 8601 timestamps to calendar tools.');
+    }
+    const systemPrompt = [contextParts.join(' '), llmRow.systemPrompt]
+      .filter(Boolean)
+      .join('\n\n');
+
     for (let loop = 0; loop < utils.constants.MAX_TOOL_LOOPS; loop++) {
       const start = Date.now();
       const completion = await adapter.complete({
         model: llmRow.model,
         baseUrl: llmRow.baseUrl,
         apiKey: apiKeyPlain,
-        systemPrompt: llmRow.systemPrompt,
+        systemPrompt,
         messages,
         tools: llmTools,
         config: (llmRow.config as Record<string, unknown>) || null

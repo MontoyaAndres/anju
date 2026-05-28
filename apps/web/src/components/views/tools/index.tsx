@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/router';
 import { UI } from '@anju/ui';
 import { utils } from '@anju/utils';
+import type { CalendarConfigField } from '@anju/utils';
 import IconButton from '@mui/material/IconButton';
 import Tooltip from '@mui/material/Tooltip';
 import Switch from '@mui/material/Switch';
@@ -67,6 +68,28 @@ interface ArtifactCredential {
 
 const EXPANDED_GROUP_KEY = 'anju:expandedToolGroupId';
 
+const SEND_UPDATES_OPTIONS = [
+  { value: utils.constants.CALENDAR_SEND_UPDATES_ALL, label: 'Notify everyone' },
+  {
+    value: utils.constants.CALENDAR_SEND_UPDATES_EXTERNAL_ONLY,
+    label: 'Notify external guests only'
+  },
+  {
+    value: utils.constants.CALENDAR_SEND_UPDATES_NONE,
+    label: "Don't send notifications"
+  }
+];
+
+const WEEKDAYS: { value: number; label: string }[] = [
+  { value: 1, label: 'Mon' },
+  { value: 2, label: 'Tue' },
+  { value: 3, label: 'Wed' },
+  { value: 4, label: 'Thu' },
+  { value: 5, label: 'Fri' },
+  { value: 6, label: 'Sat' },
+  { value: 0, label: 'Sun' }
+];
+
 export const Tools = () => {
   const router = useRouter();
   const snackbar = UI.Alert.useSnackbar();
@@ -101,6 +124,14 @@ export const Tools = () => {
     missing: string[];
   } | null>(null);
   const [connectedBanner, setConnectedBanner] = useState<string | null>(null);
+  const [calendars, setCalendars] = useState<
+    { id: string; summary: string; primary: boolean; timeZone: string | null }[]
+  >([]);
+  const [calendarStatus, setCalendarStatus] = useState<
+    'idle' | 'pending' | 'resolved' | 'rejected'
+  >('idle');
+  const [savingCalendar, setSavingCalendar] = useState(false);
+  const [configForm, setConfigForm] = useState<Record<string, unknown>>({});
 
   const { id: organizationId, projectId } = router.query as {
     id: string;
@@ -138,12 +169,46 @@ export const Tools = () => {
     }
   };
 
+  const fetchCalendars = async (signal?: AbortSignal) => {
+    setCalendarStatus('pending');
+    try {
+      const data = await utils.fetcher({
+        url: `${apiBase}/google-calendar/calendars`,
+        config: { credentials: 'include', signal }
+      });
+      if (signal?.aborted) return;
+      setCalendars(Array.isArray(data?.calendars) ? data.calendars : []);
+      setCalendarStatus('resolved');
+    } catch {
+      if (!signal?.aborted) setCalendarStatus('rejected');
+    }
+  };
+
   useEffect(() => {
     if (!organizationId || !projectId) return;
     const controller = new AbortController();
     fetchAll(controller.signal);
     return () => controller.abort();
   }, [organizationId, projectId]);
+
+  // Load the connected account's calendars when the Google Calendar group is
+  // open and connected — used to populate the default-calendar dropdown.
+  useEffect(() => {
+    if (!isCalendarGroup || !expandedGroup) {
+      setCalendars([]);
+      setCalendarStatus('idle');
+      return;
+    }
+    if (
+      !credentialByProvider.has(expandedGroup.provider!) ||
+      isProviderExpired(expandedGroup.provider)
+    ) {
+      return;
+    }
+    const controller = new AbortController();
+    fetchCalendars(controller.signal);
+    return () => controller.abort();
+  }, [expandedGroupId, credentials, catalog]);
 
   useEffect(() => {
     if (!router.isReady) return;
@@ -193,9 +258,7 @@ export const Tools = () => {
       next.add(bucket);
       return next;
     });
-    setConfigJson(JSON.stringify(match.config || {}, null, 2));
-    setConfigError(null);
-    setEditTool(match);
+    openEditor(match);
   }, [router.query.selected, installed]);
 
   const toggleInstalledProvider = (provider: string) => {
@@ -249,6 +312,90 @@ export const Tools = () => {
       expandedGroupId ? catalog.find(g => g.id === expandedGroupId) : null,
     [catalog, expandedGroupId]
   );
+
+  const isCalendarGroup =
+    expandedGroup?.provider === utils.constants.OAUTH_PROVIDER_GOOGLE_CALENDAR;
+
+  // Installed tools belonging to the open group — the fan-out targets for the
+  // group-level default calendar.
+  const expandedGroupInstalledTools = useMemo(() => {
+    if (!expandedGroup) return [] as ArtifactTool[];
+    const defIds = new Set(expandedGroup.toolDefinitions.map(d => d.id));
+    return installed.filter(t => defIds.has(t.toolDefinitionId));
+  }, [expandedGroup, installed]);
+
+  // The default calendar is stored on each calendar tool's config; read it back
+  // from whichever installed tool in the group already carries it.
+  const groupDefaultCalendarId = useMemo(() => {
+    for (const t of expandedGroupInstalledTools) {
+      const value = t.config?.defaultCalendarId;
+      if (typeof value === 'string' && value) return value;
+    }
+    return '';
+  }, [expandedGroupInstalledTools]);
+
+  const calendarOptions = useMemo(
+    () =>
+      calendars.map(cal => ({
+        value: cal.id,
+        label: cal.primary ? `${cal.summary} (primary)` : cal.summary
+      })),
+    [calendars]
+  );
+
+  const primaryCalendarId = useMemo(
+    () => calendars.find(c => c.primary)?.id || '',
+    [calendars]
+  );
+
+  // Only feed the select a value it can actually render — a stored calendar that
+  // no longer exists (deleted / access lost) falls back to blank.
+  const selectedCalendarValue = useMemo(() => {
+    const desired = groupDefaultCalendarId || primaryCalendarId;
+    return calendarOptions.some(o => o.value === desired) ? desired : '';
+  }, [calendarOptions, groupDefaultCalendarId, primaryCalendarId]);
+
+  const groupDefaultTimeZone = useMemo(() => {
+    for (const t of expandedGroupInstalledTools) {
+      const value = t.config?.defaultTimeZone;
+      if (typeof value === 'string' && value) return value;
+    }
+    return '';
+  }, [expandedGroupInstalledTools]);
+
+  const groupSendUpdates = useMemo(() => {
+    for (const t of expandedGroupInstalledTools) {
+      const value = t.config?.sendUpdates;
+      if (typeof value === 'string' && value) return value;
+    }
+    return 'all';
+  }, [expandedGroupInstalledTools]);
+
+  // Time-zone choices: the connected calendars' zones plus the browser zone,
+  // and whatever is already stored — deduped so the select can always render it.
+  const timeZoneOptions = useMemo(() => {
+    const set = new Set<string>();
+    const browserTz =
+      typeof Intl !== 'undefined'
+        ? Intl.DateTimeFormat().resolvedOptions().timeZone
+        : '';
+    if (browserTz) set.add(browserTz);
+    for (const c of calendars) if (c.timeZone) set.add(c.timeZone);
+    if (groupDefaultTimeZone) set.add(groupDefaultTimeZone);
+    return Array.from(set)
+      .sort()
+      .map(tz => ({ value: tz, label: tz }));
+  }, [calendars, groupDefaultTimeZone]);
+
+  const selectedTimeZone = useMemo(() => {
+    const browserTz =
+      typeof Intl !== 'undefined'
+        ? Intl.DateTimeFormat().resolvedOptions().timeZone
+        : '';
+    const primaryTz = calendars.find(c => c.primary)?.timeZone || '';
+    const desired = groupDefaultTimeZone || primaryTz || browserTz;
+    return timeZoneOptions.some(o => o.value === desired) ? desired : '';
+  }, [timeZoneOptions, groupDefaultTimeZone, calendars]);
 
   const renderGroupIcon = (group: ToolGroup) => {
     if (group.icon && /^https?:\/\//.test(group.icon)) {
@@ -326,6 +473,40 @@ export const Tools = () => {
     setConnectingProvider(null);
   };
 
+  // Group-level settings are backed by per-tool config: merge the patch into
+  // every installed calendar tool so they all resolve to the same defaults.
+  const saveGroupCalendarConfig = async (
+    patch: Record<string, unknown>,
+    successMessage: string
+  ) => {
+    if (savingCalendar) return;
+    const targets = expandedGroupInstalledTools;
+    if (targets.length === 0) return;
+    setSavingCalendar(true);
+    try {
+      await Promise.all(
+        targets.map(t =>
+          utils.fetcher({
+            url: `${toolApiBase}/${t.id}`,
+            config: {
+              method: 'PUT',
+              credentials: 'include',
+              body: JSON.stringify({
+                config: { ...(t.config || {}), ...patch }
+              })
+            }
+          })
+        )
+      );
+      snackbar.success(successMessage);
+      await fetchAll();
+    } catch {
+      snackbar.error('Failed to update calendar settings');
+    } finally {
+      setSavingCalendar(false);
+    }
+  };
+
   const handleToggleTool = async (def: ToolDefinition, enabled: boolean) => {
     if (togglingDefId) return;
     const existing = installedByDefId.get(def.id);
@@ -341,6 +522,20 @@ export const Tools = () => {
     try {
       let data: { error?: string } | undefined;
       if (enabled && !existing) {
+        // A new calendar tool inherits the group's already-chosen defaults so
+        // every calendar tool stays pointed at the same calendar / zone / policy.
+        const inheritedConfig: Record<string, unknown> = {};
+        if (isCalendarGroup) {
+          if (groupDefaultCalendarId) {
+            inheritedConfig.defaultCalendarId = groupDefaultCalendarId;
+          }
+          if (groupDefaultTimeZone) {
+            inheritedConfig.defaultTimeZone = groupDefaultTimeZone;
+          }
+          if (groupSendUpdates && groupSendUpdates !== 'all') {
+            inheritedConfig.sendUpdates = groupSendUpdates;
+          }
+        }
         data = await utils.fetcher({
           url: toolApiBase,
           config: {
@@ -348,7 +543,7 @@ export const Tools = () => {
             credentials: 'include',
             body: JSON.stringify({
               toolDefinitionId: def.id,
-              config: {}
+              config: inheritedConfig
             })
           }
         });
@@ -371,15 +566,146 @@ export const Tools = () => {
     }
   };
 
-  const handleEdit = (tool: ArtifactTool) => {
+  const openEditor = (tool: ArtifactTool) => {
     setConfigJson(JSON.stringify(tool.config || {}, null, 2));
+    setConfigForm({ ...(tool.config || {}) });
     setConfigError(null);
     setEditTool(tool);
   };
 
+  const handleEdit = (tool: ArtifactTool) => openEditor(tool);
+
   const handleCloseEdit = () => {
     setEditTool(null);
     setConfigError(null);
+  };
+
+  // Coerce the typed calendar form back into a config patch, dropping blanks so
+  // the stored config stays lean.
+  const buildCalendarConfigPatch = (
+    fields: CalendarConfigField[]
+  ): Record<string, unknown> => {
+    const patch: Record<string, unknown> = {};
+    for (const field of fields) {
+      const raw = configForm[field.key];
+      if (field.type === 'number') {
+        const n =
+          typeof raw === 'number'
+            ? raw
+            : typeof raw === 'string' && raw.trim()
+              ? Number(raw)
+              : NaN;
+        if (Number.isFinite(n)) patch[field.key] = n;
+      } else if (field.type === 'boolean') {
+        if (raw === true) patch[field.key] = true;
+      } else if (field.type === 'weekdays') {
+        const arr = Array.isArray(raw)
+          ? (raw as unknown[])
+              .map(Number)
+              .filter(d => Number.isInteger(d) && d >= 0 && d <= 6)
+          : [];
+        if (arr.length > 0) patch[field.key] = arr;
+      } else if (field.type === 'select') {
+        const v = typeof raw === 'string' ? raw : '';
+        if (v && v !== 'default') patch[field.key] = v;
+      } else {
+        const v = typeof raw === 'string' ? raw.trim() : '';
+        if (v) patch[field.key] = v;
+      }
+    }
+    return patch;
+  };
+
+  const setConfigField = (key: string, value: unknown) =>
+    setConfigForm(prev => ({ ...prev, [key]: value }));
+
+  const renderCalendarField = (field: CalendarConfigField) => {
+    const value = configForm[field.key];
+
+    if (field.type === 'boolean') {
+      return (
+        <div
+          key={field.key}
+          className="tools-config-field tools-config-field-row"
+        >
+          <div>
+            <p className="tools-config-field-label">{field.label}</p>
+            {field.help && (
+              <p className="tools-config-field-help">{field.help}</p>
+            )}
+          </div>
+          <Switch
+            checked={value === true}
+            disabled={submitting}
+            onChange={e => setConfigField(field.key, e.target.checked)}
+          />
+        </div>
+      );
+    }
+
+    if (field.type === 'select') {
+      return (
+        <div key={field.key} className="tools-config-field">
+          <UI.Select
+            label={field.label}
+            value={
+              typeof value === 'string' && value
+                ? value
+                : field.options[0]?.value || ''
+            }
+            options={field.options}
+            disabled={submitting}
+            helperText={field.help}
+            onChange={e => setConfigField(field.key, e.target.value)}
+          />
+        </div>
+      );
+    }
+
+    if (field.type === 'weekdays') {
+      const selected = Array.isArray(value)
+        ? (value as unknown[]).map(Number)
+        : [];
+      return (
+        <div key={field.key} className="tools-config-field">
+          <p className="tools-config-field-label">{field.label}</p>
+          <div className="tools-config-weekdays">
+            {WEEKDAYS.map(day => {
+              const active = selected.includes(day.value);
+              return (
+                <button
+                  type="button"
+                  key={day.value}
+                  className={`tools-config-weekday ${active ? 'active' : ''}`}
+                  disabled={submitting}
+                  onClick={() => {
+                    const next = active
+                      ? selected.filter(d => d !== day.value)
+                      : [...selected, day.value];
+                    setConfigField(field.key, next);
+                  }}
+                >
+                  {day.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div key={field.key} className="tools-config-field">
+        <UI.Input
+          label={field.label}
+          type={field.type === 'number' ? 'number' : 'text'}
+          value={value === undefined || value === null ? '' : String(value)}
+          disabled={submitting}
+          helperText={field.help}
+          onChange={e => setConfigField(field.key, e.target.value)}
+        />
+      </div>
+    );
   };
 
   const parseConfig = (): Record<string, unknown> | null => {
@@ -404,7 +730,20 @@ export const Tools = () => {
 
   const handleUpdateSubmit = async () => {
     if (!editTool || submitting) return;
-    const config = parseConfig();
+
+    const editKey = editTool.toolDefinition?.key;
+    const editFields = editKey ? utils.constants.CALENDAR_TOOL_FIELDS[editKey] : undefined;
+
+    let config: Record<string, unknown> | null;
+    if (editFields) {
+      // Preserve group-level keys (defaultCalendarId / defaultTimeZone /
+      // sendUpdates) and cleanly replace this tool's own per-tool keys.
+      const base = { ...(editTool.config || {}) };
+      for (const field of editFields) delete base[field.key];
+      config = { ...base, ...buildCalendarConfigPatch(editFields) };
+    } else {
+      config = parseConfig();
+    }
     if (!config) return;
 
     setSubmitting(true);
@@ -862,6 +1201,69 @@ export const Tools = () => {
                 </span>
               </div>
             )}
+            {isCalendarGroup && isGroupConnected(expandedGroup) && (
+              <div className="tools-group-detail-config">
+                {expandedGroupInstalledTools.length === 0 ? (
+                  <p className="tools-group-detail-config-hint">
+                    Enable a calendar tool below to set the default calendar,
+                    time zone, and notifications for this integration.
+                  </p>
+                ) : (
+                  <>
+                    <UI.Select
+                      label="Default calendar"
+                      value={selectedCalendarValue}
+                      options={calendarOptions}
+                      disabled={
+                        calendarStatus === 'pending' ||
+                        savingCalendar ||
+                        calendarOptions.length === 0
+                      }
+                      error={calendarStatus === 'rejected'}
+                      helperText={
+                        calendarStatus === 'rejected'
+                          ? 'Could not load calendars. Reconnect Google Calendar and try again.'
+                          : calendarStatus === 'pending'
+                            ? 'Loading calendars…'
+                            : 'Events and free/busy lookups use this calendar unless a tool call overrides it.'
+                      }
+                      onChange={e =>
+                        saveGroupCalendarConfig(
+                          { defaultCalendarId: e.target.value },
+                          'Default calendar updated'
+                        )
+                      }
+                    />
+                    <UI.Select
+                      label="Default time zone"
+                      value={selectedTimeZone}
+                      options={timeZoneOptions}
+                      disabled={savingCalendar || timeZoneOptions.length === 0}
+                      helperText="Interprets event times and the working hours used by Find Free Slots."
+                      onChange={e =>
+                        saveGroupCalendarConfig(
+                          { defaultTimeZone: e.target.value },
+                          'Default time zone updated'
+                        )
+                      }
+                    />
+                    <UI.Select
+                      label="Attendee notifications"
+                      value={groupSendUpdates}
+                      options={SEND_UPDATES_OPTIONS}
+                      disabled={savingCalendar}
+                      helperText="Whether Google emails guests when events are created, changed, or cancelled."
+                      onChange={e =>
+                        saveGroupCalendarConfig(
+                          { sendUpdates: e.target.value },
+                          'Notification setting updated'
+                        )
+                      }
+                    />
+                  </>
+                )}
+              </div>
+            )}
             <div className="tools-group-detail-list">
               {expandedGroup.toolDefinitions.map(def => {
                 const isInstalled = installedByDefId.has(def.id);
@@ -918,25 +1320,58 @@ export const Tools = () => {
                 </IconButton>
               </div>
               <div className="tools-modal-body">
-                <p className="tools-configure-help">
-                  Optional tool configuration as JSON. Leave as{' '}
-                  <code>{'{}'}</code> if none is needed.
-                </p>
-                <UI.Input
-                  label="Config (JSON)"
-                  multiline
-                  rows={8}
-                  value={configJson}
-                  disabled={submitting}
-                  error={!!configError}
-                  helperText={
-                    configError || 'e.g. {"label": "inbox", "maxResults": 20}'
+                {(() => {
+                  const editKey = editTool.toolDefinition?.key;
+                  const editFields = editKey
+                    ? utils.constants.CALENDAR_TOOL_FIELDS[editKey]
+                    : undefined;
+                  const editIsCalendar =
+                    editTool.toolDefinition?.group?.provider ===
+                    utils.constants.OAUTH_PROVIDER_GOOGLE_CALENDAR;
+
+                  if (editFields) {
+                    return (
+                      <div className="tools-config-form">
+                        {editFields.map(field => renderCalendarField(field))}
+                      </div>
+                    );
                   }
-                  onChange={e => {
-                    setConfigJson(e.target.value);
-                    if (configError) setConfigError(null);
-                  }}
-                />
+
+                  if (editIsCalendar) {
+                    return (
+                      <p className="tools-configure-help">
+                        This tool has no per-tool settings. The calendar, time
+                        zone, and notification defaults are managed for the whole
+                        integration from the Calendar header on the Catalog page.
+                      </p>
+                    );
+                  }
+
+                  return (
+                    <>
+                      <p className="tools-configure-help">
+                        Optional tool configuration as JSON. Leave as{' '}
+                        <code>{'{}'}</code> if none is needed.
+                      </p>
+                      <UI.Input
+                        label="Config (JSON)"
+                        multiline
+                        rows={8}
+                        value={configJson}
+                        disabled={submitting}
+                        error={!!configError}
+                        helperText={
+                          configError ||
+                          'e.g. {"label": "inbox", "maxResults": 20}'
+                        }
+                        onChange={e => {
+                          setConfigJson(e.target.value);
+                          if (configError) setConfigError(null);
+                        }}
+                      />
+                    </>
+                  );
+                })()}
               </div>
               <div className="tools-modal-actions">
                 <UI.Button

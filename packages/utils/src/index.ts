@@ -1,6 +1,7 @@
 import { Schema } from './schema';
 import { getEnv } from './getEnv';
 import type { EnvSource } from './getEnv';
+import type { CalendarConfigField } from './constants';
 import { fetcher } from './fetcher';
 import { constants } from './constants';
 import {
@@ -193,6 +194,7 @@ export const utils = {
 };
 
 export type {
+  CalendarConfigField,
   JsonSchema,
   MimeAttachment,
   MimeMessageInput,

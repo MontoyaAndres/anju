@@ -15,6 +15,7 @@ import {
   CatalogController,
   ChannelController,
   GoogleDriveController,
+  GoogleCalendarController,
   OneDriveController,
   WellKnownController
 } from './controllers';
@@ -306,6 +307,13 @@ app
     '/organization/:organizationId/project/:projectId/artifact/google-drive/:resourceId/sync',
     UserMiddleware.verify,
     GoogleDriveController.sync
+  )
+
+  // Google Calendar artifact controller
+  .get(
+    '/organization/:organizationId/project/:projectId/artifact/google-calendar/calendars',
+    UserMiddleware.verify,
+    GoogleCalendarController.calendars
   )
 
   // OneDrive artifact controller

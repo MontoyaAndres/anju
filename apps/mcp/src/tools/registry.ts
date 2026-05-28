@@ -47,6 +47,14 @@ import {
   uploadFile as slackUploadFile
 } from './slack';
 import {
+  listCalendars as calendarListCalendars,
+  listEvents as calendarListEvents,
+  createEvent as calendarCreateEvent,
+  updateEvent as calendarUpdateEvent,
+  deleteEvent as calendarDeleteEvent,
+  findFreeSlots as calendarFindFreeSlots
+} from './calendar';
+import {
   listResources,
   readResource,
   sendResource,
@@ -102,5 +110,11 @@ export const toolRegistry = new Map<string, ToolDefinition>([
   ['slack-list-channels', slackListChannels],
   ['slack-search-messages', slackSearchMessages],
   ['slack-get-user', slackGetUser],
-  ['slack-upload-file', slackUploadFile]
+  ['slack-upload-file', slackUploadFile],
+  ['calendar-list-calendars', calendarListCalendars],
+  ['calendar-list-events', calendarListEvents],
+  ['calendar-create-event', calendarCreateEvent],
+  ['calendar-update-event', calendarUpdateEvent],
+  ['calendar-delete-event', calendarDeleteEvent],
+  ['calendar-find-free-slots', calendarFindFreeSlots]
 ]);

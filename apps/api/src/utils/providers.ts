@@ -45,6 +45,16 @@ export const providers: Record<string, OAuthProviderConfig> = {
       'https://www.googleapis.com/auth/drive.metadata.readonly'
     ]
   },
+  [utils.constants.OAUTH_PROVIDER_GOOGLE_CALENDAR]: {
+    authUrl: utils.constants.GOOGLE_OAUTH_AUTH_URL,
+    tokenUrl: utils.constants.GOOGLE_OAUTH_TOKEN_URL,
+    clientIdEnv: 'GOOGLE_CLIENT_ID',
+    clientSecretEnv: 'GOOGLE_CLIENT_SECRET',
+    defaultScopes: [
+      'https://www.googleapis.com/auth/calendar.events',
+      'https://www.googleapis.com/auth/calendar.readonly'
+    ]
+  },
   [utils.constants.OAUTH_PROVIDER_MICROSOFT_OUTLOOK]: {
     authUrl: utils.constants.MICROSOFT_OAUTH_AUTH_URL,
     tokenUrl: utils.constants.MICROSOFT_OAUTH_TOKEN_URL,

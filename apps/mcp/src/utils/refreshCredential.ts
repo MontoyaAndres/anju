@@ -28,6 +28,10 @@ const ENV_NAMES: Record<
     clientIdEnv: 'GOOGLE_CLIENT_ID',
     clientSecretEnv: 'GOOGLE_CLIENT_SECRET'
   },
+  [utils.constants.OAUTH_PROVIDER_GOOGLE_CALENDAR]: {
+    clientIdEnv: 'GOOGLE_CLIENT_ID',
+    clientSecretEnv: 'GOOGLE_CLIENT_SECRET'
+  },
   [utils.constants.OAUTH_PROVIDER_MICROSOFT_OUTLOOK]: {
     clientIdEnv: 'MICROSOFT_CLIENT_ID',
     clientSecretEnv: 'MICROSOFT_CLIENT_SECRET'

@@ -810,6 +810,20 @@ export const Wrapper = styled.div`
       }
     }
 
+    .tools-group-detail-config {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      margin-bottom: 16px;
+      max-width: 440px;
+    }
+
+    .tools-group-detail-config-hint {
+      margin: 0;
+      font-size: ${theme.fonts.sm};
+      color: ${theme.colors.bastille}99;
+    }
+
     .tools-group-detail-list {
       display: flex;
       flex-direction: column;
@@ -929,6 +943,71 @@ export const ModalDialog = styled.div`
           background-color: ${theme.colors.bastille}0A;
           padding: 1px 6px;
           border-radius: 4px;
+        }
+      }
+
+      .tools-config-form {
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+      }
+
+      .tools-config-field-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+      }
+
+      .tools-config-field-label {
+        font-size: ${theme.fonts.sm};
+        font-weight: 600;
+        color: ${theme.colors.bastille};
+        margin: 0;
+        line-height: 1.4;
+      }
+
+      .tools-config-field-help {
+        font-size: ${theme.fonts.xs};
+        color: ${theme.colors.bastille}99;
+        margin: 4px 0 0 0;
+        line-height: 1.4;
+      }
+
+      .tools-config-weekdays {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: 10px;
+      }
+
+      .tools-config-weekday {
+        padding: 6px 12px;
+        border: 1px solid ${theme.colors.alto};
+        border-radius: 6px;
+        background-color: ${theme.colors.white};
+        color: ${theme.colors.bastille};
+        font-size: ${theme.fonts.sm};
+        font-weight: 500;
+        cursor: pointer;
+        transition:
+          background-color 0.15s ease,
+          border-color 0.15s ease,
+          color 0.15s ease;
+
+        &:hover:not(:disabled):not(.active) {
+          border-color: ${theme.colors.bastille}40;
+        }
+
+        &.active {
+          background-color: ${theme.colors.bastille};
+          border-color: ${theme.colors.bastille};
+          color: ${theme.colors.white};
+        }
+
+        &:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
         }
       }
     }

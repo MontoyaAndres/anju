@@ -9,6 +9,7 @@ import { OAuthController } from './oauth';
 import { CatalogController } from './catalog';
 import { ChannelController } from './channel';
 import { GoogleDriveController } from './googleDrive';
+import { GoogleCalendarController } from './googleCalendar';
 import { OneDriveController } from './oneDrive';
 import { WellKnownController } from './wellKnown';
 
@@ -24,6 +25,7 @@ export {
   CatalogController,
   ChannelController,
   GoogleDriveController,
+  GoogleCalendarController,
   OneDriveController,
   WellKnownController
 };

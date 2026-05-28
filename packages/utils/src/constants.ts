@@ -55,6 +55,7 @@ const SOCIAL_PROVIDERS = [SOCIAL_PROVIDER_GOOGLE, SOCIAL_PROVIDER_GITHUB];
 
 const OAUTH_PROVIDER_GOOGLE_GMAIL = 'google-gmail' as 'google-gmail';
 const OAUTH_PROVIDER_GOOGLE_DRIVE = 'google-drive' as 'google-drive';
+const OAUTH_PROVIDER_GOOGLE_CALENDAR = 'google-calendar' as 'google-calendar';
 const OAUTH_PROVIDER_MICROSOFT_OUTLOOK =
   'microsoft-outlook' as 'microsoft-outlook';
 const OAUTH_PROVIDER_ONE_DRIVE = 'microsoft-onedrive' as 'microsoft-onedrive';
@@ -63,6 +64,7 @@ const OAUTH_PROVIDER_SLACK_USER = 'slack-user' as 'slack-user';
 const OAUTH_PROVIDERS = [
   OAUTH_PROVIDER_GOOGLE_GMAIL,
   OAUTH_PROVIDER_GOOGLE_DRIVE,
+  OAUTH_PROVIDER_GOOGLE_CALENDAR,
   OAUTH_PROVIDER_MICROSOFT_OUTLOOK,
   OAUTH_PROVIDER_ONE_DRIVE,
   OAUTH_PROVIDER_SLACK,
@@ -76,6 +78,7 @@ const SLACK_OAUTH_AUTH_URL = 'https://slack.com/oauth/v2/authorize';
 const OAUTH_AUTH_URLS: Record<string, string> = {
   [OAUTH_PROVIDER_GOOGLE_GMAIL]: GOOGLE_OAUTH_AUTH_URL,
   [OAUTH_PROVIDER_GOOGLE_DRIVE]: GOOGLE_OAUTH_AUTH_URL,
+  [OAUTH_PROVIDER_GOOGLE_CALENDAR]: GOOGLE_OAUTH_AUTH_URL,
   [OAUTH_PROVIDER_MICROSOFT_OUTLOOK]: MICROSOFT_OAUTH_AUTH_URL,
   [OAUTH_PROVIDER_ONE_DRIVE]: MICROSOFT_OAUTH_AUTH_URL,
   [OAUTH_PROVIDER_SLACK]: SLACK_OAUTH_AUTH_URL,
@@ -89,11 +92,14 @@ const SLACK_OAUTH_TOKEN_URL = 'https://slack.com/api/oauth.v2.access';
 const OAUTH_TOKEN_URLS: Record<string, string> = {
   [OAUTH_PROVIDER_GOOGLE_GMAIL]: GOOGLE_OAUTH_TOKEN_URL,
   [OAUTH_PROVIDER_GOOGLE_DRIVE]: GOOGLE_OAUTH_TOKEN_URL,
+  [OAUTH_PROVIDER_GOOGLE_CALENDAR]: GOOGLE_OAUTH_TOKEN_URL,
   [OAUTH_PROVIDER_MICROSOFT_OUTLOOK]: MICROSOFT_OAUTH_TOKEN_URL,
   [OAUTH_PROVIDER_ONE_DRIVE]: MICROSOFT_OAUTH_TOKEN_URL,
   [OAUTH_PROVIDER_SLACK]: SLACK_OAUTH_TOKEN_URL,
   [OAUTH_PROVIDER_SLACK_USER]: SLACK_OAUTH_TOKEN_URL
 };
+
+const GOOGLE_CALENDAR_API_BASE = 'https://www.googleapis.com/calendar/v3';
 
 const GOOGLE_DRIVE_API_BASE = 'https://www.googleapis.com/drive/v3';
 const GOOGLE_DRIVE_DEFAULT_PAGE_SIZE = 200;
@@ -569,6 +575,154 @@ const URI_BEARING_RESOURCE_TOOL_KEYS = [
   RESOURCE_TOOL_KEY_SEND_RESOURCE
 ];
 
+const CALENDAR_TOOL_KEY_PREFIX = 'calendar-';
+const CALENDAR_TOOL_KEY_LIST_CALENDARS = 'calendar-list-calendars';
+const CALENDAR_TOOL_KEY_LIST_EVENTS = 'calendar-list-events';
+const CALENDAR_TOOL_KEY_CREATE_EVENT = 'calendar-create-event';
+const CALENDAR_TOOL_KEY_UPDATE_EVENT = 'calendar-update-event';
+const CALENDAR_TOOL_KEY_DELETE_EVENT = 'calendar-delete-event';
+const CALENDAR_TOOL_KEY_FIND_FREE_SLOTS = 'calendar-find-free-slots';
+const CALENDAR_TOOL_KEYS = [
+  CALENDAR_TOOL_KEY_LIST_CALENDARS,
+  CALENDAR_TOOL_KEY_LIST_EVENTS,
+  CALENDAR_TOOL_KEY_CREATE_EVENT,
+  CALENDAR_TOOL_KEY_UPDATE_EVENT,
+  CALENDAR_TOOL_KEY_DELETE_EVENT,
+  CALENDAR_TOOL_KEY_FIND_FREE_SLOTS
+];
+
+// Google Calendar `sendUpdates` query values — who gets emailed on event changes.
+const CALENDAR_SEND_UPDATES_ALL = 'all' as 'all';
+const CALENDAR_SEND_UPDATES_EXTERNAL_ONLY = 'externalOnly' as 'externalOnly';
+const CALENDAR_SEND_UPDATES_NONE = 'none' as 'none';
+const CALENDAR_SEND_UPDATES_VALUES = [
+  CALENDAR_SEND_UPDATES_ALL,
+  CALENDAR_SEND_UPDATES_EXTERNAL_ONLY,
+  CALENDAR_SEND_UPDATES_NONE
+];
+
+// Google Calendar event `visibility`. DEFAULT means "inherit the calendar's
+// default" and is omitted from the request body.
+const CALENDAR_VISIBILITY_DEFAULT = 'default' as 'default';
+const CALENDAR_VISIBILITY_PUBLIC = 'public' as 'public';
+const CALENDAR_VISIBILITY_PRIVATE = 'private' as 'private';
+const CALENDAR_VISIBILITY_VALUES = [
+  CALENDAR_VISIBILITY_DEFAULT,
+  CALENDAR_VISIBILITY_PUBLIC,
+  CALENDAR_VISIBILITY_PRIVATE
+];
+
+const CALENDAR_DEFAULT_CALENDAR_ID = 'primary';
+const CALENDAR_DEFAULT_EVENT_DURATION_MINUTES = 60;
+const CALENDAR_CONFERENCE_TYPE_GOOGLE_MEET = 'hangoutsMeet';
+
+// Declarative per-tool config schema for the calendar tools, rendered as a form
+// in the Tools UI. Keyed by tool key; values are the artifact_tool.config keys
+// each tool reads. Group-level keys (defaultCalendarId / defaultTimeZone /
+// sendUpdates) are edited from the group header, so they are not listed here.
+export type CalendarConfigField =
+  | {
+      key: string;
+      label: string;
+      type: 'number';
+      min?: number;
+      max?: number;
+      help?: string;
+    }
+  | { key: string; label: string; type: 'text'; help?: string }
+  | { key: string; label: string; type: 'boolean'; help?: string }
+  | {
+      key: string;
+      label: string;
+      type: 'select';
+      options: { value: string; label: string }[];
+      help?: string;
+    }
+  | { key: string; label: string; type: 'weekdays'; help?: string };
+
+const CALENDAR_TOOL_FIELDS: Record<string, CalendarConfigField[]> = {
+  [CALENDAR_TOOL_KEY_LIST_EVENTS]: [
+    {
+      key: 'defaultMaxResults',
+      label: 'Default max results',
+      type: 'number',
+      min: 1,
+      max: 50,
+      help: 'Used when a call omits maxResults (1–50).'
+    },
+    {
+      key: 'defaultWindowDays',
+      label: 'Default look-ahead (days)',
+      type: 'number',
+      min: 1,
+      help: 'When no end time is given, list events this many days ahead.'
+    }
+  ],
+  [CALENDAR_TOOL_KEY_CREATE_EVENT]: [
+    {
+      key: 'defaultDurationMinutes',
+      label: 'Default duration (minutes)',
+      type: 'number',
+      min: 1,
+      help: 'Used when an event is created without an end time.'
+    },
+    {
+      key: 'addGoogleMeet',
+      label: 'Add a Google Meet link',
+      type: 'boolean',
+      help: 'Attach a Meet conference to every new event.'
+    },
+    { key: 'defaultLocation', label: 'Default location', type: 'text' },
+    {
+      key: 'defaultVisibility',
+      label: 'Visibility',
+      type: 'select',
+      options: [
+        { value: CALENDAR_VISIBILITY_DEFAULT, label: 'Calendar default' },
+        { value: CALENDAR_VISIBILITY_PUBLIC, label: 'Public' },
+        { value: CALENDAR_VISIBILITY_PRIVATE, label: 'Private' }
+      ]
+    }
+  ],
+  [CALENDAR_TOOL_KEY_FIND_FREE_SLOTS]: [
+    {
+      key: 'workingHoursStart',
+      label: 'Working hours start (0–23)',
+      type: 'number',
+      min: 0,
+      max: 23,
+      help: 'Local hour. Requires a default time zone to take effect.'
+    },
+    {
+      key: 'workingHoursEnd',
+      label: 'Working hours end (1–24)',
+      type: 'number',
+      min: 1,
+      max: 24
+    },
+    { key: 'workingDays', label: 'Working days', type: 'weekdays' },
+    {
+      key: 'defaultDurationMinutes',
+      label: 'Default slot length (minutes)',
+      type: 'number',
+      min: 1
+    },
+    {
+      key: 'bufferMinutes',
+      label: 'Buffer between meetings (minutes)',
+      type: 'number',
+      min: 0
+    },
+    {
+      key: 'minNoticeHours',
+      label: 'Minimum notice (hours)',
+      type: 'number',
+      min: 0
+    },
+    { key: 'maxAdvanceDays', label: 'Max advance (days)', type: 'number', min: 1 }
+  ]
+};
+
 const MCP_REQUEST_METHOD_INITIALIZE = 'initialize' as 'initialize';
 const MCP_REQUEST_METHOD_PING = 'ping' as 'ping';
 const MCP_REQUEST_METHOD_TOOLS_LIST = 'tools/list' as 'tools/list';
@@ -709,6 +863,7 @@ export const constants = {
   SOCIAL_PROVIDERS,
   OAUTH_PROVIDER_GOOGLE_GMAIL,
   OAUTH_PROVIDER_GOOGLE_DRIVE,
+  OAUTH_PROVIDER_GOOGLE_CALENDAR,
   OAUTH_PROVIDER_MICROSOFT_OUTLOOK,
   OAUTH_PROVIDER_ONE_DRIVE,
   OAUTH_PROVIDER_SLACK,
@@ -722,6 +877,7 @@ export const constants = {
   MICROSOFT_OAUTH_TOKEN_URL,
   SLACK_OAUTH_TOKEN_URL,
   OAUTH_TOKEN_URLS,
+  GOOGLE_CALENDAR_API_BASE,
   GOOGLE_DRIVE_API_BASE,
   GOOGLE_DRIVE_DEFAULT_PAGE_SIZE,
   GOOGLE_DRIVE_MAX_FOLDER_PAGES,
@@ -888,6 +1044,26 @@ export const constants = {
   RESOURCE_TOOL_KEY_SEND_RESOURCE,
   RESOURCE_TOOL_KEYS,
   URI_BEARING_RESOURCE_TOOL_KEYS,
+  CALENDAR_TOOL_KEY_PREFIX,
+  CALENDAR_TOOL_KEY_LIST_CALENDARS,
+  CALENDAR_TOOL_KEY_LIST_EVENTS,
+  CALENDAR_TOOL_KEY_CREATE_EVENT,
+  CALENDAR_TOOL_KEY_UPDATE_EVENT,
+  CALENDAR_TOOL_KEY_DELETE_EVENT,
+  CALENDAR_TOOL_KEY_FIND_FREE_SLOTS,
+  CALENDAR_TOOL_KEYS,
+  CALENDAR_SEND_UPDATES_ALL,
+  CALENDAR_SEND_UPDATES_EXTERNAL_ONLY,
+  CALENDAR_SEND_UPDATES_NONE,
+  CALENDAR_SEND_UPDATES_VALUES,
+  CALENDAR_VISIBILITY_DEFAULT,
+  CALENDAR_VISIBILITY_PUBLIC,
+  CALENDAR_VISIBILITY_PRIVATE,
+  CALENDAR_VISIBILITY_VALUES,
+  CALENDAR_DEFAULT_CALENDAR_ID,
+  CALENDAR_DEFAULT_EVENT_DURATION_MINUTES,
+  CALENDAR_CONFERENCE_TYPE_GOOGLE_MEET,
+  CALENDAR_TOOL_FIELDS,
   RESERVED_SLUGS,
   MCP_INTERNAL_HEADER,
   MCP_CHANNEL_ID_HEADER,
