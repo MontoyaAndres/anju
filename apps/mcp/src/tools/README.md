@@ -29,9 +29,9 @@ A tool group's `provider` ties it to an `artifact_credential` row; the MCP serve
 - Refresh is automatic via [`refreshOAuthToken`](../../../../packages/utils/src/oauth.ts); expired refresh tokens flip the credential to `needsReauth`.
 - Tools UI shows **Connect** → `GET /oauth/:provider/authorize` → consent → callback stores the credential.
 
-**API key** (Cal.com — the first; pattern for Tavily/Airtable/etc.):
+**API key** (Cal.com and Tavily; pattern for Airtable/etc.):
 - Add the provider to `API_KEY_PROVIDERS` in [constants.ts](../../../../packages/utils/src/constants.ts). No `providers.ts` entry, no scopes, no refresh.
-- The key is stored as an `artifact_credential` (encrypted `accessToken`, null `refreshToken`/`expiresAt`) via `POST …/artifact/credential` → [`ArtifactController.createCredential`](../../../api/src/controllers/artifact/index.ts). **The key is validated against the vendor before it's persisted** (Cal.com: `validateCalcomApiKey` hits `GET /v2/event-types`); an invalid key is rejected with an `Invalid …` error that surfaces in the UI, and nothing is written.
+- The key is stored as an `artifact_credential` (encrypted `accessToken`, null `refreshToken`/`expiresAt`) via `POST …/artifact/credential` → [`ArtifactController.createCredential`](../../../api/src/controllers/artifact/index.ts). **The key is validated against the vendor before it's persisted** (Cal.com: `validateCalcomApiKey` hits `GET /v2/event-types`; Tavily: `validateTavilyApiKey` runs a minimal 1-result `POST /search`); an invalid key is rejected with an `Invalid …` error that surfaces in the UI, and nothing is written.
 - `refreshCredentialIfNeeded` is a no-op for these (no refresh token), so `credentials[0].accessToken` is the raw key.
 - Tools UI shows **Add API key** (a modal that POSTs the key) instead of Connect; Disconnect/`needsReauth`/connected-state reuse the OAuth plumbing.
 
@@ -80,6 +80,8 @@ Handlers resolve every setting the same way: **`args.<override>` → `config.<de
 | `calcom-list-available-slots` | calcom | `calcom` (API key) | `GET /v2/slots` — open slots for the default event type. |
 | `calcom-create-booking` | calcom | `calcom` (API key) | `POST /v2/bookings` against the default event type; attendee from the conversation. |
 | `calcom-cancel-booking` | calcom | `calcom` (API key) | `POST /v2/bookings/{uid}/cancel`. |
+| `web-search` | web | `tavily` (API key) | `POST /search` — top-N results + synthesized `answer`; `topic=news` with `days` window. |
+| `web-extract` | web | `tavily` (API key) | `POST /extract` — full cleaned page text for known URL(s). |
 
 Baseline pattern to copy when adding a new native provider: [gmail/index.ts](gmail/index.ts).
 
@@ -95,12 +97,9 @@ Both calendar integrations are **shipped end-to-end** (tools + config UI) — se
 
 > **Cal.com** (`calcom`, **API key — no OAuth**). The Tools page shows an **Add API key** modal (the key is validated against Cal.com before it's stored), plus group-level **default event type** (dropdown from `calcom-list-event-types`) and **default time zone**. NL booking flow: the model converts "7am tomorrow" to ISO, then `calcom-list-available-slots` → `calcom-create-booking` against `defaultEventTypeId`; the attendee name/email come from the channel conversation participant.
 
-#### Web Search
-- **Group:** `web` · **Provider:** none
-- **Tool:** `web-search`
-- **API:** Tavily (start here — cleanest LLM-grounded results) or Brave Search
-- **Config:** Org-level API key in env (`TAVILY_API_KEY`), or per-artifact override
-- **Notes:** Closes the RAG gap. Return top-N snippets + URLs as text content so the model cites them.
+Web Search is **shipped end-to-end** (tools + the generic API-key UI):
+
+> **Web Search** (`web`, **Tavily API key — no OAuth**). The Tools page shows an **Add API key** modal (the key is validated against Tavily via a minimal 1-result search before it's stored). Tools: `web-search` (`POST /search` — top-N results + a synthesized `answer`; `topic=news` honors an optional `days` window; `includeDomains`/`excludeDomains` allow/blocklists) and `web-extract` (`POST /extract` — full cleaned text for specific URLs). Per-tool config: `defaultMaxResults`, `defaultSearchDepth`, `defaultTopic`. Closes the RAG gap — results carry URLs so the model can cite them.
 
 ### Tier 2 — Paid
 

@@ -30,7 +30,9 @@ const TOOL_STATUS_COPY: Record<string, string> = {
   'outlook-delete-draft': 'Deleting the draft…',
   'outlook-trash-email': 'Moving the email to trash…',
   'outlook-move-message': 'Moving the email…',
-  'outlook-batch-move-messages': 'Moving the emails…'
+  'outlook-batch-move-messages': 'Moving the emails…',
+  'web-search': 'Searching the web…',
+  'web-extract': 'Reading the page…'
 };
 
 export const getToolStatusMessage = (toolName: string): string | null =>

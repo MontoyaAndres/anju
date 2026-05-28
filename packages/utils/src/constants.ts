@@ -576,20 +576,6 @@ const URI_BEARING_RESOURCE_TOOL_KEYS = [
 ];
 
 const CALENDAR_TOOL_KEY_PREFIX = 'calendar-';
-const CALENDAR_TOOL_KEY_LIST_CALENDARS = 'calendar-list-calendars';
-const CALENDAR_TOOL_KEY_LIST_EVENTS = 'calendar-list-events';
-const CALENDAR_TOOL_KEY_CREATE_EVENT = 'calendar-create-event';
-const CALENDAR_TOOL_KEY_UPDATE_EVENT = 'calendar-update-event';
-const CALENDAR_TOOL_KEY_DELETE_EVENT = 'calendar-delete-event';
-const CALENDAR_TOOL_KEY_FIND_FREE_SLOTS = 'calendar-find-free-slots';
-const CALENDAR_TOOL_KEYS = [
-  CALENDAR_TOOL_KEY_LIST_CALENDARS,
-  CALENDAR_TOOL_KEY_LIST_EVENTS,
-  CALENDAR_TOOL_KEY_CREATE_EVENT,
-  CALENDAR_TOOL_KEY_UPDATE_EVENT,
-  CALENDAR_TOOL_KEY_DELETE_EVENT,
-  CALENDAR_TOOL_KEY_FIND_FREE_SLOTS
-];
 
 // Google Calendar `sendUpdates` query values — who gets emailed on event changes.
 const CALENDAR_SEND_UPDATES_ALL = 'all' as 'all';
@@ -641,7 +627,7 @@ export type CalendarConfigField =
   | { key: string; label: string; type: 'weekdays'; help?: string };
 
 const CALENDAR_TOOL_FIELDS: Record<string, CalendarConfigField[]> = {
-  [CALENDAR_TOOL_KEY_LIST_EVENTS]: [
+  'calendar-list-calendars': [
     {
       key: 'defaultMaxResults',
       label: 'Default max results',
@@ -658,7 +644,7 @@ const CALENDAR_TOOL_FIELDS: Record<string, CalendarConfigField[]> = {
       help: 'When no end time is given, list events this many days ahead.'
     }
   ],
-  [CALENDAR_TOOL_KEY_CREATE_EVENT]: [
+  'calendar-create-event': [
     {
       key: 'defaultDurationMinutes',
       label: 'Default duration (minutes)',
@@ -684,7 +670,7 @@ const CALENDAR_TOOL_FIELDS: Record<string, CalendarConfigField[]> = {
       ]
     }
   ],
-  [CALENDAR_TOOL_KEY_FIND_FREE_SLOTS]: [
+  'calendar-find-free-slots': [
     {
       key: 'workingHoursStart',
       label: 'Working hours start (0–23)',
@@ -719,14 +705,21 @@ const CALENDAR_TOOL_FIELDS: Record<string, CalendarConfigField[]> = {
       type: 'number',
       min: 0
     },
-    { key: 'maxAdvanceDays', label: 'Max advance (days)', type: 'number', min: 1 }
+    {
+      key: 'maxAdvanceDays',
+      label: 'Max advance (days)',
+      type: 'number',
+      min: 1
+    }
   ]
 };
 
 // Cal.com uses a personal API key (no OAuth). The key is stored like any other
 // credential (artifact_credential, provider 'calcom', encrypted accessToken).
 const API_KEY_PROVIDER_CALCOM = 'calcom' as 'calcom';
-const API_KEY_PROVIDERS = [API_KEY_PROVIDER_CALCOM];
+// Tavily web search uses a personal API key (no OAuth), same storage pattern.
+const API_KEY_PROVIDER_TAVILY = 'tavily' as 'tavily';
+const API_KEY_PROVIDERS = [API_KEY_PROVIDER_CALCOM, API_KEY_PROVIDER_TAVILY];
 
 const CALCOM_API_BASE = 'https://api.cal.com/v2';
 // Cal.com pins behavior per endpoint with the `cal-api-version` header.
@@ -735,16 +728,27 @@ const CALCOM_API_VERSION_SLOTS = '2024-09-04';
 const CALCOM_API_VERSION_BOOKINGS = '2026-02-25';
 
 const CALCOM_TOOL_KEY_PREFIX = 'calcom-';
-const CALCOM_TOOL_KEY_LIST_EVENT_TYPES = 'calcom-list-event-types';
-const CALCOM_TOOL_KEY_LIST_AVAILABLE_SLOTS = 'calcom-list-available-slots';
-const CALCOM_TOOL_KEY_CREATE_BOOKING = 'calcom-create-booking';
-const CALCOM_TOOL_KEY_CANCEL_BOOKING = 'calcom-cancel-booking';
-const CALCOM_TOOL_KEYS = [
-  CALCOM_TOOL_KEY_LIST_EVENT_TYPES,
-  CALCOM_TOOL_KEY_LIST_AVAILABLE_SLOTS,
-  CALCOM_TOOL_KEY_CREATE_BOOKING,
-  CALCOM_TOOL_KEY_CANCEL_BOOKING
+
+// Tavily web search. The key is validated against the live API before it is
+// persisted (a minimal 1-result search), then stored as an artifact_credential
+// (provider 'tavily', encrypted accessToken, no refresh token) like Cal.com.
+const TAVILY_API_BASE = 'https://api.tavily.com';
+const TAVILY_SEARCH_DEPTH_BASIC = 'basic' as 'basic';
+const TAVILY_SEARCH_DEPTH_ADVANCED = 'advanced' as 'advanced';
+const TAVILY_SEARCH_DEPTHS = [
+  TAVILY_SEARCH_DEPTH_BASIC,
+  TAVILY_SEARCH_DEPTH_ADVANCED
 ];
+const TAVILY_TOPIC_GENERAL = 'general' as 'general';
+const TAVILY_TOPIC_NEWS = 'news' as 'news';
+const TAVILY_TOPICS = [TAVILY_TOPIC_GENERAL, TAVILY_TOPIC_NEWS];
+const TAVILY_DEFAULT_MAX_RESULTS = 5;
+const TAVILY_MAX_RESULTS_LIMIT = 20;
+
+const WEB_TOOL_KEY_PREFIX = 'web-';
+const WEB_TOOL_KEY_SEARCH = 'web-search';
+const WEB_TOOL_KEY_EXTRACT = 'web-extract';
+const WEB_TOOL_KEYS = [WEB_TOOL_KEY_SEARCH, WEB_TOOL_KEY_EXTRACT];
 
 const MCP_REQUEST_METHOD_INITIALIZE = 'initialize' as 'initialize';
 const MCP_REQUEST_METHOD_PING = 'ping' as 'ping';
@@ -1068,13 +1072,6 @@ export const constants = {
   RESOURCE_TOOL_KEYS,
   URI_BEARING_RESOURCE_TOOL_KEYS,
   CALENDAR_TOOL_KEY_PREFIX,
-  CALENDAR_TOOL_KEY_LIST_CALENDARS,
-  CALENDAR_TOOL_KEY_LIST_EVENTS,
-  CALENDAR_TOOL_KEY_CREATE_EVENT,
-  CALENDAR_TOOL_KEY_UPDATE_EVENT,
-  CALENDAR_TOOL_KEY_DELETE_EVENT,
-  CALENDAR_TOOL_KEY_FIND_FREE_SLOTS,
-  CALENDAR_TOOL_KEYS,
   CALENDAR_SEND_UPDATES_ALL,
   CALENDAR_SEND_UPDATES_EXTERNAL_ONLY,
   CALENDAR_SEND_UPDATES_NONE,
@@ -1088,17 +1085,26 @@ export const constants = {
   CALENDAR_CONFERENCE_TYPE_GOOGLE_MEET,
   CALENDAR_TOOL_FIELDS,
   API_KEY_PROVIDER_CALCOM,
+  API_KEY_PROVIDER_TAVILY,
   API_KEY_PROVIDERS,
   CALCOM_API_BASE,
   CALCOM_API_VERSION_EVENT_TYPES,
   CALCOM_API_VERSION_SLOTS,
   CALCOM_API_VERSION_BOOKINGS,
   CALCOM_TOOL_KEY_PREFIX,
-  CALCOM_TOOL_KEY_LIST_EVENT_TYPES,
-  CALCOM_TOOL_KEY_LIST_AVAILABLE_SLOTS,
-  CALCOM_TOOL_KEY_CREATE_BOOKING,
-  CALCOM_TOOL_KEY_CANCEL_BOOKING,
-  CALCOM_TOOL_KEYS,
+  TAVILY_API_BASE,
+  TAVILY_SEARCH_DEPTH_BASIC,
+  TAVILY_SEARCH_DEPTH_ADVANCED,
+  TAVILY_SEARCH_DEPTHS,
+  TAVILY_TOPIC_GENERAL,
+  TAVILY_TOPIC_NEWS,
+  TAVILY_TOPICS,
+  TAVILY_DEFAULT_MAX_RESULTS,
+  TAVILY_MAX_RESULTS_LIMIT,
+  WEB_TOOL_KEY_PREFIX,
+  WEB_TOOL_KEY_SEARCH,
+  WEB_TOOL_KEY_EXTRACT,
+  WEB_TOOL_KEYS,
   RESERVED_SLUGS,
   MCP_INTERNAL_HEADER,
   MCP_CHANNEL_ID_HEADER,

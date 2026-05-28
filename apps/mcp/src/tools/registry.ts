@@ -66,6 +66,7 @@ import {
   sendResource,
   searchResources
 } from './resources';
+import { webSearch, webExtract } from './web';
 
 // types
 import { ToolDefinition } from './types';
@@ -126,5 +127,7 @@ export const toolRegistry = new Map<string, ToolDefinition>([
   ['calcom-list-event-types', calcomListEventTypes],
   ['calcom-list-available-slots', calcomListAvailableSlots],
   ['calcom-create-booking', calcomCreateBooking],
-  ['calcom-cancel-booking', calcomCancelBooking]
+  ['calcom-cancel-booking', calcomCancelBooking],
+  ['web-search', webSearch],
+  ['web-extract', webExtract]
 ]);

@@ -44,6 +44,7 @@ import {
   listCalcomEventTypes,
   validateCalcomApiKey
 } from './calcom';
+import { validateTavilyApiKey } from './tavily';
 
 export {
   createAuth,
@@ -82,7 +83,8 @@ export {
   listCalendars,
   getCalcomApiKey,
   listCalcomEventTypes,
-  validateCalcomApiKey
+  validateCalcomApiKey,
+  validateTavilyApiKey
 };
 
 export type { McpClientHandle } from './mcpClient';

@@ -6,7 +6,8 @@ import { db } from '@anju/db';
 import {
   enqueueIndex,
   enqueueCrawlDiscover,
-  validateCalcomApiKey
+  validateCalcomApiKey,
+  validateTavilyApiKey
 } from '../../utils';
 
 // types
@@ -1176,6 +1177,14 @@ const createCredential = async (c: Context<AppEnv>) => {
     if (!valid) {
       throw new Error(
         'Invalid Cal.com API key (or Cal.com could not be reached). Double-check the key and try again.'
+      );
+    }
+  }
+  if (currentValues.provider === utils.constants.API_KEY_PROVIDER_TAVILY) {
+    const valid = await validateTavilyApiKey(currentValues.apiKey);
+    if (!valid) {
+      throw new Error(
+        'Invalid Tavily API key (or Tavily could not be reached). Double-check the key and try again.'
       );
     }
   }
