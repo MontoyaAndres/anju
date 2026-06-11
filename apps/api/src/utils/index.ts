@@ -11,6 +11,7 @@ import {
 } from './embedding';
 import { markdownToTelegramHtml } from './telegramFormat';
 import { markdownToSlackMrkdwn } from './slackFormat';
+import { markdownToDiscord } from './discordFormat';
 import {
   enqueueIndex,
   enqueueCrawlDiscover,
@@ -58,6 +59,10 @@ import {
   registerTelegramBotCommands,
   syncTelegramCommandsForArtifact
 } from './telegramCommands';
+import {
+  registerDiscordCommands,
+  syncDiscordCommandsForArtifact
+} from './discordCommands';
 
 export {
   createAuth,
@@ -71,6 +76,7 @@ export {
   reindexResourceChunks,
   markdownToTelegramHtml,
   markdownToSlackMrkdwn,
+  markdownToDiscord,
   enqueueIndex,
   enqueueCrawlDiscover,
   enqueueGdriveDiscover,
@@ -106,7 +112,9 @@ export {
   resolveMcpProxyOauthSecret,
   readStoredMcpOauth,
   registerTelegramBotCommands,
-  syncTelegramCommandsForArtifact
+  syncTelegramCommandsForArtifact,
+  registerDiscordCommands,
+  syncDiscordCommandsForArtifact
 };
 
 export type { McpClientHandle } from './mcpClient';

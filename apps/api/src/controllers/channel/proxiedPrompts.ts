@@ -81,3 +81,28 @@ export const loadProxiedPrompts = async (
   }
   return out;
 };
+
+// The full set of prompts exposed as bot slash commands for an artifact:
+// artifact prompts plus proxied (mcp-proxy) prompts, in the `{ title,
+// description }` shape the command-registration helpers expect. Shared by every
+// platform that publishes a command menu (Telegram, Discord) and by the
+// post-edit command resync, so the menu is built one way everywhere.
+export const loadCommandPrompts = async (
+  dbInstance: ReturnType<typeof db.create>,
+  artifactId: string
+): Promise<Array<{ title: string; description: string | null }>> => {
+  const prompts = await dbInstance
+    .select({
+      title: db.schema.artifactPrompt.title,
+      description: db.schema.artifactPrompt.description
+    })
+    .from(db.schema.artifactPrompt)
+    .where(eq(db.schema.artifactPrompt.artifactId, artifactId));
+
+  const proxiedPrompts = await loadProxiedPrompts(dbInstance, artifactId);
+
+  return [
+    ...prompts,
+    ...proxiedPrompts.map(p => ({ title: p.title, description: p.description }))
+  ];
+};

@@ -589,6 +589,53 @@ const SLACK_REQUIRED_SCOPES = [
 const SLACK_RECOMMENDED_SCOPES = ['users:read', 'channels:read', 'groups:read'];
 const SLACK_BOT_EVENTS = ['app_mention', 'message.im'];
 
+// Discord. Free-form messages / @mentions / DMs arrive over a persistent Gateway
+// WebSocket (held in a Durable Object); native slash commands arrive over a
+// separate Ed25519-signed Interactions HTTP endpoint. The bot identity token,
+// the application id (for command registration + interaction follow-ups), and
+// the application public key (for verifying interactions) are all stored as the
+// channel's credentials.
+const DISCORD_API_BASE = 'https://discord.com/api/v10';
+// Gateway connection query (JSON encoding, API v10). The actual socket URL is
+// discovered from GET /gateway/bot (or the resume_gateway_url after READY).
+const DISCORD_GATEWAY_QUERY = '?v=10&encoding=json';
+const DISCORD_MESSAGE_LIMIT = 2000;
+// Default bot upload ceiling for a server without boosts. Larger files should be
+// shared as links, not uploaded; this also keeps the container's memory sane.
+const DISCORD_MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
+// Discord renders at most 5 buttons per action row — source links become a
+// single row of link buttons (mirroring Telegram's inline keyboard).
+const DISCORD_MAX_SOURCE_BUTTONS = 5;
+// Gateway intents the bot identifies with: GUILDS (1<<0) + GUILD_MESSAGES
+// (1<<9) + DIRECT_MESSAGES (1<<12) + MESSAGE_CONTENT (1<<15, privileged — must
+// be enabled in the Developer Portal to read free-form text in servers).
+const DISCORD_INTENTS = (1 << 0) | (1 << 9) | (1 << 12) | (1 << 15);
+// Interactions are signed with Ed25519 over `{timestamp}{rawBody}`; verify
+// against the application public key.
+const DISCORD_SIGNATURE_HEADER = 'x-signature-ed25519';
+const DISCORD_TIMESTAMP_HEADER = 'x-signature-timestamp';
+// Interaction request types and response types (Discord API).
+const DISCORD_INTERACTION_TYPE_PING = 1;
+const DISCORD_INTERACTION_TYPE_APPLICATION_COMMAND = 2;
+const DISCORD_INTERACTION_RESPONSE_PONG = 1;
+const DISCORD_INTERACTION_RESPONSE_DEFERRED = 5;
+// Channel types we map to conversation scopes: DM (1) / group DM (3) = private;
+// everything else (guild text channels, threads) = channel.
+const DISCORD_CHANNEL_TYPE_DM = 1;
+const DISCORD_CHANNEL_TYPE_GROUP_DM = 3;
+// Discord Gateway opcodes (the persistent WebSocket protocol the bot speaks to
+// receive messages). See https://discord.com/developers/docs/topics/gateway.
+const DISCORD_GATEWAY_OP_DISPATCH = 0;
+const DISCORD_GATEWAY_OP_HEARTBEAT = 1;
+const DISCORD_GATEWAY_OP_IDENTIFY = 2;
+const DISCORD_GATEWAY_OP_RESUME = 6;
+const DISCORD_GATEWAY_OP_RECONNECT = 7;
+const DISCORD_GATEWAY_OP_INVALID_SESSION = 9;
+const DISCORD_GATEWAY_OP_HELLO = 10;
+const DISCORD_GATEWAY_OP_HEARTBEAT_ACK = 11;
+// Default heartbeat cadence (ms) until HELLO supplies the real interval.
+const DISCORD_GATEWAY_DEFAULT_HEARTBEAT_MS = 41250;
+
 const EMBEDDING_MODEL = 'gemini-embedding-001';
 const EMBEDDING_DIMENSIONS = 3072;
 const CHUNK_TARGET_CHARS = 2000;
@@ -1249,6 +1296,29 @@ export const constants = {
   SLACK_REQUIRED_SCOPES,
   SLACK_RECOMMENDED_SCOPES,
   SLACK_BOT_EVENTS,
+  DISCORD_API_BASE,
+  DISCORD_GATEWAY_QUERY,
+  DISCORD_MESSAGE_LIMIT,
+  DISCORD_MAX_UPLOAD_BYTES,
+  DISCORD_MAX_SOURCE_BUTTONS,
+  DISCORD_INTENTS,
+  DISCORD_SIGNATURE_HEADER,
+  DISCORD_TIMESTAMP_HEADER,
+  DISCORD_INTERACTION_TYPE_PING,
+  DISCORD_INTERACTION_TYPE_APPLICATION_COMMAND,
+  DISCORD_INTERACTION_RESPONSE_PONG,
+  DISCORD_INTERACTION_RESPONSE_DEFERRED,
+  DISCORD_CHANNEL_TYPE_DM,
+  DISCORD_CHANNEL_TYPE_GROUP_DM,
+  DISCORD_GATEWAY_OP_DISPATCH,
+  DISCORD_GATEWAY_OP_HEARTBEAT,
+  DISCORD_GATEWAY_OP_IDENTIFY,
+  DISCORD_GATEWAY_OP_RESUME,
+  DISCORD_GATEWAY_OP_RECONNECT,
+  DISCORD_GATEWAY_OP_INVALID_SESSION,
+  DISCORD_GATEWAY_OP_HELLO,
+  DISCORD_GATEWAY_OP_HEARTBEAT_ACK,
+  DISCORD_GATEWAY_DEFAULT_HEARTBEAT_MS,
   EMBEDDING_MODEL,
   EMBEDDING_DIMENSIONS,
   CHUNK_TARGET_CHARS,

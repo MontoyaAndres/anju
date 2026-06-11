@@ -1,8 +1,13 @@
-- Create outlook, slack tool and search for the best ones out there (Inspiration https://www.chatbase.co/)
+Create a tool "build in" to list prompts and commands but they are prompts
+Check why the mcp proxy prompts cant be executed
+Work on whatsapp integration
+Make send message to channel and receive faster
+
 - Home view per project has logs, how the user uses the mcp and channels how interactive it is based on everything it has, also shows the mcp link
 - Create landing (inspiration https://postiz.com/ I like how the show the images of how to use the product, it is more visual)
 - Create docs
   https://styles.refero.design/
+  https://www.chatbase.co/
 - Make an introdution view like chatbase does
 - implement evals in the code and for general use in mcps for users promptfoo
 

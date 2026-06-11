@@ -6,24 +6,6 @@ import { utils as serverUtils } from './utils/index.js';
 import { connectRemoteMcpClient } from './remoteMcpClient.js';
 import { handleUploadFile } from './slackSend.js';
 
-// Name a forwarded resource file: prefer the uri's last path segment, then give
-// it an extension from its mime type so the file shows a sensible name in Slack.
-const filenameForResource = (uri: string, mimeType: string): string => {
-  let base = uri;
-  try {
-    const segment = new URL(uri).pathname.split('/').filter(Boolean).pop();
-    if (segment) base = decodeURIComponent(segment);
-  } catch {
-    base = uri.split(/[?#]/)[0].split('/').filter(Boolean).pop() || uri;
-  }
-  base = utils.sanitizeFilename(base).slice(0, 80);
-  if (/\.[a-z0-9]+$/i.test(base)) return base;
-  const ext =
-    utils.constants.EXTENSION_BY_MIME[mimeType] ||
-    (mimeType.startsWith('text/') ? 'txt' : 'bin');
-  return `${base}.${ext}`;
-};
-
 // Read a PROXIED (remote MCP) resource and deliver it to Slack as a file —
 // entirely inside the container, so the bytes never transit the 128 MiB worker.
 // The worker hands over only the connection details + resolved auth header as
@@ -122,7 +104,7 @@ export const handleSlackSendRemoteResource = async (
     };
 
     const result = await handleUploadFile(uploadRequest, {
-      name: filenameForResource(remote.uri, mimeType),
+      name: serverUtils.filenameForResource(remote.uri, mimeType),
       contentType: mimeType,
       bytes
     });

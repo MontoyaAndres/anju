@@ -9,6 +9,8 @@ import { handleSlackSend } from './slackSend.js';
 import { handleSlackSendRemoteResource } from './slackSendRemoteResource.js';
 import { handleTelegramSend } from './telegramSend.js';
 import { handleTelegramSendRemoteResource } from './telegramSendRemoteResource.js';
+import { handleDiscordSend } from './discordSend.js';
+import { handleDiscordSendRemoteResource } from './discordSendRemoteResource.js';
 import { crawlDiscover, crawlPage } from './crawl.js';
 import { utils as serverUtils } from './utils/index.js';
 
@@ -132,6 +134,16 @@ const server = http.createServer(async (req, res) => {
 
     if (req.method === 'POST' && req.url === '/telegram/send-remote-resource') {
       await handleTelegramSendRemoteResource(req, res);
+      return;
+    }
+
+    if (req.method === 'POST' && req.url === '/discord/send') {
+      await handleDiscordSend(req, res);
+      return;
+    }
+
+    if (req.method === 'POST' && req.url === '/discord/send-remote-resource') {
+      await handleDiscordSendRemoteResource(req, res);
       return;
     }
 

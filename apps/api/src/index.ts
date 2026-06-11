@@ -455,6 +455,9 @@ app
   // Channel webhook (public, signed by platform secret)
   .post('/channel/:channelId/webhook/:platform', ChannelController.webhook)
 
+  // Internal: Discord Gateway DO → worker ingest (guarded by internal secret)
+  .post('/channel/:channelId/ingest/discord', ChannelController.discordIngest)
+
   // OAuth controller
   .get('/oauth/mcp-proxy/callback', OAuthController.mcpProxyCallback)
   .get(
@@ -465,6 +468,7 @@ app
   .get('/oauth/:provider/callback', OAuthController.callback);
 
 export { ResourceHandler } from '@anju/containers';
+export { DiscordGatewayDO } from './durable-objects/discordGateway';
 
 export default {
   fetch: app.fetch,

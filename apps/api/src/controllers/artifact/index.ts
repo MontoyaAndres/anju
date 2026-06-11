@@ -13,7 +13,8 @@ import {
   beginMcpProxyOauth,
   resolveMcpProxyOauthSecret,
   readStoredMcpOauth,
-  syncTelegramCommandsForArtifact
+  syncTelegramCommandsForArtifact,
+  syncDiscordCommandsForArtifact
 } from '../../utils';
 
 // types
@@ -277,6 +278,7 @@ const createPrompt = async (c: Context<AppEnv>) => {
 
   // A new prompt is a new slash command; refresh the Telegram command menu.
   await syncTelegramCommandsForArtifact(c, dbInstance, result.artifactId);
+  await syncDiscordCommandsForArtifact(c, dbInstance, result.artifactId);
 
   return c.json(result);
 };
@@ -346,6 +348,7 @@ const updatePrompt = async (c: Context<AppEnv>) => {
 
   // Title/description may have changed; refresh the Telegram command menu.
   await syncTelegramCommandsForArtifact(c, dbInstance, result.artifactId);
+  await syncDiscordCommandsForArtifact(c, dbInstance, result.artifactId);
 
   return c.json(result);
 };
@@ -435,6 +438,7 @@ const removePrompt = async (c: Context<AppEnv>) => {
 
   // The removed prompt's slash command should drop out of the Telegram menu.
   await syncTelegramCommandsForArtifact(c, dbInstance, artifactId);
+  await syncDiscordCommandsForArtifact(c, dbInstance, artifactId);
 
   return c.json(currentValues);
 };
@@ -1046,6 +1050,7 @@ const createTool = async (c: Context<AppEnv>) => {
   // the Telegram menu. Other tool kinds don't affect prompts.
   if (proxyData) {
     await syncTelegramCommandsForArtifact(c, dbInstance, result.artifactId);
+    await syncDiscordCommandsForArtifact(c, dbInstance, result.artifactId);
   }
 
   return c.json(result);
@@ -1191,6 +1196,7 @@ const updateTool = async (c: Context<AppEnv>) => {
   // the Telegram menu so slash-command autocomplete tracks the new set.
   if (proxyData) {
     await syncTelegramCommandsForArtifact(c, dbInstance, result.artifactId);
+    await syncDiscordCommandsForArtifact(c, dbInstance, result.artifactId);
   }
 
   return c.json(result);
@@ -1600,6 +1606,7 @@ const removeTool = async (c: Context<AppEnv>) => {
   // Removing an mcp-proxy install drops its proxied prompts; refresh the menu.
   if (wasProxy) {
     await syncTelegramCommandsForArtifact(c, dbInstance, artifactId);
+    await syncDiscordCommandsForArtifact(c, dbInstance, artifactId);
   }
 
   return c.json(currentValues);

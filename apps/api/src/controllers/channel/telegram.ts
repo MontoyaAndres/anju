@@ -12,7 +12,8 @@ import { getResourceHandler } from '@anju/containers';
 
 import { runChannelTurn } from './runner';
 import { resolveSlashPrompt } from './slashPrompt';
-import { markdownToTelegramHtml, createAuth } from '../../utils';
+import { startChannelLink } from './link';
+import { markdownToTelegramHtml } from '../../utils';
 
 import type { ParsedSlashCommand } from './slashPrompt';
 
@@ -131,7 +132,12 @@ export const handleTelegramWebhook = async (c: Context<AppEnv>) => {
     const isPrivateChat =
       message.chat.type === utils.constants.CHANNEL_CONVERSATION_SCOPE_PRIVATE;
     const replyText = isPrivateChat
-      ? await startTelegramLink(c, message, displayName, channelRow.id)
+      ? await startChannelLink(c, {
+          provider: utils.constants.CHANNEL_PLATFORM_TELEGRAM,
+          externalId: String(message.from.id),
+          channelId: channelRow.id,
+          displayName: displayName || message.from.username || ''
+        })
       : 'For your security, account linking only works in a private chat — open a direct message with me and send /link there.';
     await sendTelegramMessage(
       credentials.botToken,
@@ -442,73 +448,6 @@ const parseSlashCommand = (
   return { name: name.toLowerCase(), trailingText };
 };
 
-interface ExternalLinkApi {
-  startExternalLink: (args: {
-    body: {
-      provider: string;
-      externalId: string;
-      channelId: string;
-      displayName?: string;
-      client_id?: string;
-      client_secret?: string;
-    };
-  }) => Promise<{ code: string }>;
-}
-
-// `/link` lets a Telegram user connect their account to an Anju user for THIS
-// specific channel. It calls the bot-client link endpoint in-process (a Worker
-// self-fetch to its own hostname times out) and replies with a code to redeem
-// on the web.
-const startTelegramLink = async (
-  c: Context<AppEnv>,
-  message: TelegramIncomingMessage,
-  displayName: string,
-  channelId: string
-): Promise<string> => {
-  const webUrl = utils.getEnv(c, 'NEXT_PUBLIC_WEB_URL');
-  const clientId = utils.getEnv(c, 'BOT_OAUTH_CLIENT_ID');
-  const clientSecret = utils.getEnv(c, 'BOT_OAUTH_CLIENT_SECRET');
-  if (!webUrl || !clientId || !clientSecret) {
-    return 'Account linking is not available right now.';
-  }
-
-  try {
-    const auth = createAuth(c);
-
-    const api = auth.api as unknown as ExternalLinkApi;
-    const result = await api.startExternalLink({
-      body: {
-        provider: utils.constants.CHANNEL_PLATFORM_TELEGRAM,
-        externalId: String(message.from.id),
-        channelId,
-        displayName: displayName || message.from.username || undefined,
-        client_id: clientId,
-        client_secret: clientSecret
-      }
-    });
-
-    return [
-      'Link this Telegram account to your Anju account.',
-      '',
-      `Open ${webUrl}/link?code=${result.code}`,
-      `(or go to ${webUrl}/link and enter the code ${result.code})`,
-      '',
-      'The code expires in 10 minutes.'
-    ].join('\n');
-  } catch (error) {
-    await dbUtils.handleError(c, error, {
-      service: utils.constants.SERVICE_NAME_API,
-      metadata: {
-        source: 'startTelegramLink',
-        platform: utils.constants.CHANNEL_PLATFORM_TELEGRAM,
-        chatId: message.chat.id,
-        messageId: message.message_id,
-        externalId: String(message.from.id)
-      }
-    });
-    return 'Could not start account linking. Please try again later.';
-  }
-};
 
 const messageAddressesBot = (
   message: TelegramIncomingMessage,

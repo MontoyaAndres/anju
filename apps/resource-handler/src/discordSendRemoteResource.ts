@@ -1,24 +1,24 @@
 import http from 'node:http';
 import { utils } from '@anju/utils';
-import type { TelegramSendRemoteResourceRequest } from '@anju/utils';
+import type { DiscordSendRemoteResourceRequest } from '@anju/utils';
 
 import { utils as serverUtils } from './utils/index.js';
 import { connectRemoteMcpClient } from './remoteMcpClient.js';
-import { sendBlobToTelegram } from './telegramSend.js';
+import { sendBlobToDiscord } from './discordSend.js';
 
-// Read a PROXIED (remote MCP) resource and deliver it to Telegram as a file —
+// Read a PROXIED (remote MCP) resource and deliver it to Discord as a file —
 // entirely inside the container, so the bytes never transit the 128 MiB worker.
 // The worker hands over only the connection details + resolved auth header as
 // JSON; this connects to the remote MCP server, reads the resource, decodes its
-// blob/text, and forwards it via the shared Telegram send.
-export const handleTelegramSendRemoteResource = async (
+// blob/text, and forwards it via the shared Discord send.
+export const handleDiscordSendRemoteResource = async (
   req: http.IncomingMessage,
   res: http.ServerResponse
 ): Promise<void> => {
-  let body: TelegramSendRemoteResourceRequest;
+  let body: DiscordSendRemoteResourceRequest;
   try {
     body =
-      await serverUtils.parseJsonBody<TelegramSendRemoteResourceRequest>(req);
+      await serverUtils.parseJsonBody<DiscordSendRemoteResourceRequest>(req);
   } catch (err) {
     serverUtils.sendJson(res, 400, {
       error: `invalid JSON body: ${(err as Error).message}`
@@ -26,16 +26,14 @@ export const handleTelegramSendRemoteResource = async (
     return;
   }
 
-  const telegram = body?.telegram;
+  const discord = body?.discord;
   const remote = body?.remote;
-  if (!telegram?.botToken) {
-    serverUtils.sendJson(res, 401, { error: 'missing botToken in telegram' });
+  if (!discord?.botToken) {
+    serverUtils.sendJson(res, 401, { error: 'missing botToken in discord' });
     return;
   }
-  if (typeof telegram.chatId !== 'number') {
-    serverUtils.sendJson(res, 400, {
-      error: 'missing or invalid chatId in telegram'
-    });
+  if (!discord.channelId) {
+    serverUtils.sendJson(res, 400, { error: 'missing channelId in discord' });
     return;
   }
   if (!remote?.url || !remote?.uri) {
@@ -99,8 +97,8 @@ export const handleTelegramSendRemoteResource = async (
       return;
     }
 
-    const result = await sendBlobToTelegram(
-      telegram,
+    const result = await sendBlobToDiscord(
+      discord,
       blob,
       serverUtils.filenameForResource(remote.uri, mimeType)
     );

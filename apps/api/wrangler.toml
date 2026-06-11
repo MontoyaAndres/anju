@@ -32,6 +32,9 @@ NEXT_PUBLIC_DOMAIN = "vocesqueabrazan.com"
 [[env.development.services]]
 binding = "MCP"
 service = "anju-mcp-development"
+[[env.development.services]]
+binding = "API"
+service = "anju-api-development"
 [[env.development.hyperdrive]]
 binding = "HYPERDRIVE"
 id = "20b38b96e12a4f45ac111fb7d8161edf"
@@ -119,9 +122,15 @@ instance_type = "standard-1"
 [[env.development.durable_objects.bindings]]
 name = "RESOURCE_HANDLER"
 class_name = "ResourceHandler"
+[[env.development.durable_objects.bindings]]
+name = "DISCORD_GATEWAY"
+class_name = "DiscordGatewayDO"
 [[env.development.migrations]]
 tag = "v1"
 new_sqlite_classes = ["ResourceHandler"]
+[[env.development.migrations]]
+tag = "v2"
+new_sqlite_classes = ["DiscordGatewayDO"]
 
 [env.production]
 name = "anju-api-production"
@@ -142,6 +151,9 @@ NEXT_PUBLIC_DOMAIN = "anju.ai"
 [[env.production.services]]
 binding = "MCP"
 service = "anju-mcp-production"
+[[env.production.services]]
+binding = "API"
+service = "anju-api-production"
 [[env.production.hyperdrive]]
 binding = "HYPERDRIVE"
 id = "<YOUR_HYPERDRIVE_ID>"
@@ -229,6 +241,12 @@ instance_type = "standard-1"
 [[env.production.durable_objects.bindings]]
 name = "RESOURCE_HANDLER"
 class_name = "ResourceHandler"
+[[env.production.durable_objects.bindings]]
+name = "DISCORD_GATEWAY"
+class_name = "DiscordGatewayDO"
 [[env.production.migrations]]
 tag = "v1"
 new_sqlite_classes = ["ResourceHandler"]
+[[env.production.migrations]]
+tag = "v2"
+new_sqlite_classes = ["DiscordGatewayDO"]

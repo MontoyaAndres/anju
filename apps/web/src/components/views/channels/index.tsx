@@ -43,6 +43,14 @@ interface SlackBotInfo {
   url?: string;
 }
 
+interface DiscordBotInfo {
+  id: string;
+  username?: string;
+  globalName?: string | null;
+  discriminator?: string;
+  applicationId?: string;
+}
+
 interface Channel {
   id: string;
   platform: string;
@@ -51,6 +59,7 @@ interface Channel {
   metadata: {
     telegram?: { bot?: BotInfo };
     slack?: { bot?: SlackBotInfo };
+    discord?: { bot?: DiscordBotInfo };
   } | null;
   conversationCount: number;
   messageCount: number;
@@ -152,7 +161,7 @@ const PLATFORMS = [
     id: utils.constants.CHANNEL_PLATFORM_DISCORD,
     label: 'Discord',
     Icon: UI.Icons.Discord,
-    enabled: false
+    enabled: true
   }
 ];
 
@@ -165,6 +174,9 @@ const platformIcon = (platform: string) => {
 
   if (platform === utils.constants.CHANNEL_PLATFORM_WHATSAPP)
     return <WhatsApp />;
+
+  if (platform === utils.constants.CHANNEL_PLATFORM_DISCORD)
+    return <UI.Icons.Discord width={20} height={20} />;
 
   return <ForumOutlined />;
 };
@@ -179,6 +191,11 @@ const channelLabel = (channel: Channel): string => {
     const bot = channel.metadata?.slack?.bot;
     if (bot?.username) return `@${bot.username}`;
     if (bot?.teamName) return bot.teamName;
+  }
+  if (channel.platform === utils.constants.CHANNEL_PLATFORM_DISCORD) {
+    const bot = channel.metadata?.discord?.bot;
+    if (bot?.username) return `@${bot.username}`;
+    if (bot?.globalName) return bot.globalName;
   }
   return channel.platform;
 };
@@ -330,6 +347,34 @@ const SlackRequirements = () => (
   </div>
 );
 
+const DiscordRequirements = () => (
+  <div className="slack-requirements">
+    <div className="slack-requirements-group">
+      <p className="slack-requirements-label">Privileged Gateway Intents</p>
+      <div className="slack-scope-chips">
+        <code className="slack-scope-chip">MESSAGE CONTENT INTENT</code>
+        <code className="slack-scope-chip">SERVER MEMBERS INTENT</code>
+      </div>
+      <p className="slack-requirements-hint">
+        Enable these under Bot → Privileged Gateway Intents in the Discord
+        Developer Portal. Without MESSAGE CONTENT the bot can only read messages
+        in DMs or when it&apos;s @mentioned.
+      </p>
+    </div>
+    <div className="slack-requirements-group">
+      <p className="slack-requirements-label">Invite scopes</p>
+      <div className="slack-scope-chips">
+        <code className="slack-scope-chip">bot</code>
+        <code className="slack-scope-chip">applications.commands</code>
+      </div>
+      <p className="slack-requirements-hint">
+        Invite the bot with the Send Messages, Read Message History, and Attach
+        Files permissions so it can reply and share files.
+      </p>
+    </div>
+  </div>
+);
+
 export const Channels = () => {
   const router = useRouter();
   const snackbar = UI.Alert.useSnackbar();
@@ -354,6 +399,8 @@ export const Channels = () => {
     platform: utils.constants.CHANNEL_PLATFORM_TELEGRAM as string,
     botToken: '',
     signingSecret: '',
+    applicationId: '',
+    publicKey: '',
     llmId: utils.constants.LLM_SYSTEM_DEFAULT as string
   });
   const [llms, setLlms] = useState<OrganizationLlm[]>([]);
@@ -473,6 +520,8 @@ export const Channels = () => {
       platform: utils.constants.CHANNEL_PLATFORM_TELEGRAM,
       botToken: '',
       signingSecret: '',
+      applicationId: '',
+      publicKey: '',
       llmId: utils.constants.LLM_SYSTEM_DEFAULT
     });
     setErrors({});
@@ -538,6 +587,8 @@ export const Channels = () => {
 
     const isSlack =
       createValues.platform === utils.constants.CHANNEL_PLATFORM_SLACK;
+    const isDiscord =
+      createValues.platform === utils.constants.CHANNEL_PLATFORM_DISCORD;
 
     const nextErrors: Record<string, string> = {};
     if (!createValues.botToken.trim()) {
@@ -545,6 +596,12 @@ export const Channels = () => {
     }
     if (isSlack && !createValues.signingSecret.trim()) {
       nextErrors.signingSecret = 'Signing secret is required';
+    }
+    if (isDiscord && !createValues.applicationId.trim()) {
+      nextErrors.applicationId = 'Application ID is required';
+    }
+    if (isDiscord && !createValues.publicKey.trim()) {
+      nextErrors.publicKey = 'Public key is required';
     }
     if (Object.keys(nextErrors).length > 0) {
       setErrors(nextErrors);
@@ -556,6 +613,10 @@ export const Channels = () => {
     };
     if (isSlack) {
       credentials.signingSecret = createValues.signingSecret.trim();
+    }
+    if (isDiscord) {
+      credentials.applicationId = createValues.applicationId.trim();
+      credentials.publicKey = createValues.publicKey.trim();
     }
 
     const body: Record<string, unknown> = {
@@ -984,6 +1045,94 @@ export const Channels = () => {
                   </>
                 )}
 
+                {createValues.platform ===
+                  utils.constants.CHANNEL_PLATFORM_DISCORD && (
+                  <>
+                    <UI.Input
+                      label="Bot token"
+                      name="botToken"
+                      type="password"
+                      placeholder="Bot token from the Bot tab"
+                      value={createValues.botToken}
+                      disabled={submitting}
+                      error={!!errors.botToken}
+                      helperText={
+                        errors.botToken ||
+                        'Discord Developer Portal → your application → Bot → Reset Token.'
+                      }
+                      onChange={e => {
+                        setCreateValues(prev => ({
+                          ...prev,
+                          botToken: e.target.value
+                        }));
+                        if (errors.botToken) {
+                          setErrors(prev => {
+                            const n = { ...prev };
+                            delete n.botToken;
+                            return n;
+                          });
+                        }
+                      }}
+                    />
+                    <UI.Input
+                      label="Application ID"
+                      name="applicationId"
+                      placeholder="Application (client) ID"
+                      value={createValues.applicationId}
+                      disabled={submitting}
+                      error={!!errors.applicationId}
+                      helperText={
+                        errors.applicationId ||
+                        'General Information → Application ID. Used to register slash commands.'
+                      }
+                      onChange={e => {
+                        setCreateValues(prev => ({
+                          ...prev,
+                          applicationId: e.target.value
+                        }));
+                        if (errors.applicationId) {
+                          setErrors(prev => {
+                            const n = { ...prev };
+                            delete n.applicationId;
+                            return n;
+                          });
+                        }
+                      }}
+                    />
+                    <UI.Input
+                      label="Public key"
+                      name="publicKey"
+                      placeholder="Application public key"
+                      value={createValues.publicKey}
+                      disabled={submitting}
+                      error={!!errors.publicKey}
+                      helperText={
+                        errors.publicKey ||
+                        'General Information → Public Key. Used to verify incoming interactions.'
+                      }
+                      onChange={e => {
+                        setCreateValues(prev => ({
+                          ...prev,
+                          publicKey: e.target.value
+                        }));
+                        if (errors.publicKey) {
+                          setErrors(prev => {
+                            const n = { ...prev };
+                            delete n.publicKey;
+                            return n;
+                          });
+                        }
+                      }}
+                    />
+                    <DiscordRequirements />
+                    <p className="panel-toggle-hint">
+                      After connecting, you&apos;ll get an Interactions Endpoint
+                      URL to paste into your application&apos;s General
+                      Information page — that&apos;s what powers slash commands.
+                    </p>
+                  </>
+                )}
+
                 <div className="panel-edit-actions">
                   <UI.Button
                     variant="contained"
@@ -1062,6 +1211,50 @@ export const Channels = () => {
                       and as the Request URL for any Slash Commands you add.
                     </p>
                     <SlackRequirements />
+                  </div>
+                )}
+
+                {selectedChannel.platform ===
+                  utils.constants.CHANNEL_PLATFORM_DISCORD &&
+                  selectedChannel.metadata?.discord?.bot && (
+                    <div className="panel-bot-card">
+                      <div className="panel-bot-avatar">
+                        <UI.Icons.Discord width={22} height={22} />
+                      </div>
+                      <div className="panel-bot-text">
+                        <p className="panel-bot-name">
+                          {selectedChannel.metadata.discord.bot.globalName ||
+                            selectedChannel.metadata.discord.bot.username ||
+                            'Discord bot'}
+                        </p>
+                        {selectedChannel.metadata.discord.bot.username && (
+                          <p className="panel-bot-handle">
+                            @{selectedChannel.metadata.discord.bot.username}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                {selectedChannel.platform ===
+                  utils.constants.CHANNEL_PLATFORM_DISCORD && (
+                  <div className="panel-section">
+                    <p className="panel-section-label">Discord setup</p>
+                    <UI.CopyableBlock
+                      label="Interactions Endpoint URL"
+                      text={`${process.env.NEXT_PUBLIC_API_URL || ''}/channel/${selectedChannel.id}/webhook/discord`}
+                      onCopy={() =>
+                        snackbar.success('Interactions Endpoint URL copied')
+                      }
+                      onCopyError={() => snackbar.error('Failed to copy')}
+                    />
+                    <p className="panel-toggle-hint">
+                      Paste this into the Discord Developer Portal → General
+                      Information → Interactions Endpoint URL (needed for slash
+                      commands). Normal messages and @mentions arrive over the
+                      Gateway automatically.
+                    </p>
+                    <DiscordRequirements />
                   </div>
                 )}
 

@@ -29,6 +29,7 @@ import {
 import {
   bytesToBase64,
   base64ToBytes,
+  hexToBytes,
   utf8ToBase64,
   base64ToUtf8,
   toBase64Url,
@@ -69,6 +70,11 @@ import type {
   SlackSendResponse,
   SlackSendRemoteResourceRequest
 } from './slackSend';
+import type {
+  DiscordSendRequest,
+  DiscordSendResponse,
+  DiscordSendRemoteResourceRequest
+} from './discordSend';
 import { parseHttpErrorMessage } from './parseHttpError';
 import { isApiError, getApiErrorMessage } from './apiError';
 import { toStringArray } from './coerce';
@@ -144,6 +150,7 @@ export const utils = {
   timingSafeEqual,
   bytesToBase64,
   base64ToBytes,
+  hexToBytes,
   utf8ToBase64,
   base64ToUtf8,
   toBase64Url,
@@ -215,6 +222,9 @@ export type {
   TelegramSendRequest,
   TelegramSendResponse,
   TelegramSendRemoteResourceRequest,
+  DiscordSendRequest,
+  DiscordSendResponse,
+  DiscordSendRemoteResourceRequest,
   EnvSource,
   Separator,
   ChunkMetadata,

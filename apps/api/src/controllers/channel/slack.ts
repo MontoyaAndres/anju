@@ -11,7 +11,8 @@ import { getResourceHandler } from '@anju/containers';
 
 import { runChannelTurn } from './runner';
 import { resolveSlashPrompt } from './slashPrompt';
-import { markdownToSlackMrkdwn, createAuth } from '../../utils';
+import { markdownToSlackMrkdwn } from '../../utils';
+import { startChannelLink } from './link';
 
 import type { ChannelAttachment } from './runner';
 import type { ParsedSlashCommand } from './slashPrompt';
@@ -219,7 +220,8 @@ const processSlackEvent = async (
     const isPrivate =
       scope === utils.constants.CHANNEL_CONVERSATION_SCOPE_PRIVATE;
     const replyText = isPrivate
-      ? await startSlackLink(c, {
+      ? await startChannelLink(c, {
+          provider: utils.constants.CHANNEL_PLATFORM_SLACK,
           externalId: event.user!,
           channelId: channelRow.id,
           displayName: displayName || ''
@@ -296,7 +298,8 @@ const handleSlashCommand = async (
       : scopeForChannel(conversationId);
 
   if (name === utils.constants.BOT_COMMAND_LINK) {
-    const replyText = await startSlackLink(c, {
+    const replyText = await startChannelLink(c, {
+      provider: utils.constants.CHANNEL_PLATFORM_SLACK,
       externalId: externalParticipantId,
       channelId: channelRow.id,
       displayName: ''
@@ -645,69 +648,6 @@ const chunkMessage = (text: string): string[] => {
   }
   if (remaining.length) chunks.push(remaining);
   return chunks;
-};
-
-interface ExternalLinkApi {
-  startExternalLink: (args: {
-    body: {
-      provider: string;
-      externalId: string;
-      channelId: string;
-      displayName?: string;
-      client_id?: string;
-      client_secret?: string;
-    };
-  }) => Promise<{ code: string }>;
-}
-
-// `/link` connects this Slack user to an Anju account for THIS channel. Calls
-// the bot-client link endpoint in-process (a Worker self-fetch to its own
-// hostname times out) and returns a code to redeem on the web.
-const startSlackLink = async (
-  c: Context<AppEnv>,
-  args: { externalId: string; channelId: string; displayName: string }
-): Promise<string> => {
-  const webUrl = utils.getEnv(c, 'NEXT_PUBLIC_WEB_URL');
-  const clientId = utils.getEnv(c, 'BOT_OAUTH_CLIENT_ID');
-  const clientSecret = utils.getEnv(c, 'BOT_OAUTH_CLIENT_SECRET');
-  if (!webUrl || !clientId || !clientSecret) {
-    return 'Account linking is not available right now.';
-  }
-
-  try {
-    const auth = createAuth(c);
-    const api = auth.api as unknown as ExternalLinkApi;
-    const result = await api.startExternalLink({
-      body: {
-        provider: utils.constants.CHANNEL_PLATFORM_SLACK,
-        externalId: args.externalId,
-        channelId: args.channelId,
-        displayName: args.displayName || undefined,
-        client_id: clientId,
-        client_secret: clientSecret
-      }
-    });
-
-    return [
-      'Link this Slack account to your Anju account.',
-      '',
-      `Open ${webUrl}/link?code=${result.code}`,
-      `(or go to ${webUrl}/link and enter the code ${result.code})`,
-      '',
-      'The code expires in 10 minutes.'
-    ].join('\n');
-  } catch (error) {
-    await dbUtils.handleError(c, error, {
-      service: utils.constants.SERVICE_NAME_API,
-      metadata: {
-        source: 'startSlackLink',
-        platform: utils.constants.CHANNEL_PLATFORM_SLACK,
-        channelId: args.channelId,
-        externalId: args.externalId
-      }
-    });
-    return 'Could not start account linking. Please try again later.';
-  }
 };
 
 const verifySlackSignature = async (

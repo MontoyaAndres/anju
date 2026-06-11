@@ -3,7 +3,12 @@
 // of magnitude faster than the btoa/charCode loop, which matters once payloads
 // reach tens of megabytes (e.g. a Gmail attachment).
 declare const Buffer:
-  | { from(input: Uint8Array | string, encoding?: string): { toString(encoding: string): string } }
+  | {
+      from(
+        input: Uint8Array | string,
+        encoding?: string
+      ): { toString(encoding: string): string };
+    }
   | undefined;
 
 const HAS_BUFFER = typeof Buffer !== 'undefined';
@@ -11,7 +16,8 @@ const HAS_BUFFER = typeof Buffer !== 'undefined';
 export const bytesToBase64 = (bytes: Uint8Array): string => {
   if (HAS_BUFFER) return Buffer!.from(bytes).toString('base64');
   let binary = '';
-  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+  for (let i = 0; i < bytes.length; i++)
+    binary += String.fromCharCode(bytes[i]);
   return btoa(binary);
 };
 
@@ -19,6 +25,15 @@ export const base64ToBytes = (b64: string): Uint8Array => {
   const binary = atob(b64);
   const out = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i++) out[i] = binary.charCodeAt(i);
+  return out;
+};
+
+export const hexToBytes = (hex: string): Uint8Array => {
+  if (hex.length % 2 !== 0) return new Uint8Array(0);
+  const out = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < out.length; i++) {
+    out[i] = parseInt(hex.slice(i * 2, i * 2 + 2), 16);
+  }
   return out;
 };
 
@@ -38,7 +53,8 @@ export const fromBase64Url = (b64url: string): string => {
   return standard.padEnd(Math.ceil(standard.length / 4) * 4, '=');
 };
 
-export const utf8ToBase64Url = (value: string): string => toBase64Url(utf8ToBase64(value));
+export const utf8ToBase64Url = (value: string): string =>
+  toBase64Url(utf8ToBase64(value));
 
 export const base64UrlToUtf8 = (b64url: string): string =>
   base64ToUtf8(fromBase64Url(b64url));

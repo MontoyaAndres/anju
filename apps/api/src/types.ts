@@ -8,6 +8,7 @@ import type {
 import type { ResourceHandler } from '@anju/containers';
 
 import type { Auth } from './utils';
+import type { DiscordGatewayDO } from './durable-objects/discordGateway';
 import type {
   IndexJob,
   CrawlDiscoverJob,
@@ -35,6 +36,8 @@ export type Bindings = {
   ONEDRIVE_FILE_QUEUE: Queue<OnedriveFileJob>;
   RESOURCE_HANDLER: DurableObjectNamespace<ResourceHandler>;
   RESOURCE_HANDLER_PORT: string;
+  DISCORD_GATEWAY: DurableObjectNamespace<DiscordGatewayDO>;
+  API: Fetcher;
   SEND_EMAIL?: SendEmail;
   MCP: Fetcher;
   MCP_INTERNAL_SECRET?: string;

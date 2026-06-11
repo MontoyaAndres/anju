@@ -10,11 +10,23 @@ import {
   getTelegramBotInfo
 } from './telegram';
 import { handleSlackWebhook, getSlackBotInfo } from './slack';
+import {
+  handleDiscordInteraction,
+  handleDiscordIngest,
+  getDiscordBotInfo,
+  startGateway,
+  stopGateway
+} from './discord';
 
 import type { TelegramBotInfo } from './telegram';
 import type { SlackBotInfo } from './slack';
-import { loadProxiedPrompts } from './proxiedPrompts';
-import { registerTelegramBotCommands } from '../../utils';
+import type { DiscordBotInfo } from './discord';
+import { loadCommandPrompts } from './proxiedPrompts';
+import { assertNoChannelConflict } from './conflicts';
+import {
+  registerTelegramBotCommands,
+  registerDiscordCommands
+} from '../../utils';
 
 import type { AppEnv } from '../../types';
 
@@ -69,6 +81,7 @@ const create = async (c: Context<AppEnv>) => {
   let platformMetadata: Record<string, unknown> | null = null;
   let telegramBotInfo: TelegramBotInfo | null = null;
   let slackBotInfo: SlackBotInfo | null = null;
+  let discordBotInfo: DiscordBotInfo | null = null;
   if (currentValues.platform === utils.constants.CHANNEL_PLATFORM_TELEGRAM) {
     telegramBotInfo = await getTelegramBotInfo(
       currentValues.credentials.botToken
@@ -90,6 +103,26 @@ const create = async (c: Context<AppEnv>) => {
     // until Slack signs the first webhook, so we store it as-is.
     slackBotInfo = await getSlackBotInfo(currentValues.credentials.botToken);
     platformMetadata = { slack: { bot: slackBotInfo } };
+  } else if (
+    currentValues.platform === utils.constants.CHANNEL_PLATFORM_DISCORD
+  ) {
+    if (
+      !currentValues.credentials.botToken ||
+      !currentValues.credentials.applicationId ||
+      !currentValues.credentials.publicKey
+    ) {
+      throw new Error(
+        'Discord channels require a bot token, an application id, and the application public key.'
+      );
+    }
+    // Verifies the bot token and gives us the bot identity for the card +
+    // duplicate-connection detection. The public key is verified later when
+    // Discord signs the first interaction, so we store it as-is.
+    discordBotInfo = await getDiscordBotInfo(
+      currentValues.credentials.botToken
+    );
+    discordBotInfo.applicationId = currentValues.credentials.applicationId;
+    platformMetadata = { discord: { bot: discordBotInfo } };
   }
 
   const result = await dbInstance.transaction(async tx => {
@@ -115,136 +148,49 @@ const create = async (c: Context<AppEnv>) => {
     if (!artifactRow) throw new Error('Artifact not found for the project');
 
     if (telegramBotInfo) {
-      const [conflict] = await tx
-        .select({
-          projectName: db.schema.project.name,
-          organizationId: db.schema.project.organizationId,
-          organizationName: db.schema.organization.name
-        })
-        .from(db.schema.channel)
-        .innerJoin(
-          db.schema.artifact,
-          eq(db.schema.channel.artifactId, db.schema.artifact.id)
-        )
-        .innerJoin(
-          db.schema.project,
-          eq(db.schema.artifact.projectId, db.schema.project.id)
-        )
-        .innerJoin(
-          db.schema.organization,
-          eq(db.schema.project.organizationId, db.schema.organization.id)
-        )
-        .where(
-          and(
-            eq(
-              db.schema.channel.platform,
-              utils.constants.CHANNEL_PLATFORM_TELEGRAM
-            ),
-            sql`(${db.schema.channel.metadata}->'telegram'->'bot'->>'id')::bigint = ${telegramBotInfo.id}`
-          )
-        )
-        .limit(1);
-
-      if (conflict) {
-        if (conflict.organizationId === currentValues.organizationId) {
-          throw new Error(
-            `Telegram bot @${telegramBotInfo.username} is already connected to project "${conflict.projectName}" in this organization. Remove it there first or use a different bot.`
-          );
-        }
-
-        const [membership] = await tx
-          .select({ organizationId: db.schema.organizationUser.organizationId })
-          .from(db.schema.organizationUser)
-          .where(
-            and(
-              eq(db.schema.organizationUser.userId, currentValues.userId),
-              eq(
-                db.schema.organizationUser.organizationId,
-                conflict.organizationId
-              )
-            )
-          )
-          .limit(1);
-
-        if (membership) {
-          throw new Error(
-            `Telegram bot @${telegramBotInfo.username} is already connected to project "${conflict.projectName}" in your organization "${conflict.organizationName}". Remove it there first or use a different bot.`
-          );
-        }
-
-        throw new Error(
-          `Telegram bot @${telegramBotInfo.username} is already connected to a project in another organization you don't have access to. Use a different bot.`
-        );
-      }
+      await assertNoChannelConflict(tx, {
+        platform: utils.constants.CHANNEL_PLATFORM_TELEGRAM,
+        match: [
+          sql`(${db.schema.channel.metadata}->'telegram'->'bot'->>'id')::bigint = ${telegramBotInfo.id}`
+        ],
+        subject: `Telegram bot @${telegramBotInfo.username}`,
+        noun: 'bot',
+        userId: currentValues.userId,
+        organizationId: currentValues.organizationId
+      });
     }
 
     if (slackBotInfo) {
-      const botLabel = slackBotInfo.username
-        ? `@${slackBotInfo.username}`
-        : 'this Slack app';
-      const [conflict] = await tx
-        .select({
-          projectName: db.schema.project.name,
-          organizationId: db.schema.project.organizationId,
-          organizationName: db.schema.organization.name
-        })
-        .from(db.schema.channel)
-        .innerJoin(
-          db.schema.artifact,
-          eq(db.schema.channel.artifactId, db.schema.artifact.id)
-        )
-        .innerJoin(
-          db.schema.project,
-          eq(db.schema.artifact.projectId, db.schema.project.id)
-        )
-        .innerJoin(
-          db.schema.organization,
-          eq(db.schema.project.organizationId, db.schema.organization.id)
-        )
-        .where(
-          and(
-            eq(
-              db.schema.channel.platform,
-              utils.constants.CHANNEL_PLATFORM_SLACK
-            ),
-            // Same bot user in the same workspace = the same Slack app.
-            sql`${db.schema.channel.metadata}->'slack'->'bot'->>'teamId' = ${slackBotInfo.teamId}`,
-            sql`${db.schema.channel.metadata}->'slack'->'bot'->>'userId' = ${slackBotInfo.userId}`
-          )
-        )
-        .limit(1);
+      await assertNoChannelConflict(tx, {
+        platform: utils.constants.CHANNEL_PLATFORM_SLACK,
+        // Same bot user in the same workspace = the same Slack app.
+        match: [
+          sql`${db.schema.channel.metadata}->'slack'->'bot'->>'teamId' = ${slackBotInfo.teamId}`,
+          sql`${db.schema.channel.metadata}->'slack'->'bot'->>'userId' = ${slackBotInfo.userId}`
+        ],
+        subject: slackBotInfo.username
+          ? `Slack app @${slackBotInfo.username}`
+          : 'this Slack app',
+        noun: 'app',
+        userId: currentValues.userId,
+        organizationId: currentValues.organizationId
+      });
+    }
 
-      if (conflict) {
-        if (conflict.organizationId === currentValues.organizationId) {
-          throw new Error(
-            `Slack app ${botLabel} is already connected to project "${conflict.projectName}" in this organization. Remove it there first or use a different app.`
-          );
-        }
-
-        const [membership] = await tx
-          .select({ organizationId: db.schema.organizationUser.organizationId })
-          .from(db.schema.organizationUser)
-          .where(
-            and(
-              eq(db.schema.organizationUser.userId, currentValues.userId),
-              eq(
-                db.schema.organizationUser.organizationId,
-                conflict.organizationId
-              )
-            )
-          )
-          .limit(1);
-
-        if (membership) {
-          throw new Error(
-            `Slack app ${botLabel} is already connected to project "${conflict.projectName}" in your organization "${conflict.organizationName}". Remove it there first or use a different app.`
-          );
-        }
-
-        throw new Error(
-          `Slack app ${botLabel} is already connected to a project in another organization you don't have access to. Use a different app.`
-        );
-      }
+    if (discordBotInfo) {
+      await assertNoChannelConflict(tx, {
+        platform: utils.constants.CHANNEL_PLATFORM_DISCORD,
+        // Same bot user = the same Discord application.
+        match: [
+          sql`${db.schema.channel.metadata}->'discord'->'bot'->>'id' = ${discordBotInfo.id}`
+        ],
+        subject: discordBotInfo.username
+          ? `Discord bot @${discordBotInfo.username}`
+          : 'this Discord bot',
+        noun: 'bot',
+        userId: currentValues.userId,
+        organizationId: currentValues.organizationId
+      });
     }
 
     if (currentValues.llmId) {
@@ -294,32 +240,28 @@ const create = async (c: Context<AppEnv>) => {
         rawSecret
       );
 
-      const prompts = await tx
-        .select({
-          title: db.schema.artifactPrompt.title,
-          description: db.schema.artifactPrompt.description
-        })
-        .from(db.schema.artifactPrompt)
-        .where(eq(db.schema.artifactPrompt.artifactId, artifactRow.id));
-
-      // Proxied (GitHub/Notion) prompts are slash commands too — same shape, so
-      // they appear in the bot's command menu alongside artifact prompts.
-      const proxiedPrompts = await loadProxiedPrompts(
-        db.create(c),
-        artifactRow.id
+      await registerTelegramBotCommands(
+        currentValues.credentials.botToken,
+        await loadCommandPrompts(db.create(c), artifactRow.id)
       );
+    }
 
-      await registerTelegramBotCommands(currentValues.credentials.botToken, [
-        ...prompts,
-        ...proxiedPrompts.map(p => ({
-          title: p.title,
-          description: p.description
-        }))
-      ]);
+    if (currentValues.platform === utils.constants.CHANNEL_PLATFORM_DISCORD) {
+      await registerDiscordCommands(
+        currentValues.credentials.botToken,
+        currentValues.credentials.applicationId,
+        await loadCommandPrompts(db.create(c), artifactRow.id)
+      );
     }
 
     return channelRow;
   });
+
+  // Open the persistent Gateway connection AFTER the channel row is committed —
+  // the DiscordGatewayDO reads the row (over its own connection) on start().
+  if (currentValues.platform === utils.constants.CHANNEL_PLATFORM_DISCORD) {
+    await startGateway(c, result.id);
+  }
 
   const { credentials: _c, webhookSecret: _w, ...safe } = result;
   return c.json(safe);
@@ -379,6 +321,16 @@ const update = async (c: Context<AppEnv>) => {
 
   if (!updated) throw new Error('Channel not found');
 
+  // Keep the Discord Gateway connection in sync: an active channel (re)connects
+  // — also picking up rotated credentials — while a disabled one disconnects.
+  if (updated.platform === utils.constants.CHANNEL_PLATFORM_DISCORD) {
+    if (updated.status === utils.constants.STATUS_ACTIVE) {
+      await startGateway(c, updated.id);
+    } else {
+      await stopGateway(c, updated.id);
+    }
+  }
+
   const { credentials: _c, webhookSecret: _w, ...safe } = updated;
   return c.json(safe);
 };
@@ -393,7 +345,7 @@ const remove = async (c: Context<AppEnv>) => {
 
   const dbInstance = db.create(c);
 
-  await dbInstance.transaction(async tx => {
+  const removedPlatform = await dbInstance.transaction(async tx => {
     const [channelRow] = await tx
       .select()
       .from(db.schema.channel)
@@ -412,7 +364,14 @@ const remove = async (c: Context<AppEnv>) => {
         channelCount: sql`(${db.schema.artifact.channelCount}::int - 1)::int`
       })
       .where(eq(db.schema.artifact.id, channelRow.artifactId));
+
+    return channelRow.platform;
   });
+
+  // Tear down the persistent Gateway connection for a removed Discord channel.
+  if (removedPlatform === utils.constants.CHANNEL_PLATFORM_DISCORD) {
+    await stopGateway(c, currentValues.channelId);
+  }
 
   return c.json(currentValues);
 };
@@ -482,8 +441,16 @@ const webhook = async (c: Context<AppEnv>) => {
   if (platform === utils.constants.CHANNEL_PLATFORM_SLACK) {
     return handleSlackWebhook(c);
   }
+  if (platform === utils.constants.CHANNEL_PLATFORM_DISCORD) {
+    return handleDiscordInteraction(c);
+  }
   return c.json({ error: `Unsupported platform: ${platform}` }, 400);
 };
+
+// Internal: the DiscordGatewayDO posts Gateway messages here (via the API
+// service binding) to run a turn in normal request context. Guarded by the
+// internal secret inside the handler.
+const discordIngest = async (c: Context<AppEnv>) => handleDiscordIngest(c);
 
 export const ChannelController = {
   list,
@@ -492,5 +459,6 @@ export const ChannelController = {
   remove,
   listConversations,
   listMessages,
-  webhook
+  webhook,
+  discordIngest
 };

@@ -3,7 +3,7 @@ import { and, eq } from 'drizzle-orm';
 import { db } from '@anju/db';
 import { utils } from '@anju/utils';
 
-import { loadProxiedPrompts } from '../controllers/channel/proxiedPrompts';
+import { loadCommandPrompts } from '../controllers/channel/proxiedPrompts';
 
 import type { AppEnv } from '../types';
 
@@ -63,24 +63,7 @@ export const syncTelegramCommandsForArtifact = async (
     );
   if (channels.length === 0) return;
 
-  const prompts = await dbInstance
-    .select({
-      title: db.schema.artifactPrompt.title,
-      description: db.schema.artifactPrompt.description
-    })
-    .from(db.schema.artifactPrompt)
-    .where(eq(db.schema.artifactPrompt.artifactId, artifactId));
-
-  // Proxied (GitHub/Notion) prompts are slash commands too — same shape, so
-  // they sit in the menu alongside artifact prompts (matching channel create).
-  const proxiedPrompts = await loadProxiedPrompts(dbInstance, artifactId);
-  const commands = [
-    ...prompts,
-    ...proxiedPrompts.map(p => ({
-      title: p.title,
-      description: p.description
-    }))
-  ];
+  const commands = await loadCommandPrompts(dbInstance, artifactId);
 
   const encryptionKey = utils.getCredentialEncryptionKey(c);
   await Promise.all(
