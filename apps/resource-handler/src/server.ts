@@ -11,6 +11,8 @@ import { handleTelegramSend } from './telegramSend.js';
 import { handleTelegramSendRemoteResource } from './telegramSendRemoteResource.js';
 import { handleDiscordSend } from './discordSend.js';
 import { handleDiscordSendRemoteResource } from './discordSendRemoteResource.js';
+import { handleWhatsappSend } from './whatsappSend.js';
+import { handleWhatsappSendRemoteResource } from './whatsappSendRemoteResource.js';
 import { crawlDiscover, crawlPage } from './crawl.js';
 import { utils as serverUtils } from './utils/index.js';
 
@@ -144,6 +146,16 @@ const server = http.createServer(async (req, res) => {
 
     if (req.method === 'POST' && req.url === '/discord/send-remote-resource') {
       await handleDiscordSendRemoteResource(req, res);
+      return;
+    }
+
+    if (req.method === 'POST' && req.url === '/whatsapp/send') {
+      await handleWhatsappSend(req, res);
+      return;
+    }
+
+    if (req.method === 'POST' && req.url === '/whatsapp/send-remote-resource') {
+      await handleWhatsappSendRemoteResource(req, res);
       return;
     }
 

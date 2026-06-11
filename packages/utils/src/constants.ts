@@ -636,6 +636,31 @@ const DISCORD_GATEWAY_OP_HEARTBEAT_ACK = 11;
 // Default heartbeat cadence (ms) until HELLO supplies the real interval.
 const DISCORD_GATEWAY_DEFAULT_HEARTBEAT_MS = 41250;
 
+// WhatsApp (Meta Cloud API). Inbound messages and the GET verification handshake
+// hit the same per-channel Request URL the tenant configures in their Meta app
+// dashboard. Meta signs every POST with the app secret over the RAW body —
+// `sha256=<hmac>` in the x-hub-signature-256 header (mirrors Slack's scheme).
+// The GET handshake echoes hub.challenge when hub.verify_token matches the
+// channel's stored token. Like Slack, there's no group concept for the Cloud
+// API bot — every conversation is a 1:1 (private) chat keyed by the user's wa_id.
+const WHATSAPP_API_BASE = 'https://graph.facebook.com';
+const WHATSAPP_API_VERSION = 'v25.0';
+// A WhatsApp text message body caps at 4096 chars; we chunk a bit under that.
+const WHATSAPP_MESSAGE_LIMIT = 4000;
+const WHATSAPP_SIGNATURE_HEADER = 'x-hub-signature-256';
+const WHATSAPP_SIGNATURE_PREFIX = 'sha256=';
+// GET-handshake query params + the expected hub.mode value.
+const WHATSAPP_HUB_MODE_PARAM = 'hub.mode';
+const WHATSAPP_HUB_VERIFY_TOKEN_PARAM = 'hub.verify_token';
+const WHATSAPP_HUB_CHALLENGE_PARAM = 'hub.challenge';
+const WHATSAPP_HUB_MODE_SUBSCRIBE = 'subscribe';
+// Cloud API media ceilings by category (Meta-enforced). Documents are the
+// largest; images the smallest. Used to reject an oversize send before upload.
+const WHATSAPP_MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+const WHATSAPP_MAX_VIDEO_BYTES = 16 * 1024 * 1024;
+const WHATSAPP_MAX_AUDIO_BYTES = 16 * 1024 * 1024;
+const WHATSAPP_MAX_DOCUMENT_BYTES = 100 * 1024 * 1024;
+
 const EMBEDDING_MODEL = 'gemini-embedding-001';
 const EMBEDDING_DIMENSIONS = 3072;
 const CHUNK_TARGET_CHARS = 2000;
@@ -1321,6 +1346,19 @@ export const constants = {
   DISCORD_GATEWAY_OP_HELLO,
   DISCORD_GATEWAY_OP_HEARTBEAT_ACK,
   DISCORD_GATEWAY_DEFAULT_HEARTBEAT_MS,
+  WHATSAPP_API_BASE,
+  WHATSAPP_API_VERSION,
+  WHATSAPP_MESSAGE_LIMIT,
+  WHATSAPP_SIGNATURE_HEADER,
+  WHATSAPP_SIGNATURE_PREFIX,
+  WHATSAPP_HUB_MODE_PARAM,
+  WHATSAPP_HUB_VERIFY_TOKEN_PARAM,
+  WHATSAPP_HUB_CHALLENGE_PARAM,
+  WHATSAPP_HUB_MODE_SUBSCRIBE,
+  WHATSAPP_MAX_IMAGE_BYTES,
+  WHATSAPP_MAX_VIDEO_BYTES,
+  WHATSAPP_MAX_AUDIO_BYTES,
+  WHATSAPP_MAX_DOCUMENT_BYTES,
   EMBEDDING_MODEL,
   EMBEDDING_DIMENSIONS,
   CHUNK_TARGET_CHARS,

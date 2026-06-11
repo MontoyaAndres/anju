@@ -51,6 +51,13 @@ interface DiscordBotInfo {
   applicationId?: string;
 }
 
+interface WhatsappBotInfo {
+  id: string;
+  phoneNumberId: string;
+  displayPhoneNumber?: string;
+  verifiedName?: string;
+}
+
 interface Channel {
   id: string;
   platform: string;
@@ -60,6 +67,7 @@ interface Channel {
     telegram?: { bot?: BotInfo };
     slack?: { bot?: SlackBotInfo };
     discord?: { bot?: DiscordBotInfo };
+    whatsapp?: { bot?: WhatsappBotInfo };
   } | null;
   conversationCount: number;
   messageCount: number;
@@ -155,7 +163,7 @@ const PLATFORMS = [
     id: utils.constants.CHANNEL_PLATFORM_WHATSAPP,
     label: 'WhatsApp',
     Icon: WhatsApp,
-    enabled: false
+    enabled: true
   },
   {
     id: utils.constants.CHANNEL_PLATFORM_DISCORD,
@@ -196,6 +204,11 @@ const channelLabel = (channel: Channel): string => {
     const bot = channel.metadata?.discord?.bot;
     if (bot?.username) return `@${bot.username}`;
     if (bot?.globalName) return bot.globalName;
+  }
+  if (channel.platform === utils.constants.CHANNEL_PLATFORM_WHATSAPP) {
+    const bot = channel.metadata?.whatsapp?.bot;
+    if (bot?.displayPhoneNumber) return bot.displayPhoneNumber;
+    if (bot?.verifiedName) return bot.verifiedName;
   }
   return channel.platform;
 };
@@ -375,6 +388,31 @@ const DiscordRequirements = () => (
   </div>
 );
 
+const WhatsappRequirements = () => (
+  <div className="slack-requirements">
+    <div className="slack-requirements-group">
+      <p className="slack-requirements-label">Webhook fields</p>
+      <div className="slack-scope-chips">
+        <code className="slack-scope-chip">messages</code>
+      </div>
+      <p className="slack-requirements-hint">
+        In the Meta app dashboard → WhatsApp → Configuration, subscribe the
+        webhook to the <code>messages</code> field. Use the same Verify token
+        you entered here.
+      </p>
+    </div>
+    <div className="slack-requirements-group">
+      <p className="slack-requirements-label">Credentials</p>
+      <p className="slack-requirements-hint">
+        Access token: a permanent System User token with{' '}
+        <code>whatsapp_business_messaging</code> permission. Phone number ID and
+        App secret come from the WhatsApp → API Setup and App → Settings → Basic
+        pages.
+      </p>
+    </div>
+  </div>
+);
+
 export const Channels = () => {
   const router = useRouter();
   const snackbar = UI.Alert.useSnackbar();
@@ -401,6 +439,10 @@ export const Channels = () => {
     signingSecret: '',
     applicationId: '',
     publicKey: '',
+    accessToken: '',
+    phoneNumberId: '',
+    verifyToken: '',
+    appSecret: '',
     llmId: utils.constants.LLM_SYSTEM_DEFAULT as string
   });
   const [llms, setLlms] = useState<OrganizationLlm[]>([]);
@@ -522,6 +564,10 @@ export const Channels = () => {
       signingSecret: '',
       applicationId: '',
       publicKey: '',
+      accessToken: '',
+      phoneNumberId: '',
+      verifyToken: '',
+      appSecret: '',
       llmId: utils.constants.LLM_SYSTEM_DEFAULT
     });
     setErrors({});
@@ -589,9 +635,13 @@ export const Channels = () => {
       createValues.platform === utils.constants.CHANNEL_PLATFORM_SLACK;
     const isDiscord =
       createValues.platform === utils.constants.CHANNEL_PLATFORM_DISCORD;
+    const isWhatsapp =
+      createValues.platform === utils.constants.CHANNEL_PLATFORM_WHATSAPP;
 
     const nextErrors: Record<string, string> = {};
-    if (!createValues.botToken.trim()) {
+    // WhatsApp authenticates with an access token (not a bot token); every other
+    // platform uses a bot token.
+    if (!isWhatsapp && !createValues.botToken.trim()) {
       nextErrors.botToken = 'Bot token is required';
     }
     if (isSlack && !createValues.signingSecret.trim()) {
@@ -603,14 +653,31 @@ export const Channels = () => {
     if (isDiscord && !createValues.publicKey.trim()) {
       nextErrors.publicKey = 'Public key is required';
     }
+    if (isWhatsapp && !createValues.accessToken.trim()) {
+      nextErrors.accessToken = 'Access token is required';
+    }
+    if (isWhatsapp && !createValues.phoneNumberId.trim()) {
+      nextErrors.phoneNumberId = 'Phone number ID is required';
+    }
+    if (isWhatsapp && !createValues.verifyToken.trim()) {
+      nextErrors.verifyToken = 'Verify token is required';
+    }
+    if (isWhatsapp && !createValues.appSecret.trim()) {
+      nextErrors.appSecret = 'App secret is required';
+    }
     if (Object.keys(nextErrors).length > 0) {
       setErrors(nextErrors);
       return;
     }
 
-    const credentials: Record<string, string> = {
-      botToken: createValues.botToken.trim()
-    };
+    const credentials: Record<string, string> = isWhatsapp
+      ? {
+          accessToken: createValues.accessToken.trim(),
+          phoneNumberId: createValues.phoneNumberId.trim(),
+          verifyToken: createValues.verifyToken.trim(),
+          appSecret: createValues.appSecret.trim()
+        }
+      : { botToken: createValues.botToken.trim() };
     if (isSlack) {
       credentials.signingSecret = createValues.signingSecret.trim();
     }
@@ -1133,6 +1200,120 @@ export const Channels = () => {
                   </>
                 )}
 
+                {createValues.platform ===
+                  utils.constants.CHANNEL_PLATFORM_WHATSAPP && (
+                  <>
+                    <UI.Input
+                      label="Access token"
+                      name="accessToken"
+                      type="password"
+                      placeholder="System User access token"
+                      value={createValues.accessToken}
+                      disabled={submitting}
+                      error={!!errors.accessToken}
+                      helperText={
+                        errors.accessToken ||
+                        'A permanent System User token with the whatsapp_business_messaging permission.'
+                      }
+                      onChange={e => {
+                        setCreateValues(prev => ({
+                          ...prev,
+                          accessToken: e.target.value
+                        }));
+                        if (errors.accessToken) {
+                          setErrors(prev => {
+                            const n = { ...prev };
+                            delete n.accessToken;
+                            return n;
+                          });
+                        }
+                      }}
+                    />
+                    <UI.Input
+                      label="Phone number ID"
+                      name="phoneNumberId"
+                      placeholder="WhatsApp phone number ID"
+                      value={createValues.phoneNumberId}
+                      disabled={submitting}
+                      error={!!errors.phoneNumberId}
+                      helperText={
+                        errors.phoneNumberId ||
+                        'WhatsApp → API Setup → From: the Phone number ID (not the display number).'
+                      }
+                      onChange={e => {
+                        setCreateValues(prev => ({
+                          ...prev,
+                          phoneNumberId: e.target.value
+                        }));
+                        if (errors.phoneNumberId) {
+                          setErrors(prev => {
+                            const n = { ...prev };
+                            delete n.phoneNumberId;
+                            return n;
+                          });
+                        }
+                      }}
+                    />
+                    <UI.Input
+                      label="Verify token"
+                      name="verifyToken"
+                      placeholder="A token you choose"
+                      value={createValues.verifyToken}
+                      disabled={submitting}
+                      error={!!errors.verifyToken}
+                      helperText={
+                        errors.verifyToken ||
+                        'Any value you choose. Enter the same token in the Meta dashboard when you set the Callback URL.'
+                      }
+                      onChange={e => {
+                        setCreateValues(prev => ({
+                          ...prev,
+                          verifyToken: e.target.value
+                        }));
+                        if (errors.verifyToken) {
+                          setErrors(prev => {
+                            const n = { ...prev };
+                            delete n.verifyToken;
+                            return n;
+                          });
+                        }
+                      }}
+                    />
+                    <UI.Input
+                      label="App secret"
+                      name="appSecret"
+                      type="password"
+                      placeholder="Meta app secret"
+                      value={createValues.appSecret}
+                      disabled={submitting}
+                      error={!!errors.appSecret}
+                      helperText={
+                        errors.appSecret ||
+                        'App → Settings → Basic → App secret. Used to verify incoming webhooks.'
+                      }
+                      onChange={e => {
+                        setCreateValues(prev => ({
+                          ...prev,
+                          appSecret: e.target.value
+                        }));
+                        if (errors.appSecret) {
+                          setErrors(prev => {
+                            const n = { ...prev };
+                            delete n.appSecret;
+                            return n;
+                          });
+                        }
+                      }}
+                    />
+                    <WhatsappRequirements />
+                    <p className="panel-toggle-hint">
+                      After connecting, you&apos;ll get a Callback URL to paste
+                      into the Meta app dashboard → WhatsApp → Configuration,
+                      together with the Verify token above.
+                    </p>
+                  </>
+                )}
+
                 <div className="panel-edit-actions">
                   <UI.Button
                     variant="contained"
@@ -1255,6 +1436,52 @@ export const Channels = () => {
                       Gateway automatically.
                     </p>
                     <DiscordRequirements />
+                  </div>
+                )}
+
+                {selectedChannel.platform ===
+                  utils.constants.CHANNEL_PLATFORM_WHATSAPP &&
+                  selectedChannel.metadata?.whatsapp?.bot && (
+                    <div className="panel-bot-card">
+                      <div className="panel-bot-avatar">
+                        <WhatsApp />
+                      </div>
+                      <div className="panel-bot-text">
+                        <p className="panel-bot-name">
+                          {selectedChannel.metadata.whatsapp.bot.verifiedName ||
+                            selectedChannel.metadata.whatsapp.bot
+                              .displayPhoneNumber ||
+                            'WhatsApp number'}
+                        </p>
+                        {selectedChannel.metadata.whatsapp.bot
+                          .displayPhoneNumber && (
+                          <p className="panel-bot-handle">
+                            {
+                              selectedChannel.metadata.whatsapp.bot
+                                .displayPhoneNumber
+                            }
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                {selectedChannel.platform ===
+                  utils.constants.CHANNEL_PLATFORM_WHATSAPP && (
+                  <div className="panel-section">
+                    <p className="panel-section-label">WhatsApp setup</p>
+                    <UI.CopyableBlock
+                      label="Callback URL"
+                      text={`${process.env.NEXT_PUBLIC_API_URL || ''}/channel/${selectedChannel.id}/webhook/whatsapp`}
+                      onCopy={() => snackbar.success('Callback URL copied')}
+                      onCopyError={() => snackbar.error('Failed to copy')}
+                    />
+                    <p className="panel-toggle-hint">
+                      Paste this into the Meta app dashboard → WhatsApp →
+                      Configuration → Callback URL, with the Verify token you set
+                      when connecting, then subscribe to the messages field.
+                    </p>
+                    <WhatsappRequirements />
                   </div>
                 )}
 

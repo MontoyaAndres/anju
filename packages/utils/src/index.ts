@@ -75,6 +75,11 @@ import type {
   DiscordSendResponse,
   DiscordSendRemoteResourceRequest
 } from './discordSend';
+import type {
+  WhatsappSendRequest,
+  WhatsappSendResponse,
+  WhatsappSendRemoteResourceRequest
+} from './whatsappSend';
 import { parseHttpErrorMessage } from './parseHttpError';
 import { isApiError, getApiErrorMessage } from './apiError';
 import { toStringArray } from './coerce';
@@ -225,6 +230,9 @@ export type {
   DiscordSendRequest,
   DiscordSendResponse,
   DiscordSendRemoteResourceRequest,
+  WhatsappSendRequest,
+  WhatsappSendResponse,
+  WhatsappSendRemoteResourceRequest,
   EnvSource,
   Separator,
   ChunkMetadata,

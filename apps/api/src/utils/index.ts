@@ -12,6 +12,7 @@ import {
 import { markdownToTelegramHtml } from './telegramFormat';
 import { markdownToSlackMrkdwn } from './slackFormat';
 import { markdownToDiscord } from './discordFormat';
+import { markdownToWhatsapp } from './whatsappFormat';
 import {
   enqueueIndex,
   enqueueCrawlDiscover,
@@ -77,6 +78,7 @@ export {
   markdownToTelegramHtml,
   markdownToSlackMrkdwn,
   markdownToDiscord,
+  markdownToWhatsapp,
   enqueueIndex,
   enqueueCrawlDiscover,
   enqueueGdriveDiscover,

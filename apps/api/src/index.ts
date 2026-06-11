@@ -454,6 +454,8 @@ app
 
   // Channel webhook (public, signed by platform secret)
   .post('/channel/:channelId/webhook/:platform', ChannelController.webhook)
+  // GET handshake on the same URL — WhatsApp's hub.challenge verification.
+  .get('/channel/:channelId/webhook/:platform', ChannelController.webhookVerify)
 
   // Internal: Discord Gateway DO → worker ingest (guarded by internal secret)
   .post('/channel/:channelId/ingest/discord', ChannelController.discordIngest)

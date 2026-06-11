@@ -17,10 +17,16 @@ import {
   startGateway,
   stopGateway
 } from './discord';
+import {
+  handleWhatsappWebhook,
+  handleWhatsappVerification,
+  getWhatsappBotInfo
+} from './whatsapp';
 
 import type { TelegramBotInfo } from './telegram';
 import type { SlackBotInfo } from './slack';
 import type { DiscordBotInfo } from './discord';
+import type { WhatsappBotInfo } from './whatsapp';
 import { loadCommandPrompts } from './proxiedPrompts';
 import { assertNoChannelConflict } from './conflicts';
 import {
@@ -82,6 +88,7 @@ const create = async (c: Context<AppEnv>) => {
   let telegramBotInfo: TelegramBotInfo | null = null;
   let slackBotInfo: SlackBotInfo | null = null;
   let discordBotInfo: DiscordBotInfo | null = null;
+  let whatsappBotInfo: WhatsappBotInfo | null = null;
   if (currentValues.platform === utils.constants.CHANNEL_PLATFORM_TELEGRAM) {
     telegramBotInfo = await getTelegramBotInfo(
       currentValues.credentials.botToken
@@ -123,6 +130,28 @@ const create = async (c: Context<AppEnv>) => {
     );
     discordBotInfo.applicationId = currentValues.credentials.applicationId;
     platformMetadata = { discord: { bot: discordBotInfo } };
+  } else if (
+    currentValues.platform === utils.constants.CHANNEL_PLATFORM_WHATSAPP
+  ) {
+    if (
+      !currentValues.credentials.accessToken ||
+      !currentValues.credentials.phoneNumberId ||
+      !currentValues.credentials.verifyToken ||
+      !currentValues.credentials.appSecret
+    ) {
+      throw new Error(
+        'WhatsApp channels require an access token, a phone number id, a webhook verify token, and the app secret.'
+      );
+    }
+    // Verifies the access token can act for the number and gives us the bot
+    // identity for the card + duplicate-connection detection. The verify token
+    // and app secret can't be checked until Meta calls the webhook, so they're
+    // stored as-is.
+    whatsappBotInfo = await getWhatsappBotInfo(
+      currentValues.credentials.accessToken,
+      currentValues.credentials.phoneNumberId
+    );
+    platformMetadata = { whatsapp: { bot: whatsappBotInfo } };
   }
 
   const result = await dbInstance.transaction(async tx => {
@@ -188,6 +217,22 @@ const create = async (c: Context<AppEnv>) => {
           ? `Discord bot @${discordBotInfo.username}`
           : 'this Discord bot',
         noun: 'bot',
+        userId: currentValues.userId,
+        organizationId: currentValues.organizationId
+      });
+    }
+
+    if (whatsappBotInfo) {
+      await assertNoChannelConflict(tx, {
+        platform: utils.constants.CHANNEL_PLATFORM_WHATSAPP,
+        // Same Cloud API phone-number id = the same WhatsApp sender.
+        match: [
+          sql`${db.schema.channel.metadata}->'whatsapp'->'bot'->>'phoneNumberId' = ${whatsappBotInfo.phoneNumberId}`
+        ],
+        subject: whatsappBotInfo.displayPhoneNumber
+          ? `WhatsApp number ${whatsappBotInfo.displayPhoneNumber}`
+          : 'this WhatsApp number',
+        noun: 'number',
         userId: currentValues.userId,
         organizationId: currentValues.organizationId
       });
@@ -444,6 +489,21 @@ const webhook = async (c: Context<AppEnv>) => {
   if (platform === utils.constants.CHANNEL_PLATFORM_DISCORD) {
     return handleDiscordInteraction(c);
   }
+  if (platform === utils.constants.CHANNEL_PLATFORM_WHATSAPP) {
+    return handleWhatsappWebhook(c);
+  }
+  return c.json({ error: `Unsupported platform: ${platform}` }, 400);
+};
+
+// GET on the same Request URL. Only WhatsApp uses it — Meta performs a
+// hub.challenge handshake when the tenant saves the Callback URL in their app
+// dashboard. The other platforms verify their URL over POST, so a GET there is
+// just unsupported.
+const webhookVerify = async (c: Context<AppEnv>) => {
+  const platform = c.req.param('platform');
+  if (platform === utils.constants.CHANNEL_PLATFORM_WHATSAPP) {
+    return handleWhatsappVerification(c);
+  }
   return c.json({ error: `Unsupported platform: ${platform}` }, 400);
 };
 
@@ -460,5 +520,6 @@ export const ChannelController = {
   listConversations,
   listMessages,
   webhook,
+  webhookVerify,
   discordIngest
 };
